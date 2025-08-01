@@ -1,0 +1,36 @@
+#!/bin/bash
+# Set variables
+USER="viberbg-deploy"
+HOST="viberbg.sftp.wpengine.com"
+PORT="2222" # or your sftp port number
+REMOTE_PATH="/wp-content/plugins/" # The path on WP Engine where plugins are stored
+PASSWORD="amazingcube123#!" # this is just informational, you will be prompted for this password
+DIR=`pwd`
+
+# Create temporary directory
+TMP_DIR="/tmp/partyline-deploy-$(date +%s)/partyline"
+mkdir -p "$TMP_DIR"
+
+echo "Exporting plugin files using git archive..."
+
+# Export only tracked files from git to temp directory
+git archive --format=tar HEAD | tar -x -C "$TMP_DIR"
+
+# Deploy the exported plugin
+echo "Deploying plugin to $HOST..."
+cd "$TMP_DIR/.."
+
+echo $TMP_DIR
+
+sftp -P $PORT $USER@$HOST <<EOF
+cd $REMOTE_PATH/..
+put -r partyline
+exit
+EOF
+
+# Clean up temp directory
+echo "Cleaning up temporary files..."
+rm -rf "$TMP_DIR"
+
+echo "Plugin deployed successfully!"
+cd "$DIR"

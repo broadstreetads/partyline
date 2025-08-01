@@ -26,7 +26,14 @@
           <div id="controls">
             <div class="box">
                 <div class="title"><span class="dashicons dashicons-admin-generic"></span> Partyline Settings</div>
-                <div class="content">                    
+                <div class="content">
+                    <div class="webhook-notice">
+                        <strong>Your Twilio Webhook URL is:</strong>
+                        <span id="webhook-url"><?php echo home_url('/?partyline_twilio_webhook=1'); ?></span>
+                        <span class="copy-icon" onclick="copyToClipboard('#webhook-url')">
+                            <span class="dashicons dashicons-admin-page"></span>
+                        </span>
+                    </div>
                     <div class="option">
                         <div class="control-label">
                             <div class="name nomargin">
@@ -124,7 +131,7 @@
         app.controller('ZoneCtrl', function($scope, $http) {
             var bootstrap = window.bs_bootstrap;
             $scope.loadingMessage = null;
-            
+
             $scope.data = { settings: bootstrap.settings || {} };
 
             var catList = [], found = false;
@@ -149,6 +156,44 @@
 
             console.log();
         });
+
+        window.copyToClipboard = function(element) {
+            var $temp = jQuery("<input>");
+            jQuery("body").append($temp);
+            $temp.val(jQuery(element).text()).select();
+            document.execCommand("copy");
+            $temp.remove();
+            alert("Copied to clipboard!");
+        }
     })()
 
 </script>
+<style>
+    .webhook-notice {
+        background-color: #f0f6fc;
+        border: 1px solid #c8d7e5;
+        border-radius: 4px;
+        padding: 15px;
+        margin-bottom: 20px;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .webhook-notice strong {
+        margin-right: 10px;
+    }
+    #webhook-url {
+        font-family: monospace;
+        background-color: #e1eaf2;
+        padding: 5px 10px;
+        border-radius: 4px;
+    }
+    .copy-icon {
+        cursor: pointer;
+        color: #0073aa;
+    }
+    .copy-icon:hover {
+        color: #00a0d2;
+    }
+</style>
