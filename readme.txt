@@ -4,11 +4,18 @@ Donate link: https://broadstreetads.com/
 Tags: twilio, sms, community, local news, chatgpt, openai, user generated content
 Requires at least: 5.0
 Tested up to: 6.8
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPLv2
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 Local news is the original social media. Let your community share tell its side of the story with Partyline.
+
+== Changelog ==
+= 1.0.1 =
+* ENHANCEMENT: Tightened up conditional checks on a number of variables
+* ENHANCEMENT: Added server-side authentication to Twilio image retrieval
+* ENHANCEMENT: Added Twilio-specific settings to the Admin settings page
+* ENHANCEMENT: Enabled generation of thumbnails based on Twilio-supplied image
 
 == Description ==
 

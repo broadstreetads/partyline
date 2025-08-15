@@ -34,6 +34,37 @@
                             <span class="dashicons dashicons-admin-page"></span>
                         </span>
                     </div>
+					<div class="break"></div>
+                    <div class="option">
+                        <div class="control-label">
+                            <div class="name nomargin">
+                                Twilio Account SID
+                            </div>
+                            <div class="desc nomargin">
+                                You will find this on your Twilio Account Dashboard
+                            </div>
+                        </div>
+                        <div class="control-container">
+                            <input ng-model="data.settings.twilio_account_sid" type="text" placeholder="" />
+                        </div>
+                    </div>
+                    <div class="clearfix"></div>
+                    <div class="option">
+                        <div class="control-label">
+                            <div class="name nomargin">
+                                Twilio Auth Token
+                            </div>
+                            <div class="desc nomargin">
+                                These values are required to retrieve the images from Twilio
+                            </div>
+                        </div>
+                        <div class="control-container">
+                            <input ng-model="data.settings.twilio_auth_token" type="password" placeholder="" />
+                        </div>
+                    </div>
+                    <div class="clearfix"></div>
+					<div class="break"></div>
+                    <div class="clearfix"></div>
                     <div class="option">
                         <div class="control-label">
                             <div class="name nomargin">
