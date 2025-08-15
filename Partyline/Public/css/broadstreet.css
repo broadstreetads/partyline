@@ -193,8 +193,8 @@
     float: left;
 }
 
-.control-container input[type="text"] {
-    width: 250px;
+.control-container input[type="text"], .control-container input[type="password"] {
+    width: 250px;password
 }
 
 .save-container input {

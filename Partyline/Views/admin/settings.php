@@ -41,7 +41,7 @@
                                 Twilio Account SID
                             </div>
                             <div class="desc nomargin">
-                                You will find this on your Twilio Account Dashboard
+                                You will find this on your <a href="https://twilio.com/console" target="_blank">Twilio Console &#x2197;</a>.
                             </div>
                         </div>
                         <div class="control-container">
@@ -49,13 +49,15 @@
                         </div>
                     </div>
                     <div class="clearfix"></div>
+                    <div class="break"></div>
+                    <div class="clearfix"></div>
                     <div class="option">
                         <div class="control-label">
                             <div class="name nomargin">
                                 Twilio Auth Token
                             </div>
                             <div class="desc nomargin">
-                                These values are required to retrieve the images from Twilio
+                                This is required to download images from Twilio. You will also find this on your <a href="https://twilio.com/console" target="_blank">Twilio Console &#x2197;</a>.
                             </div>
                         </div>
                         <div class="control-container">
