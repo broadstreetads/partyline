@@ -15,7 +15,7 @@
                             </p>
                             <ol>
                                 <?php foreach($errors as $error): ?>
-                                    <li><?php echo $error; ?></li>
+                                    <li><?php echo wp_kses_post( $error ); ?></li>
                                 <?php endforeach; ?>
                             </ol>
                         </div>
@@ -29,7 +29,7 @@
                 <div class="content">
                     <div class="webhook-notice">
                         <strong>Your Twilio Webhook URL is:</strong>
-                        <span id="webhook-url"><?php echo home_url('/?partyline_twilio_webhook=1'); ?></span>
+                        <span id="webhook-url"><?php echo esc_url( home_url( '/?partyline_twilio_webhook=1' ) ); ?></span>
                         <span class="copy-icon" onclick="copyToClipboard('#webhook-url')">
                             <span class="dashicons dashicons-admin-page"></span>
                         </span>
@@ -148,7 +148,7 @@
             </div>
         </div>
         <div class="selfie-loading-box" ng-show="loadingMessage !== null">
-            <img src="<?php echo Partyline_Utility::getImageBaseURL() . 'ajax-loader-bar.gif'; ?>" alt="Loading Image"/>
+            <img src="<?php echo esc_url( Partyline_Utility::getImageBaseURL() . 'ajax-loader-bar.gif' ); ?>" alt="Loading Image"/>
             <span>{{loadingMessage}}</span>
         </div>
       </div>

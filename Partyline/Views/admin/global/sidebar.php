@@ -24,7 +24,7 @@
                 You can add or update your registered Partyliners by following these steps:
             </p>
             <ol>
-                <li>Go to the <a href="<?php echo admin_url('users.php'); ?>">Users page</a>.</li>
+                <li>Go to the <a href="<?php echo esc_url( admin_url('users.php') ); ?>">Users page</a>.</li>
                 <li>Add a new user or edit an existing one.</li>
                 <li>At the bottom of the user profile, set the "Partyline Phone Number" field.</li>
             </ol>
@@ -32,6 +32,6 @@
                 To easily see all of your registered Partyliners at once, you can use this convenient link:
             </p>
             <p>
-                <a href="<?php echo admin_url('users.php?has_partyline_phone=1'); ?>" class="button">View All Partyliners</a>
+                <a href="<?php echo esc_url( admin_url('users.php?has_partyline_phone=1') ); ?>" class="button">View All Partyliners</a>
             </p>
         </div>    

@@ -116,13 +116,35 @@ class Partyline_Core
      */
     public function adminInitCallback()
     {
-        wp_enqueue_style('partyline-admin-styles', Partyline_Utility::getCSSBaseURL() . 'admin.css?v='. PARTYLINE_VERSION);
+        wp_enqueue_style(
+			'partyline-admin-styles', 
+			Partyline_Utility::getCSSBaseURL() . 'admin.css',
+			array(),
+			PARTYLINE_VERSION
+			);
         # Only register javascript and css if the Broadstreet admin page is loading
         if(isset($_SERVER['QUERY_STRING']) && strstr($_SERVER['QUERY_STRING'], 'Partyline'))
         {
-            wp_enqueue_style ('partyline-styles',  Partyline_Utility::getCSSBaseURL() . 'broadstreet.css?v='. PARTYLINE_VERSION);            
-            wp_enqueue_script('partyline-main'  ,  Partyline_Utility::getJSBaseURL().'broadstreet.js?v='. PARTYLINE_VERSION);
-            wp_enqueue_script('angular-js', Partyline_Utility::getJSBaseURL().'angular.min.js?v='. PARTYLINE_VERSION);
+			wp_enqueue_style(
+				'partyline-styles', 
+				Partyline_Utility::getCSSBaseURL() . 'broadstreet.css',
+				array(),
+				PARTYLINE_VERSION
+			);            
+            wp_enqueue_script(
+				'partyline-main',
+				Partyline_Utility::getJSBaseURL().'broadstreet.js',
+				array(),
+				PARTYLINE_VERSION,
+				array( 'in_footer' => true )
+			);           
+            wp_enqueue_script(
+				'angular-js',
+				Partyline_Utility::getJSBaseURL().'angular.min.js',
+				array(),
+				PARTYLINE_VERSION,
+				array( 'in_footer' => true )
+			);
         }
     }
 
@@ -386,9 +408,6 @@ class Partyline_Core
 		require_once(ABSPATH . 'wp-admin/includes/file.php');
 		require_once(ABSPATH . 'wp-admin/includes/image.php');
 
-		$debugging_message = array();
-		$message_recipient = 'adrian.ohagan@lina.org.au';
-
 		// Get the Twilio settings.
 		$settings 		= Partyline_Utility::getSettings();
 		$account_sid 	= $settings->twilio_account_sid;
@@ -410,12 +429,8 @@ class Partyline_Core
 
 		$file_body = wp_remote_retrieve_body( $response );
 		$filename = basename( $image_url );
-		
-		$debugging_message['filename'] = print_r( $filename, true );
 
 		$temp_file = tempnam( sys_get_temp_dir(), 'wp_remote_download_' );
-		
-		$debugging_message['temp_file'] = print_r( $temp_file, true );
 
 		file_put_contents( $temp_file, $file_body );
 
@@ -425,18 +440,11 @@ class Partyline_Core
 			'name' => $filename . '.jpeg',
 			'tmp_name' => $temp_file,
 		);
-		$debugging_message['file_array'] = print_r( $file_array, true );
 
 		$sideload_result = wp_handle_sideload( $file_array, array( 'test_form' => false ) );
 
-
-		$debugging_message['sideload_result'] = print_r( $sideload_result, true );
-
 		if ( is_wp_error( $sideload_result ) ) {
 			error_log( 'Error sideloading file: ' . $sideload_result->get_error_message() );
-			
-			$debugging_message['Error sideloading file'] = $sideload_result->get_error_message() ;
-
 		} else {
 			// File successfully downloaded and saved
 			$file_path = $sideload_result['file'];
@@ -450,10 +458,6 @@ class Partyline_Core
 				'post_mime_type' => $sideload_result['type']
 			), $sideload_result['file'], 0 );
 
-			$debugging_message['attachment_id'] = $attachment_id;
-	
-			wp_mail( $message_recipient, 'Twilio debugging', print_r( $debugging_message, true ) );
-			
 			self::regenerate_image_thumbnails($attachment_id);
 
 			// Clean up the temporary file.
@@ -464,28 +468,28 @@ class Partyline_Core
 		return $attachment_id;
 	}
 
-	public function regenerate_image_thumbnails( $attachment_id ) {
-    // Ensure the image.php file is loaded.
-    require_once(ABSPATH . 'wp-admin/includes/image.php');
+	public static function regenerate_image_thumbnails( $attachment_id ) {
+		// Ensure the image.php file is loaded.
+		require_once(ABSPATH . 'wp-admin/includes/image.php');
+		
+		// Get the path to the original file.
+		$filepath = get_attached_file( $attachment_id );
+		
+		if ( !$filepath ) {
+			return new WP_Error( 'regenerate_error', 'File path not found for attachment ID: ' . $attachment_id );
+		}
     
-    // Get the path to the original file.
-    $filepath = get_attached_file( $attachment_id );
-    
-    if ( !$filepath ) {
-        return new WP_Error( 'regenerate_error', 'File path not found for attachment ID: ' . $attachment_id );
-    }
-    
-    // Generate the new metadata, which also creates the image files.
-    $attach_data = wp_generate_attachment_metadata( $attachment_id, $filepath );
-    
-    // Update the database with the new metadata.
-    if ($attach_data) {
-        wp_update_attachment_metadata( $attachment_id, $attach_data );
-        return true;
-    } else {
-        return new WP_Error( 'regenerate_error', 'Failed to generate new attachment metadata.' );
-    }
-}
+		// Generate the new metadata, which also creates the image files.
+		$attach_data = wp_generate_attachment_metadata( $attachment_id, $filepath );
+		
+		// Update the database with the new metadata.
+		if ($attach_data) {
+			wp_update_attachment_metadata( $attachment_id, $attach_data );
+			return true;
+		} else {
+			return new WP_Error( 'regenerate_error', 'Failed to generate new attachment metadata.' );
+		}
+	}
 }
 
 endif;
