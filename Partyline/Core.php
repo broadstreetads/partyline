@@ -12,6 +12,7 @@ require_once dirname(__FILE__) . '/Cache.php';
 require_once dirname(__FILE__) . '/Config.php';
 require_once dirname(__FILE__) . '/Benchmark.php';
 require_once dirname(__FILE__) . '/Log.php';
+require_once dirname(__FILE__) . '/Twilio.php';
 require_once dirname(__FILE__) . '/Utility.php';
 require_once dirname(__FILE__) . '/View.php';
 require_once dirname(__FILE__) . '/Exception.php';
@@ -199,10 +200,9 @@ class Partyline_Core
      */
     public function catchTwilioWebhook()
     {
+        $twilio = Partyline_Twilio::fromPost();
         // Check if the request has 'partyline_twilio_webhook' parameter.
-        if ( isset( $_GET['partyline_twilio_webhook'] ) && $_GET['partyline_twilio_webhook'] == '1' ) {
-
-            Partyline_Log::add('debug', 'Raw Twilio POST body: ' . file_get_contents('php://input'));
+        if ($twilio) {
             
             require_once(ABSPATH . 'wp-admin/includes/image.php');
             require_once(ABSPATH . 'wp-admin/includes/file.php');
@@ -211,19 +211,8 @@ class Partyline_Core
             $settings = Partyline_Utility::getSettings();
             $selected_category = isset($settings->partyline_category) ? $settings->partyline_category : 0;
 
-            // Extract message content from Twilio's data.
-            $message_content = isset($_POST['Body']) ? $_POST['Body'] : '';
-
-            // Check for media (images).
-            $image_url = isset($_POST['MediaUrl0']) ? esc_url_raw($_POST['MediaUrl0']) : '';
-            $image_id = '';
-
-            $from = $_POST['From'];
-
-            Partyline_Log::add('debug', "Twilio webhook received from: " . $from);
-
             // Find user by phone number
-            $user = self::getUserByPhoneNumber($from);
+            $user = self::getUserByPhoneNumber($twilio->from);
             $author_name = 'Anonymous Partyliner';
             $author_id = 1; // Default to admin
 
@@ -232,25 +221,35 @@ class Partyline_Core
                 $author_id = $user->ID;
             }
 
-            if ($image_url) {
-                // Download and attach the image to a post.
-                // $image_id = media_sideload_image($image_url . '?ext=.jpeg', 0, 'Twilio Image Attachment', 'id');
-				// Replaced with the below:
-				$image_id = self::sideload_authenticated_image( $image_url );
-            }
-
             $post_content = '';
 
-            if ($image_id && !is_wp_error($image_id)) {
-                $post_content .= wp_get_attachment_image($image_id, 'full');
+            // Sideload all image attachments and collect IDs
+            $attachment_ids = array();
+            if (!empty($twilio->attachments) && is_array($twilio->attachments)) {
+                foreach ($twilio->attachments as $attachment) {
+                    $attachment_url = isset($attachment->url) ? $attachment->url : '';
+                    $attachment_type = isset($attachment->type) ? $attachment->type : '';
+
+                    if ($attachment_url && strpos($attachment_type, 'image/') === 0) {
+                        $attachment_id = Partyline_Utility::sideloadAuthenticatedImage($attachment_url, $attachment_type);
+                        if ($attachment_id && !is_wp_error($attachment_id)) {
+                            $attachment_ids[] = $attachment_id;
+                            $post_content .= wp_get_attachment_image($attachment_id, 'full');
+                        } else {
+                            Partyline_Log::add('debug', 'Failed to sideload media: ' . print_r($attachment_id, true));
+                        }
+                    }
+                }
             }
 
-            $components = Partyline_Utility::parseContent($message_content);
+            // Parse and append message body
+            $components = Partyline_Utility::parseContent($twilio->body);
             $post_content .= wpautop($components['body']);
 
             $post_content .= '<p><em>Submitted by ' . $author_name . '</em></p>';
 
-            if ($message_content) {
+            // Only create a post if we have content or attachments
+            if (!empty(trim($twilio->body)) || !empty($attachment_ids)) {
                 // Create a new post.
                 $post_id = wp_insert_post(array(
                     'post_title'    => $components['title'],
@@ -260,18 +259,21 @@ class Partyline_Core
                     'post_category' => $selected_category ? array($selected_category) : array()
                 ));
 
-                if ($image_id && !is_wp_error($image_id)) {
-                    set_post_thumbnail($post_id, $image_id);
+                // Set the first image attachment as the featured image
+                if (!empty($attachment_ids)) {
+                    set_post_thumbnail($post_id, $attachment_ids[0]);
                 }
 
-                Partyline_Utility::sendNotificationEmail($post_id, $from, $post_content, $components['title'], $author_name);
+                Partyline_Utility::sendNotificationEmail($post_id, $twilio->from, $post_content, $components['title'], $author_name);
             }
 
-            // Send a response back to Twilio.
-            header('Content-Type: application/xml');
-            echo "<Response><Message>Thank You! Not every post will always make it but if it's quality and authentic we'll sure as heck try!</Message></Response>";
+            $twilio->sendResponse("Thank You! Not every post will always make it but if it's quality and authentic we'll sure as heck try!");
             exit;
         }
+    }
+
+    public function sendErrorEmail($message) {
+        
     }
 
     /**
@@ -376,116 +378,6 @@ class Partyline_Core
             update_user_meta($user_id, 'partyline_phone', sanitize_text_field($_POST['partyline_phone']));
         }
     }
-
-	/**
-	 * 
-	 * @param string The URL of the image to be downloaded and moved to the Media Library.
-	 */
-	public static function sideload_authenticated_image( $image_url ) {
-
-		require_once(ABSPATH . 'wp-admin/includes/file.php');
-		require_once(ABSPATH . 'wp-admin/includes/image.php');
-
-		$debugging_message = array();
-		$message_recipient = 'adrian.ohagan@lina.org.au';
-
-		// Get the Twilio settings.
-		$settings 		= Partyline_Utility::getSettings();
-		$account_sid 	= $settings->twilio_account_sid;
-		$auth_token 	= $settings->twilio_auth_token;
-
-		$args = array(
-				'headers' => array(
-					'Authorization' => 'Basic ' . base64_encode($account_sid . ':' . $auth_token),
-				),
-				'filename' => $image_url
-			);
-
-		$response = wp_remote_get( $image_url, $args );
-
-		if (is_wp_error($response)) {
-			wp_mail( $message_recipient, 'Twilio debugging error(response)', 'Error fetching remote image: ' . $response->get_error_message() );
-			return new WP_Error('sideload_authenticated_image', 'Error fetching remote image: ' . $response->get_error_message());
-		}
-
-		$file_body = wp_remote_retrieve_body( $response );
-		$filename = basename( $image_url );
-		
-		$debugging_message['filename'] = print_r( $filename, true );
-
-		$temp_file = tempnam( sys_get_temp_dir(), 'wp_remote_download_' );
-		
-		$debugging_message['temp_file'] = print_r( $temp_file, true );
-
-		file_put_contents( $temp_file, $file_body );
-
-		// Sideload the file into WordPress media library or desired location
-		// @to-do - dynamically generate the file extension
-		$file_array = array(
-			'name' => $filename . '.jpeg',
-			'tmp_name' => $temp_file,
-		);
-		$debugging_message['file_array'] = print_r( $file_array, true );
-
-		$sideload_result = wp_handle_sideload( $file_array, array( 'test_form' => false ) );
-
-
-		$debugging_message['sideload_result'] = print_r( $sideload_result, true );
-
-		if ( is_wp_error( $sideload_result ) ) {
-			error_log( 'Error sideloading file: ' . $sideload_result->get_error_message() );
-			
-			$debugging_message['Error sideloading file'] = $sideload_result->get_error_message() ;
-
-		} else {
-			// File successfully downloaded and saved
-			$file_path = $sideload_result['file'];
-			$file_url = $sideload_result['url'];
-
-			// Insert the image into the media library database.
-			$attachment_id = wp_insert_attachment(array(
-				'post_title' => sanitize_file_name(basename($image_url)),
-				'post_content' => '',
-				'post_status' => 'inherit',
-				'post_mime_type' => $sideload_result['type']
-			), $sideload_result['file'], 0 );
-
-			$debugging_message['attachment_id'] = $attachment_id;
-	
-			wp_mail( $message_recipient, 'Twilio debugging', print_r( $debugging_message, true ) );
-			
-			self::regenerate_image_thumbnails($attachment_id);
-
-			// Clean up the temporary file.
-			@unlink( $temp_file );
-
-		}
-
-		return $attachment_id;
-	}
-
-	public function regenerate_image_thumbnails( $attachment_id ) {
-    // Ensure the image.php file is loaded.
-    require_once(ABSPATH . 'wp-admin/includes/image.php');
-    
-    // Get the path to the original file.
-    $filepath = get_attached_file( $attachment_id );
-    
-    if ( !$filepath ) {
-        return new WP_Error( 'regenerate_error', 'File path not found for attachment ID: ' . $attachment_id );
-    }
-    
-    // Generate the new metadata, which also creates the image files.
-    $attach_data = wp_generate_attachment_metadata( $attachment_id, $filepath );
-    
-    // Update the database with the new metadata.
-    if ($attach_data) {
-        wp_update_attachment_metadata( $attachment_id, $attach_data );
-        return true;
-    } else {
-        return new WP_Error( 'regenerate_error', 'Failed to generate new attachment metadata.' );
-    }
-}
 }
 
 endif;

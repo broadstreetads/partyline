@@ -461,6 +461,34 @@ class Partyline_Utility
     }
 
     /**
+     * Get notification emails in the Partyline settings
+     */
+    public static function getNotificationEmails()
+    {
+        $settings = self::getSettings();
+        $email_notifications = isset($settings->email_notifications) ? $settings->email_notifications : '';
+        
+        if (empty($email_notifications)) {
+            return [];
+        }
+
+        return array_filter(array_map('trim', explode("\n", $email_notifications)));
+    }
+
+    public static function sendErrorEmail($message)
+    {
+        $emails = self::getNotificationEmails();
+
+        if (empty($emails)) {
+            return;
+        }
+
+        $notification = "There has been an error in Partyline:\n\n\n$message";
+        
+        wp_mail($emails, 'Partyline Error', $notification, array('Content-Type: text/html; charset=UTF-8'));
+    }
+
+    /**
      * Send notification email for new posts
      * @param int $post_id The post ID
      * @param string $from The sender phone number
@@ -469,15 +497,8 @@ class Partyline_Utility
      */
     public static function sendNotificationEmail($post_id, $from, $post_content, $title, $author_name)
     {
-        $settings = self::getSettings();
-        $email_notifications = isset($settings->email_notifications) ? $settings->email_notifications : '';
-        
-        if (empty($email_notifications)) {
-            return;
-        }
+        $emails = self::getNotificationEmails();
 
-        $emails = array_filter(array_map('trim', explode("\n", $email_notifications)));
-        
         if (empty($emails)) {
             return;
         }
@@ -486,5 +507,138 @@ class Partyline_Utility
         $notification = "A Partyline post has been sent in from $author_name ($from): {$edit_link}\n\n\n{$post_content}\n\n{$title}";
         
         wp_mail($emails, 'New Partyline submission', $notification, array('Content-Type: text/html; charset=UTF-8'));
+    }
+
+    /**
+     * Download a Twilio-authenticated image and add it to the Media Library
+     * @param string $image_url The Twilio media URL
+     * @param string $media_type The MIME type from Twilio (e.g., image/jpeg)
+     * @return int|WP_Error Attachment ID on success or WP_Error on failure
+     */
+    public static function sideloadAuthenticatedImage($image_url, $media_type)
+    {
+		require_once(ABSPATH . 'wp-admin/includes/file.php');
+		require_once(ABSPATH . 'wp-admin/includes/image.php');
+
+		// Get the Twilio settings.
+		$settings 		= self::getSettings();
+		$account_sid 	= $settings->twilio_account_sid;
+		$auth_token 	= $settings->twilio_auth_token;
+
+		$args = array(
+				'headers' => array(
+					'Authorization' => 'Basic ' . base64_encode($account_sid . ':' . $auth_token),
+				),
+				'filename' => $image_url
+			);
+
+		$response = wp_remote_get( $image_url . '?ext=.jpeg', $args );
+
+		if (is_wp_error($response)) {
+			wp_mail( $message_recipient, 'Twilio debugging error(response)', 'Error fetching remote image: ' . $response->get_error_message() );
+			return new WP_Error('sideload_authenticated_image', 'Error fetching remote image: ' . $response->get_error_message());
+		}
+
+		$file_body = wp_remote_retrieve_body( $response );
+		$filename = basename( $image_url );
+
+		$temp_file = tempnam( sys_get_temp_dir(), 'wp_remote_download_' );
+
+		file_put_contents( $temp_file, $file_body );
+
+		// Sideload the file into WordPress media library or desired location
+		// @to-do - dynamically generate the file extension
+		$file_array = array(
+			'name' => $filename . '.jpeg',
+			'tmp_name' => $temp_file,
+		);
+
+		$sideload_result = wp_handle_sideload( $file_array, array( 'test_form' => false ) );
+
+		if ( is_wp_error( $sideload_result ) ) {
+			error_log( 'Error sideloading file: ' . $sideload_result->get_error_message() );
+		} else {
+			// File successfully downloaded and saved
+			$file_path = $sideload_result['file'];
+			$file_url = $sideload_result['url'];
+
+            Partyline_Log::add('debug', 'Sideloaded file path: ' . $file_path);
+            Partyline_Log::add('debug', 'Sideloaded file URL: ' . $file_url);
+            Partyline_Log::add('debug', 'Sideloaded file type: ' . $sideload_result['type']);
+
+			// Insert the image into the media library database.
+			$attachment_id = wp_insert_attachment(array(
+				'post_title' => sanitize_file_name(basename($image_url)),
+				'post_content' => '',
+				'post_status' => 'inherit',
+				'post_mime_type' => $sideload_result['type']
+			), $sideload_result['file'], 0 );
+
+			self::regenerateImageThumbnails($attachment_id);
+
+			// Clean up the temporary file.
+			@unlink( $temp_file );
+		}
+
+		return $attachment_id;
+    }
+
+    public static function regenerateImageThumbnails( $attachment_id ) {
+		// Ensure the image.php file is loaded.
+		require_once(ABSPATH . 'wp-admin/includes/image.php');
+		
+		// Get the path to the original file.
+		$filepath = get_attached_file( $attachment_id );
+		
+		if ( !$filepath ) {
+			return new WP_Error( 'regenerate_error', 'File path not found for attachment ID: ' . $attachment_id );
+		}
+    
+		// Generate the new metadata, which also creates the image files.
+		$attach_data = wp_generate_attachment_metadata( $attachment_id, $filepath );
+		
+		// Update the database with the new metadata.
+		if ($attach_data) {
+			wp_update_attachment_metadata( $attachment_id, $attach_data );
+			return true;
+		} else {
+			return new WP_Error( 'regenerate_error', 'Failed to generate new attachment metadata.' );
+		}
+	}
+
+    /**
+     * Map MIME type to preferred file extension
+     * @param string $mime
+     * @return string
+     */
+    private static function getExtensionFromMime($mime)
+    {
+        Partyline_Log::add('debug', "Getting extension for MIME type: $mime");
+        
+        $mime = is_string($mime) ? strtolower(trim($mime)) : '';
+        $map = array(
+            'image/jpeg' => 'jpeg',
+            'image/jpg'  => 'jpeg',
+            'image/pjpeg'=> 'jpeg',
+            'image/png'  => 'png',
+            'image/gif'  => 'gif',
+            'image/webp' => 'webp',
+            'image/heic' => 'heic',
+            'image/heif' => 'heif',
+        );
+
+        if (isset($map[$mime])) {
+            Partyline_Log::add('debug', "Found mapped extension: {$map[$mime]}");
+            return $map[$mime];
+        }
+
+        if (strpos($mime, 'image/') === 0) {
+            $ext = substr($mime, strlen('image/'));
+            Partyline_Log::add('debug', "Using MIME subtype as extension: $ext");
+            return $ext;
+        }
+
+        Partyline_Log::add('debug', "No valid extension found, using default: bin");
+        return 'bin';
     }
 }
