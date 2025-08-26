@@ -12,7 +12,7 @@ Text Domain: bspl
 Domain Path: /languages
 */
 
-define('PARTYLINE_VERSION', '1.0.0');
+define('PARTYLINE_VERSION', '1.0.2');
 
 require dirname(__FILE__) . '/Partyline/Core.php';
 

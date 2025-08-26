@@ -117,13 +117,35 @@ class Partyline_Core
      */
     public function adminInitCallback()
     {
-        wp_enqueue_style('partyline-admin-styles', Partyline_Utility::getCSSBaseURL() . 'admin.css?v='. PARTYLINE_VERSION);
+        wp_enqueue_style(
+			'partyline-admin-styles', 
+			Partyline_Utility::getCSSBaseURL() . 'admin.css',
+			array(),
+			PARTYLINE_VERSION
+			);
         # Only register javascript and css if the Broadstreet admin page is loading
         if(isset($_SERVER['QUERY_STRING']) && strstr($_SERVER['QUERY_STRING'], 'Partyline'))
         {
-            wp_enqueue_style ('partyline-styles',  Partyline_Utility::getCSSBaseURL() . 'broadstreet.css?v='. PARTYLINE_VERSION);            
-            wp_enqueue_script('partyline-main'  ,  Partyline_Utility::getJSBaseURL().'broadstreet.js?v='. PARTYLINE_VERSION);
-            wp_enqueue_script('angular-js', Partyline_Utility::getJSBaseURL().'angular.min.js?v='. PARTYLINE_VERSION);
+			wp_enqueue_style(
+				'partyline-styles', 
+				Partyline_Utility::getCSSBaseURL() . 'broadstreet.css',
+				array(),
+				PARTYLINE_VERSION
+			);            
+            wp_enqueue_script(
+				'partyline-main',
+				Partyline_Utility::getJSBaseURL().'broadstreet.js',
+				array(),
+				PARTYLINE_VERSION,
+				array( 'in_footer' => true )
+			);           
+            wp_enqueue_script(
+				'angular-js',
+				Partyline_Utility::getJSBaseURL().'angular.min.js',
+				array(),
+				PARTYLINE_VERSION,
+				array( 'in_footer' => true )
+			);
         }
     }
 

@@ -32,10 +32,10 @@
                     <div class="partyline-posts-list">
                         <?php foreach ($posts as $post): ?>
                             <div class="partyline-post-item">
-                                <a href="<?php echo get_edit_post_link($post->ID); ?>" class="partyline-post-link">
+                                <a href="<?php echo esc_url( get_edit_post_link($post->ID) ); ?>" class="partyline-post-link">
                                     <div class="post-title"><?php echo esc_html($post->post_title); ?></div>
                                     <div class="post-meta">
-                                        <span class="post-date"><?php echo get_the_date('M j, Y g:i A', $post->ID); ?></span>
+                                        <span class="post-date"><?php echo esc_html( get_the_date('M j, Y g:i A', $post->ID) ); ?></span>
                                         <span class="post-status">Draft</span>
                                     </div>
                                 </a>
