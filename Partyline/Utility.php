@@ -510,78 +510,213 @@ class Partyline_Utility
     }
 
     /**
-     * Download a Twilio-authenticated image and add it to the Media Library
-     * @param string $image_url The Twilio media URL
-     * @param string $media_type The MIME type from Twilio (e.g., image/jpeg)
-     * @return int|WP_Error Attachment ID on success or WP_Error on failure
+     * Download a Twilio-hosted media item and add it to the Media Library.
+     * Handles accounts with/without "Enforce HTTP Auth on Media URLs".
+     *
+     * @param string $image_url   Twilio MediaUrlN (e.g., .../Messages/MM.../Media/ME...)
+     * @param string $media_type  MIME type from Twilio (e.g., image/jpeg). Optional but helpful.
+     * @return int|WP_Error       Attachment ID on success; WP_Error on failure
      */
-    public static function sideloadAuthenticatedImage($image_url, $media_type)
-    {
-		require_once(ABSPATH . 'wp-admin/includes/file.php');
-		require_once(ABSPATH . 'wp-admin/includes/image.php');
+    public static function sideloadAuthenticatedImage( $image_url, $media_type = '' ) {
+        Partyline_Log::add('debug', "Starting sideloadAuthenticatedImage for URL: $image_url with type: $media_type");
 
-		// Get the Twilio settings.
-		$settings 		= self::getSettings();
-		$account_sid 	= $settings->twilio_account_sid;
-		$auth_token 	= $settings->twilio_auth_token;
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+        require_once ABSPATH . 'wp-admin/includes/image.php';
 
-		$args = array(
-				'headers' => array(
-					'Authorization' => 'Basic ' . base64_encode($account_sid . ':' . $auth_token),
-				),
-				'filename' => $image_url
-			);
+        // Twilio creds
+        $settings     = self::getSettings();
+        $account_sid  = $settings->twilio_account_sid ?? '';
+        $auth_token   = $settings->twilio_auth_token ?? '';
 
-		$response = wp_remote_get( $image_url . '?ext=.jpeg', $args );
+        if ( empty($account_sid) || empty($auth_token) ) {
+            $msg = 'Twilio credentials are missing.';
+            Partyline_Log::add('error', $msg);
+            return new WP_Error('twilio_creds_missing', $msg);
+        }
 
-		if (is_wp_error($response)) {
-			wp_mail( $message_recipient, 'Twilio debugging error(response)', 'Error fetching remote image: ' . $response->get_error_message() );
-			return new WP_Error('sideload_authenticated_image', 'Error fetching remote image: ' . $response->get_error_message());
-		}
+        Partyline_Log::add('debug', "Using Twilio account SID: $account_sid");
 
-		$file_body = wp_remote_retrieve_body( $response );
-		$filename = basename( $image_url );
+        // --- Step 1: Request Twilio media URL with auth, but DO NOT follow redirects ---
+        $args1 = [
+            'headers'     => [ 'Authorization' => 'Basic ' . base64_encode($account_sid . ':' . $auth_token) ],
+            'timeout'     => 30,
+            'redirection' => 0, // critical: don’t forward Authorization to a different host
+        ];
 
-		$temp_file = tempnam( sys_get_temp_dir(), 'wp_remote_download_' );
+        Partyline_Log::add('debug', "Requesting Twilio media (no redirect follow): $image_url");
+        $resp1 = wp_remote_get( $image_url, $args1 );
 
-		file_put_contents( $temp_file, $file_body );
+        if ( is_wp_error($resp1) ) {
+            $msg = 'Error requesting Twilio media: ' . $resp1->get_error_message();
+            Partyline_Log::add('error', $msg);
+            return new WP_Error('twilio_media_request_failed', $msg);
+        }
 
-		// Sideload the file into WordPress media library or desired location
-		// @to-do - dynamically generate the file extension
-		$file_array = array(
-			'name' => $filename . '.jpeg',
-			'tmp_name' => $temp_file,
-		);
+        $code1 = wp_remote_retrieve_response_code($resp1);
+        Partyline_Log::add('debug', "First-hop response code: $code1");
 
-		$sideload_result = wp_handle_sideload( $file_array, array( 'test_form' => false ) );
+        $file_body   = '';
+        $contentType = '';
 
-		if ( is_wp_error( $sideload_result ) ) {
-			error_log( 'Error sideloading file: ' . $sideload_result->get_error_message() );
-		} else {
-			// File successfully downloaded and saved
-			$file_path = $sideload_result['file'];
-			$file_url = $sideload_result['url'];
+        if ( $code1 >= 300 && $code1 < 400 ) {
+            // Redirect expected — get the signed CDN URL.
+            $location = wp_remote_retrieve_header($resp1, 'location');
+            if ( empty($location) ) {
+                $msg = 'Twilio returned a redirect without a Location header.';
+                Partyline_Log::add('error', $msg);
+                return new WP_Error('twilio_missing_location', $msg);
+            }
+            Partyline_Log::add('debug', "Following redirect to: $location");
 
-            Partyline_Log::add('debug', 'Sideloaded file path: ' . $file_path);
-            Partyline_Log::add('debug', 'Sideloaded file URL: ' . $file_url);
-            Partyline_Log::add('debug', 'Sideloaded file type: ' . $sideload_result['type']);
+            // --- Step 2: Fetch the redirected URL WITHOUT auth; allow further redirects ---
+            $args2 = [
+                'timeout'     => 30,
+                'redirection' => 5,
+                // No Authorization header here on purpose.
+            ];
+            $resp2 = wp_remote_get( $location, $args2 );
 
-			// Insert the image into the media library database.
-			$attachment_id = wp_insert_attachment(array(
-				'post_title' => sanitize_file_name(basename($image_url)),
-				'post_content' => '',
-				'post_status' => 'inherit',
-				'post_mime_type' => $sideload_result['type']
-			), $sideload_result['file'], 0 );
+            if ( is_wp_error($resp2) ) {
+                $msg = 'Error fetching redirected media: ' . $resp2->get_error_message();
+                Partyline_Log::add('error', $msg);
+                return new WP_Error('twilio_media_fetch_failed', $msg);
+            }
 
-			self::regenerateImageThumbnails($attachment_id);
+            $code2 = wp_remote_retrieve_response_code($resp2);
+            Partyline_Log::add('debug', "Second-hop response code: $code2");
+            if ( $code2 < 200 || $code2 >= 300 ) {
+                $msg = 'Unexpected response code fetching media: ' . $code2;
+                Partyline_Log::add('error', $msg);
+                return new WP_Error('twilio_media_bad_status', $msg);
+            }
 
-			// Clean up the temporary file.
-			@unlink( $temp_file );
-		}
+            $file_body   = wp_remote_retrieve_body($resp2);
+            $contentType = wp_remote_retrieve_header($resp2, 'content-type');
 
-		return $attachment_id;
+        } elseif ( $code1 >= 200 && $code1 < 300 ) {
+            // Rare but possible: body returned directly from Twilio
+            $file_body   = wp_remote_retrieve_body($resp1);
+            $contentType = wp_remote_retrieve_header($resp1, 'content-type');
+        } elseif ( $code1 === 401 || $code1 === 403 ) {
+            // Auth failed — surface a clear error
+            $msg = "Unauthorized fetching Twilio media (HTTP $code1). Check SID/Auth Token.";
+            Partyline_Log::add('error', $msg);
+            return new WP_Error('twilio_media_unauthorized', $msg);
+        } else {
+            $msg = "Unexpected first-hop status code from Twilio: $code1";
+            Partyline_Log::add('error', $msg);
+            return new WP_Error('twilio_media_unexpected_status', $msg);
+        }
+
+        if ( empty($file_body) ) {
+            $msg = 'Downloaded media body is empty.';
+            Partyline_Log::add('error', $msg);
+            return new WP_Error('twilio_media_empty', $msg);
+        }
+
+        // --- Determine final MIME type & extension ---
+        if ( empty($contentType) && !empty($media_type) ) {
+            $contentType = $media_type; // fallback to provided type
+        }
+        $contentType = is_string($contentType) ? trim(explode(';', $contentType)[0]) : '';
+
+        $ext_map = [
+            'image/jpeg' => 'jpg',
+            'image/jpg'  => 'jpg',
+            'image/png'  => 'png',
+            'image/gif'  => 'gif',
+            'image/webp' => 'webp',
+            'image/heic' => 'heic',
+            'video/mp4'  => 'mp4',
+            'audio/mpeg' => 'mp3',
+        ];
+        $ext = $ext_map[$contentType] ?? '';
+
+        // Use the last path segment of the Media URL as a base; append extension.
+        $base = sanitize_file_name( basename( parse_url($image_url, PHP_URL_PATH) ?: 'twilio_media' ) );
+        if ( $ext && !preg_match('/\.' . preg_quote($ext, '/') . '$/i', $base) ) {
+            $filename = $base . '.' . $ext;
+        } else {
+            $filename = $base; // last resort
+        }
+
+        Partyline_Log::add('debug', "Resolved filename: $filename (MIME: $contentType)");
+
+        // --- Write to a temp file ---
+        $temp_file = tempnam( sys_get_temp_dir(), 'wp_twilio_media_' );
+        if ( $temp_file === false ) {
+            $msg = 'Failed to create temporary file.';
+            Partyline_Log::add('error', $msg);
+            return new WP_Error('tempfile_create_failed', $msg);
+        }
+
+        $bytes = file_put_contents( $temp_file, $file_body );
+        Partyline_Log::add('debug', "Wrote $bytes bytes to temporary file: $temp_file");
+
+        if ( $bytes === false || $bytes === 0 ) {
+            @unlink($temp_file);
+            $msg = 'Failed writing media to temporary file.';
+            Partyline_Log::add('error', $msg);
+            return new WP_Error('tempfile_write_failed', $msg);
+        }
+
+        // --- Sideload into Media Library ---
+        $file_array = [
+            'name'     => $filename,
+            'tmp_name' => $temp_file,
+        ];
+
+        $overrides = [
+            'test_form' => false,
+            'type'      => $contentType ?: null, // let WP sniff if unknown
+        ];
+
+        Partyline_Log::add('debug', "Attempting to sideload file: $filename");
+        $sideload = wp_handle_sideload( $file_array, $overrides );
+
+        if ( is_wp_error($sideload) ) {
+            @unlink($temp_file);
+            $msg = 'Error sideloading file: ' . $sideload->get_error_message();
+            Partyline_Log::add('error', $msg);
+            return new WP_Error('sideload_failed', $msg);
+        }
+
+        $file_path = $sideload['file'] ?? '';
+        $file_url  = $sideload['url']  ?? '';
+        $file_type = $sideload['type'] ?? $contentType;
+
+        Partyline_Log::add('debug', 'Sideloaded file path: ' . $file_path);
+        Partyline_Log::add('debug', 'Sideloaded file URL: ' . $file_url);
+        Partyline_Log::add('debug', 'Sideloaded file type: ' . $file_type);
+
+        // Insert attachment
+        $attach = [
+            'post_title'     => sanitize_file_name( $base ),
+            'post_content'   => '',
+            'post_status'    => 'inherit',
+            'post_mime_type' => $file_type,
+        ];
+
+        Partyline_Log::add('debug', "Inserting attachment into media library");
+        $attachment_id = wp_insert_attachment( $attach, $file_path, 0 );
+
+        if ( is_wp_error($attachment_id) ) {
+            $msg = 'Failed to insert attachment: ' . $attachment_id->get_error_message();
+            Partyline_Log::add('error', $msg);
+            return new WP_Error('attachment_insert_failed', $msg);
+        }
+
+        // Generate metadata / thumbnails
+        self::regenerateImageThumbnails( $attachment_id );
+
+        // Cleanup temp file
+        @unlink( $temp_file );
+        Partyline_Log::add('debug', "Cleaned up temporary file: $temp_file");
+
+        Partyline_Log::add('debug', "sideloadAuthenticatedImage completed, returning attachment ID: $attachment_id");
+        return (int) $attachment_id;
     }
+
 
     public static function regenerateImageThumbnails( $attachment_id ) {
 		// Ensure the image.php file is loaded.
@@ -605,40 +740,4 @@ class Partyline_Utility
 			return new WP_Error( 'regenerate_error', 'Failed to generate new attachment metadata.' );
 		}
 	}
-
-    /**
-     * Map MIME type to preferred file extension
-     * @param string $mime
-     * @return string
-     */
-    private static function getExtensionFromMime($mime)
-    {
-        Partyline_Log::add('debug', "Getting extension for MIME type: $mime");
-        
-        $mime = is_string($mime) ? strtolower(trim($mime)) : '';
-        $map = array(
-            'image/jpeg' => 'jpeg',
-            'image/jpg'  => 'jpeg',
-            'image/pjpeg'=> 'jpeg',
-            'image/png'  => 'png',
-            'image/gif'  => 'gif',
-            'image/webp' => 'webp',
-            'image/heic' => 'heic',
-            'image/heif' => 'heif',
-        );
-
-        if (isset($map[$mime])) {
-            Partyline_Log::add('debug', "Found mapped extension: {$map[$mime]}");
-            return $map[$mime];
-        }
-
-        if (strpos($mime, 'image/') === 0) {
-            $ext = substr($mime, strlen('image/'));
-            Partyline_Log::add('debug', "Using MIME subtype as extension: $ext");
-            return $ext;
-        }
-
-        Partyline_Log::add('debug', "No valid extension found, using default: bin");
-        return 'bin';
-    }
 }
