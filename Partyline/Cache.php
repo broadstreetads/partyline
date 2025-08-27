@@ -50,7 +50,15 @@ class Partyline_Cache
         $value = @json_decode($value);
 
         # Uh oh, couldn't unserialize
-        if(!is_object($value)) throw new Exception("$key value wasn't decodable.");
+        if(!is_object($value)) {
+            throw new Exception(
+                sprintf(
+                    /* translators: %s: cache key */
+                    esc_html__('%s value wasn\'t decodable.', 'partyline'),
+                    esc_html($key)
+                )
+            );
+        }
 
         $expire = $value->expire;
         $value  = $value->value;

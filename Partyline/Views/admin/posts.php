@@ -14,7 +14,7 @@
                         </p>
                         <ol>
                             <?php foreach($errors as $error): ?>
-                                <li><?php echo $error; ?></li>
+                                <li><?php echo esc_html($error); ?></li>
                             <?php endforeach; ?>
                         </ol>
                     </div>

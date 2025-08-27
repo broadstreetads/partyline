@@ -25,7 +25,13 @@ class Partyline_View
         if(!file_exists($file))
         {
             Partyline_Log::add('fatal', "View '$file' was not found");
-            throw new Exception("View '$file' was not found");
+            throw new Exception(
+                sprintf(
+                    /* translators: %s: file path */
+                    esc_html__('View %s was not found', 'partyline'),
+                    esc_html($file)
+                )
+            );
         }
 
         # Extract the variables into the global scope so the views can use them

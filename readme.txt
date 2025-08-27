@@ -1,25 +1,14 @@
 === Partyline by Broadstreet ===
 Contributors: katzgrau
 Donate link: https://broadstreetads.com/
-Tags: twilio, sms, community, local news, chatgpt, openai, user generated content
+Tags: community, local news, ai, sms, user generated content
 Requires at least: 5.0
 Tested up to: 6.8
-Stable tag: 1.0.2
+Stable tag: 1.1.0
 License: GPLv2
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 Local news is the original social media. Let your community share tell its side of the story with Partyline.
-
-== Changelog ==
-= 1.0.1 =
-* ENHANCEMENT: Tightened up conditional checks on a number of variables
-* ENHANCEMENT: Added server-side authentication to Twilio image retrieval
-* ENHANCEMENT: Added Twilio-specific settings to the Admin settings page
-* ENHANCEMENT: Enabled generation of thumbnails based on Twilio-supplied image
-
-= 1.0.2 =
-* ENHANCEMENT: Applied escaped outputs as per WordPress Coding Standards
-* ENHANCEMENT: Tightened up enqueue scripts
 
 == Description ==
 
@@ -79,10 +68,20 @@ You can also view all users with a Partyline phone number by going to **Partylin
 
 == Changelog ==
 
+= 1.1.0 =
+* ENHANCEMENT: Support multiple image attachments
+* ENHANCEMENT: Added fallback for Twilio images that don't require authentication
+* ENHANCEMENT: Refactor code
+
+= 1.0.2 =
+* ENHANCEMENT: Applied escaped outputs as per WordPress Coding Standards
+* ENHANCEMENT: Tightened up enqueue scripts
+
+= 1.0.1 =
+* ENHANCEMENT: Tightened up conditional checks on a number of variables
+* ENHANCEMENT: Added server-side authentication to Twilio image retrieval
+* ENHANCEMENT: Added Twilio-specific settings to the Admin settings page
+* ENHANCEMENT: Enabled generation of thumbnails based on Twilio-supplied image
+
 = 1.0.0 =
 * Initial public release.
-
-== Upgrade Notice ==
-
-= 1.0.0 =
-* Initial release. 

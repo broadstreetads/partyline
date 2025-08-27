@@ -76,6 +76,7 @@ class Partyline_Twilio
         // Send a response back to Twilio.
         header('Content-Type: application/xml');
         $sanitized_message = htmlspecialchars($message, ENT_XML1 | ENT_QUOTES, 'UTF-8');
+        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
         echo "<Response><Message>{$sanitized_message}</Message></Response>";
     }
 }

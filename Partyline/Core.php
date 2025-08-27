@@ -136,15 +136,13 @@ class Partyline_Core
 				'partyline-main',
 				Partyline_Utility::getJSBaseURL().'broadstreet.js',
 				array(),
-				PARTYLINE_VERSION,
-				array( 'in_footer' => true )
+				PARTYLINE_VERSION
 			);           
             wp_enqueue_script(
 				'angular-js',
 				Partyline_Utility::getJSBaseURL().'angular.min.js',
 				array(),
-				PARTYLINE_VERSION,
-				array( 'in_footer' => true )
+				PARTYLINE_VERSION
 			);
         }
     }

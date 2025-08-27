@@ -25,7 +25,7 @@ class Partyline_Config
 
         $config['log'] = array (
 
-            'level'     => Partyline_Log::DEBUG,
+            'level'     => Partyline_Log::OFF,
             'directory' => dirname(__FILE__) . '/Logs'
 
         );

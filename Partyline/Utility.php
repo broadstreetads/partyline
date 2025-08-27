@@ -251,7 +251,7 @@ class Partyline_Utility
 
     public static function toTime($time)
     {
-        return date("g:i a", strtotime($time));
+        return gmdate("g:i a", strtotime($time));
     }
 
     /**
@@ -454,7 +454,7 @@ class Partyline_Utility
             $decoded_response = json_decode($body, true);
             return trim(trim($decoded_response['choices'][0]['message']['content']), "\"");
         } else {
-            Partyline_Log::add('error', "GPT API call failed: " . print_r($response, true));
+            Partyline_Log::add('error', "GPT API call failed: " . wp_json_encode($response));
         }
 
         return $default;
@@ -633,7 +633,7 @@ class Partyline_Utility
         $ext = $ext_map[$contentType] ?? '';
 
         // Use the last path segment of the Media URL as a base; append extension.
-        $base = sanitize_file_name( basename( parse_url($image_url, PHP_URL_PATH) ?: 'twilio_media' ) );
+        $base = sanitize_file_name( basename( wp_parse_url($image_url, PHP_URL_PATH) ?: 'twilio_media' ) );
         if ( $ext && !preg_match('/\.' . preg_quote($ext, '/') . '$/i', $base) ) {
             $filename = $base . '.' . $ext;
         } else {
@@ -654,7 +654,7 @@ class Partyline_Utility
         Partyline_Log::add('debug', "Wrote $bytes bytes to temporary file: $temp_file");
 
         if ( $bytes === false || $bytes === 0 ) {
-            @unlink($temp_file);
+            @wp_delete_file($temp_file);
             $msg = 'Failed writing media to temporary file.';
             Partyline_Log::add('error', $msg);
             return new WP_Error('tempfile_write_failed', $msg);
@@ -675,7 +675,7 @@ class Partyline_Utility
         $sideload = wp_handle_sideload( $file_array, $overrides );
 
         if ( is_wp_error($sideload) ) {
-            @unlink($temp_file);
+            @wp_delete_file($temp_file);
             $msg = 'Error sideloading file: ' . $sideload->get_error_message();
             Partyline_Log::add('error', $msg);
             return new WP_Error('sideload_failed', $msg);
@@ -710,7 +710,7 @@ class Partyline_Utility
         self::regenerateImageThumbnails( $attachment_id );
 
         // Cleanup temp file
-        @unlink( $temp_file );
+        @wp_delete_file( $temp_file );
         Partyline_Log::add('debug', "Cleaned up temporary file: $temp_file");
 
         Partyline_Log::add('debug', "sideloadAuthenticatedImage completed, returning attachment ID: $attachment_id");
