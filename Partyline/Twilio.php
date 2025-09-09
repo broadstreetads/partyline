@@ -17,8 +17,11 @@ class Partyline_Twilio
     
     public static function fromPost() {
         $twilio = null;
+        
+        $settings = Partyline_Utility::getSettings();
+        $partyline_key = $settings->partyline_key ?? '';
 
-        if ( isset( $_GET['partyline_twilio_webhook'] ) && $_GET['partyline_twilio_webhook'] == '1' ) {            
+        if ( isset( $_GET['partyline_twilio_webhook'] ) && $_GET['partyline_twilio_webhook'] === $partyline_key ) {
 
             Partyline_Log::add('debug', 'Raw Twilio POST body: ' . file_get_contents('php://input'));
 

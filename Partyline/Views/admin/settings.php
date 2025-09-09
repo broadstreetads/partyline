@@ -27,9 +27,24 @@
             <div class="box">
                 <div class="title"><span class="dashicons dashicons-admin-generic"></span> Partyline Settings</div>
                 <div class="content">
+                    <div class="option">
+                        <div class="control-label">
+                            <div class="name nomargin">
+                                Partyline Key
+                            </div>
+                            <div class="desc nomargin">
+                                This is a password that will be used to authenticate requests to the Partyline API.
+                            </div>
+                        </div>
+                        <div class="control-container">
+                            <input ng-model="data.settings.partyline_key" type="text" placeholder="" />
+                        </div>
+                    </div>
+                    <div class="clearfix"></div>
+                    <div class="break"></div>                    
                     <div class="webhook-notice">
                         <strong>Your Twilio Webhook URL is:</strong>
-                        <span id="webhook-url"><?php echo esc_url( home_url( '/?partyline_twilio_webhook=1' ) ); ?></span>
+                        <span id="webhook-url"><?php echo esc_url( home_url( '/' ) ); ?>?partyline_twilio_webhook={{data.settings.partyline_key}}</span>
                         <span class="copy-icon" onclick="copyToClipboard('#webhook-url')">
                             <span class="dashicons dashicons-admin-page"></span>
                         </span>
@@ -187,7 +202,10 @@
                    });
             }
 
-            console.log();
+            if (!$scope.data.settings.partyline_key) {
+                $scope.data.settings.partyline_key = Math.random().toString(36).substring(2, 15);
+                $scope.save();
+            }
         });
 
         window.copyToClipboard = function(element) {
