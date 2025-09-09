@@ -1,6 +1,6 @@
 <?php
 /*
-Plugin Name: Partyline by Broadstreet
+Plugin Name: Partyline
 Plugin URI:  https://broadstreetads.com/
 Description: Listens for a webhook callback from Twilio, reformats the body via ChatGPT, and saves it as a WordPress draft.
 Version:     1.1.0

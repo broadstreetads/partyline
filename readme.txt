@@ -1,4 +1,4 @@
-=== Partyline by Broadstreet ===
+=== Partyline ===
 Contributors: katzgrau
 Donate link: https://broadstreetads.com/
 Tags: community, local news, ai, sms, user generated content
