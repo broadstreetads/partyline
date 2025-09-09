@@ -1,5 +1,6 @@
 *.DS_Store
 Partyline/Logs/*.*
 Partyline/Test/*.*
-build/*.*
+dist/*.*
 deploy
+build
