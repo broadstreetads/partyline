@@ -28,7 +28,19 @@ class Partyline_Twilio
             $twilio = new Partyline_Twilio();
                         
             // Extract message content from Twilio's data.
-            $twilio->body = isset($_POST['Body']) ? $_POST['Body'] : '';
+            // Body — allow basic punctuation, strip tags
+            $twilio->body = isset($_POST['Body'])
+            ? sanitize_textarea_field( wp_unslash($_POST['Body']) )
+            : '';
+
+            // Phone numbers — plain text sanitizer is fine
+            $twilio->from = isset($_POST['From'])
+                ? sanitize_text_field( wp_unslash($_POST['From']) )
+                : '';
+
+            $twilio->to = isset($_POST['To'])
+                ? sanitize_text_field( wp_unslash($_POST['To']) )
+                : '';
 
             // Collect all media attachments from Twilio webhook
             $num_media = isset($_POST['NumMedia']) ? intval($_POST['NumMedia']) : 0;
@@ -51,9 +63,6 @@ class Partyline_Twilio
                     }
                 }
             }
-
-            $twilio->from = $_POST['From'];
-            $twilio->to = $_POST['To'];
         }
 
         Partyline_Log::add('debug', 'Parsed Twilio body: ' . print_r($twilio, true));
