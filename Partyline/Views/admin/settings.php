@@ -1,29 +1,33 @@
+<?php
+if (!defined('ABSPATH')) exit;
+?>
+
 <script>window.bs_bootstrap = <?php echo json_encode($data) ?>;</script>
 <div id="main" ng-app="bs_zones">
-      <?php Partyline_View::load('admin/global/header') ?>
-      <div class="left_column" ng-controller="ZoneCtrl">
-         <?php if($errors): ?>
-             <div class="box">
-                    <div class="shadow_column">
-                        <div class="title" style="">
-                            <span class="dashicons dashicons-warning"></span> Alerts
-                        </div>
-                        <div class="content">
-                            <p>
-                                Nice to have you! We've noticed some things you may want to take
-                                care of:
-                            </p>
-                            <ol>
-                                <?php foreach($errors as $error): ?>
-                                    <li><?php echo wp_kses_post( $error ); ?></li>
-                                <?php endforeach; ?>
-                            </ol>
-                        </div>
+    <?php Partyline_View::load('admin/global/header') ?>
+    <div class="left_column" ng-controller="ZoneCtrl">
+        <?php if($errors): ?>
+            <div class="box">
+                <div class="shadow_column">
+                    <div class="title" style="">
+                        <span class="dashicons dashicons-warning"></span> Alerts
                     </div>
-                    <div class="shadow_bottom"></div>
-             </div>
-         <?php endif; ?>
-          <div id="controls">
+                    <div class="content">
+                        <p>
+                            Nice to have you! We've noticed some things you may want to take
+                            care of:
+                        </p>
+                        <ol>
+                            <?php foreach($errors as $error): ?>
+                                <li><?php echo wp_kses_post( $error ); ?></li>
+                            <?php endforeach; ?>
+                        </ol>
+                    </div>
+                </div>
+                <div class="shadow_bottom"></div>
+            </div>
+        <?php endif; ?>
+        <div id="controls">
             <div class="box">
                 <div class="title"><span class="dashicons dashicons-admin-generic"></span> Partyline Settings</div>
                 <div class="content">
@@ -166,85 +170,9 @@
             <img src="<?php echo esc_url( Partyline_Utility::getImageBaseURL() . 'ajax-loader-bar.gif' ); ?>" alt="Loading Image"/>
             <span>{{loadingMessage}}</span>
         </div>
-      </div>
-      <div class="right_column">
-          <?php Partyline_View::load('admin/global/sidebar') ?>
-      </div>
     </div>
-      <div class="clearfix"></div>
-<script>
-    (function() {
-        var app = angular.module('bs_zones', []);
-
-        app.controller('ZoneCtrl', function($scope, $http) {
-            var bootstrap = window.bs_bootstrap;
-            $scope.loadingMessage = null;
-
-            $scope.data = { settings: bootstrap.settings || {} };
-
-            var catList = [], found = false;
-            for(var i = 0; i < bootstrap.categories.length; i++) {
-                catList.push({name: bootstrap.categories[i].cat_name, id: bootstrap.categories[i].cat_ID, selected: false, ticked: false});
-            }
-
-            $scope.data.categories = catList;
-
-            $scope.save = function() {
-                console.log($scope.data.settings);
-                $scope.loadingMessage = 'Saving ...';
-                var params = $scope.data.settings;
-                $http.post(window.ajaxurl + '?action=partyline_save_settings', params)
-                    .success(function(response) {
-                        $scope.loadingMessage = null;
-                   }).error(function(response) {
-                        $scope.loadingMessage = null;
-                        alert('There was an error saving the zone information! Try again.');
-                   });
-            }
-
-            if (!$scope.data.settings.partyline_key) {
-                $scope.data.settings.partyline_key = Math.random().toString(36).substring(2, 15);
-                $scope.save();
-            }
-        });
-
-        window.copyToClipboard = function(element) {
-            var $temp = jQuery("<input>");
-            jQuery("body").append($temp);
-            $temp.val(jQuery(element).text()).select();
-            document.execCommand("copy");
-            $temp.remove();
-            alert("Copied to clipboard!");
-        }
-    })()
-
-</script>
-<style>
-    .webhook-notice {
-        background-color: #f0f6fc;
-        border: 1px solid #c8d7e5;
-        border-radius: 4px;
-        padding: 15px;
-        margin-bottom: 20px;
-        font-size: 14px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-    .webhook-notice strong {
-        margin-right: 10px;
-    }
-    #webhook-url {
-        font-family: monospace;
-        background-color: #e1eaf2;
-        padding: 5px 10px;
-        border-radius: 4px;
-    }
-    .copy-icon {
-        cursor: pointer;
-        color: #0073aa;
-    }
-    .copy-icon:hover {
-        color: #00a0d2;
-    }
-</style>
+    <div class="right_column">
+        <?php Partyline_View::load('admin/global/sidebar') ?>
+    </div>
+</div>
+<div class="clearfix"></div>

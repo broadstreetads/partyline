@@ -1,3 +1,6 @@
+<?php
+if (!defined('ABSPATH')) exit;
+?>
     <h3 style="margin-top: 0; padding-top: 0;">About Partyline</h3>
     <p>
         Partyline was developed at <a href="https://redbankgreen.com">redbankgreen.com</a> to help better tell the story of Red Bank, the community.
@@ -19,19 +22,19 @@
         for using Partyline!
     </p>
     <div class="info-box">
-             <h3>How to Manage Your Partyliners</h3>
-            <p>
-                You can add or update your registered Partyliners by following these steps:
-            </p>
-            <ol>
-                <li>Go to the <a href="<?php echo esc_url( admin_url('users.php') ); ?>">Users page</a>.</li>
-                <li>Add a new user or edit an existing one.</li>
-                <li>At the bottom of the user profile, set the "Partyline Phone Number" field.</li>
-            </ol>
-            <p>
-                To easily see all of your registered Partyliners at once, you can use this convenient link:
-            </p>
-            <p>
-                <a href="<?php echo esc_url( admin_url('users.php?has_partyline_phone=1') ); ?>" class="button">View All Partyliners</a>
-            </p>
-        </div>    
+        <h3>How to Manage Your Partyliners</h3>
+        <p>
+            You can add or update your registered Partyliners by following these steps:
+        </p>
+        <ol>
+            <li>Go to the <a href="<?php echo esc_url( admin_url('users.php') ); ?>">Users page</a>.</li>
+            <li>Add a new user or edit an existing one.</li>
+            <li>At the bottom of the user profile, set the "Partyline Phone Number" field.</li>
+        </ol>
+        <p>
+            To easily see all of your registered Partyliners at once, you can use this convenient link:
+        </p>
+        <p>
+            <a href="<?php echo esc_url( admin_url('users.php?has_partyline_phone=1') ); ?>" class="button">View All Partyliners</a>
+        </p>
+    </div>

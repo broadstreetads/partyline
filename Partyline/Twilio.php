@@ -61,20 +61,6 @@ class Partyline_Twilio
         return $twilio;
     }
 
-
-
-    public static function fromMock() {
-        $twilio = new Partyline_Twilio();
-        $twilio->from = '+1234567890';
-        $twilio->to = '+1234567890';
-        $twilio->body = 'Hello, world!';
-        $twilio->attachments[] = (object) array(
-            'url' => 'https://example.com/image.jpg',
-            'type' => 'image/jpeg'
-        );
-        return $twilio;
-    }
-
     public function sendResponse($message) {
         // Send a response back to Twilio.
         header('Content-Type: application/xml');

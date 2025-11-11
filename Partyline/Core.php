@@ -1,4 +1,6 @@
 <?php
+if (!defined('ABSPATH')) exit;
+
 /**
  * This file acts as the 'Controller' of the application. It contains a class
  *  that will load the required hooks, and the callback functions that those
@@ -69,14 +71,15 @@ class Partyline_Core
         add_action('wp_ajax_partyline_save_settings', array('Partyline_Ajax', 'saveSettings'));
 
         # -- Below is core functionality --
-        add_action('admin_menu', 	array($this, 'adminCallback'     ));
-        add_action('admin_init', 	array($this, 'adminInitCallback' ));
-        add_action('init', array($this, 'catchTwilioWebhook'));
+        add_action('admin_menu',            array($this, 'adminCallback'));
+        add_action('admin_init',            array($this, 'adminInitCallback'));
+        add_action('admin_enqueue_scripts', array($this, 'adminEnqueueVars'));
+        add_action('init',                  array($this, 'catchTwilioWebhook'));
         
         # -- User profile --
-        add_action('show_user_profile', array($this, 'addPartylinePhoneField'));
-        add_action('edit_user_profile', array($this, 'addPartylinePhoneField'));
-        add_action('personal_options_update', array($this, 'savePartylinePhoneField'));
+        add_action('show_user_profile',        array($this, 'addPartylinePhoneField'));
+        add_action('edit_user_profile',        array($this, 'addPartylinePhoneField'));
+        add_action('personal_options_update',  array($this, 'savePartylinePhoneField'));
         add_action('edit_user_profile_update', array($this, 'savePartylinePhoneField'));
 
         # -- New User form --
@@ -118,33 +121,55 @@ class Partyline_Core
     public function adminInitCallback()
     {
         wp_enqueue_style(
-			'partyline-admin-styles', 
-			Partyline_Utility::getCSSBaseURL() . 'admin.css',
-			array(),
-			PARTYLINE_VERSION
-			);
+            'partyline-admin-styles', 
+            Partyline_Utility::getCSSBaseURL() . 'admin.css',
+            array(),
+            PARTYLINE_VERSION
+        );
         # Only register javascript and css if the Broadstreet admin page is loading
         if(isset($_SERVER['QUERY_STRING']) && strstr($_SERVER['QUERY_STRING'], 'Partyline'))
         {
-			wp_enqueue_style(
-				'partyline-styles', 
-				Partyline_Utility::getCSSBaseURL() . 'broadstreet.css',
-				array(),
-				PARTYLINE_VERSION
-			);            
+            wp_enqueue_style(
+                'partyline-styles', 
+                Partyline_Utility::getCSSBaseURL() . 'broadstreet.css',
+                array(),
+                PARTYLINE_VERSION
+            );
             wp_enqueue_script(
-				'partyline-main',
-				Partyline_Utility::getJSBaseURL().'broadstreet.js',
-				array(),
-				PARTYLINE_VERSION
-			);           
+                'partyline-main',
+                Partyline_Utility::getJSBaseURL() . 'broadstreet.js',
+                array(),
+                PARTYLINE_VERSION
+            );
             wp_enqueue_script(
-				'angular-js',
-				Partyline_Utility::getJSBaseURL().'angular.min.js',
-				array(),
-				PARTYLINE_VERSION
-			);
+                'angular-js',
+                Partyline_Utility::getJSBaseURL() . 'angular.min.js',
+                array(),
+                PARTYLINE_VERSION
+            );
+            wp_enqueue_script(
+                'partyline-settings',
+                Partyline_Utility::getJSBaseURL() . 'settings.js',
+                array(),
+                PARTYLINE_VERSION
+            );
+
         }
+    }
+    
+    /**
+     * Set window.admin_email so that JS can access this email address
+     */
+    public function adminEnqueueVars($hook_suffix) {
+        $handle = 'partyline-vars';
+        wp_register_script($handle, '', [], null, true);
+        wp_enqueue_script($handle);
+
+        $email  = get_bloginfo('admin_email'); // or get_option('admin_email');
+        $inline = 'window.admin_email = ' . wp_json_encode($email) . ';';
+
+        // Use 'before' so the variable exists for any script relying on it.
+        wp_add_inline_script($handle, $inline, 'before');
     }
 
     /**
@@ -200,19 +225,19 @@ class Partyline_Core
         $settings = Partyline_Utility::getSettings();
         $selected_category = isset( $settings->partyline_category ) ? $settings->partyline_category : null;
 
-		if ( $selected_category ) {
+        if ( $selected_category ) {
 
-			$args = array (
-				'category' => $selected_category,
-				'posts_per_page' => -1,
-				'post_status' => 'draft'
-			);
+            $args = array (
+                'category' => $selected_category,
+                'posts_per_page' => -1,
+                'post_status' => 'draft'
+            );
 
-			return get_posts($args);
+            return get_posts($args);
 
-		} else {
-			return false;
-		}
+        } else {
+            return false;
+        }
     }
 
     /**

@@ -69,6 +69,41 @@ You can associate specific phone numbers with WordPress users to automatically a
 
 You can also view all users with a Partyline phone number by going to **Partyline > All Partyliners** in the admin menu.
 
+## External services ##
+
+### Twilio (webhooks for incoming SMS) ###
+What it is and what it’s used for: If enabled, the plugin accepts incoming SMS messages from Twilio via a webhook. Incoming messages can be optionally processed by OpenAI to create or update WordPress content, per your settings.
+
+What data is sent and when:
+- Twilio -> Your WordPress site (on each inbound SMS): Twilio posts a webhook payload that typically includes the message body and metadata such as From, To, MessageSid, and (if present) media URLs.
+- Your WordPress site -> OpenAI (optional; only if you provide a key to OpenAI). The plugin sends only the message text (and any context/templates you configure) to OpenAI to generate a result. Phone numbers are not sent unless you include them in prompts/templates.
+- The generated result may be stored in WordPress (e.g., as a post or log entry) depending on your settings.
+
+Policies:
+- Twilio Terms of Service: https://www.twilio.com/en-us/legal/tos
+- Twilio Privacy Notice: https://www.twilio.com/en-us/legal/privacy
+
+### OpenAI (ChatGPT API) ###
+What it is and what it’s used for: This plugin can generate WordPress posts using OpenAI’s ChatGPT API. No requests are made unless an administrator adds an OpenAI API key in the plugin settings.
+
+What data is sent and when:
+- When an admin (or an automated workflow you configure) triggers content generation, the plugin sends the prompt text you provide (and any additional context/templates you configure) to OpenAI’s API.
+- By default, only the message body/content needed to fulfill the request is sent. The plugin does not send phone numbers or other personal data unless you explicitly include such data in your prompts or templates.
+- The API response (generated text) is saved in WordPress (e.g., as a draft or published post) according to your settings.
+
+Policies:
+- Terms of Use: https://openai.com/policies/row-terms-of-use
+- Privacy Policy: https://openai.com/policies/row-privacy-policy
+- Privacy Center (overview): https://privacy.openai.com/
+
+## Data handling & controls ##
+- Admin-only setup: No external calls occur unless valid credentials are provided (OpenAI API key and/or Twilio webhook credentials).
+- Opt-out controls: You can disable external integrations at any time by removing the API key and/or disconnecting the Twilio webhook in the plugin settings.
+- Data minimization: Only the text needed to fulfill the request is sent externally by default. Do not include personal data in prompts/templates unless necessary for your workflow.
+- Storage: Prompts you enter and OpenAI responses you choose to save are stored in your WordPress database (drafts/posts/logs) per your settings. If you enable logging of webhooks, Twilio payloads may be stored as logs.
+- Removal: Disabling a feature stops new transmissions. You may delete generated content or logs from within WordPress according to your site’s policies.
+
+
 ## License
 
 This plugin is licensed under the GPL-2.0. For more information, see the [license file](https://www.gnu.org/licenses/gpl-2.0.html). 

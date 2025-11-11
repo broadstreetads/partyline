@@ -316,7 +316,7 @@ class Broadstreet
                 throw new Broadstreet_DependencyException("The cURL module must be installed");
             }
 
-            list($body, $status) = $this->_curlGet($url, $options);
+            list($body, $status) = $this->_httpGet($url, $options);
         }
 
         if($status == '403')
@@ -389,61 +389,94 @@ class Broadstreet
     }
 
     /**
-     * Issue a network request using cURL
+     * Issue a network GET request using the WordPress HTTP API.
+     * Mirrors the old return shape: array( string $body, string $status_code )
+     *
      * @param string $url
-     * @param array  $options
-     * @return array(body, status_code)
+     * @param array  $args  WP HTTP args. Common keys: 'headers', 'timeout', 'redirection', 'body', 'user-agent'
+     * @return array{0:string,1:string}
      */
-    protected function _curlGet($url, $options = array())
-    {
-        $curl_handle = curl_init($url);
-        $options    += array(
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_CONNECTTIMEOUT => 1,
-            CURLOPT_TIMEOUT => 10
+    protected function _httpGet( $url, array $args = array() ) {
+        $defaults = array(
+            'timeout'     => 10,
+            'redirection' => 5,
+            'headers'     => array()
         );
 
-        curl_setopt_array($curl_handle, $options);
+        $response = wp_safe_remote_get( $url, $args + $defaults );
 
-        $body   = curl_exec($curl_handle);
-        $status = (string)curl_getinfo($curl_handle, CURLINFO_HTTP_CODE);
+        if ( is_wp_error( $response ) ) {
+            // Map error to a 0 status code and pass the message through as the "body"
+            return array( $response->get_error_message(), '0' );
+        }
 
-        return array($body, $status);
-    }
+        $body   = (string) wp_remote_retrieve_body( $response );
+        $status = (string) wp_remote_retrieve_response_code( $response );
 
-
-    /**
-     * POST data to the server
-     * @param string $uri
-     * @param array $data Assoc. array of post data
-     * @return mixed
-     */
-    protected function _post($uri, $data)
-    {
-        return $this->_get($uri, array(
-            CURLOPT_POST       => true,
-            CURLOPT_POSTFIELDS => $data)
-        );
+        return array( $body, $status );
     }
 
     /**
-     * PUT data to the server
+     * POST data using WP HTTP API (safe for external URLs).
+     * Returns array( string $body, string $status_code ).
+     *
      * @param string $uri
-     * @param array $data Assoc. array of post data
-     * @return mixed
+     * @param array  $data Assoc array of POST data (form or JSON; see $args['json'])
+     * @param array  $args Extra WP HTTP args (headers, timeout, etc.)
+     * @return array{0:string,1:string}
      */
-    public function _put($uri, $data = false, $options = array())
-    {
-        $data    = http_build_query($data);
+    protected function _post( $uri, array $data = array(), array $args = array() ) {
+        $defaults = array(
+            'timeout'     => 10,
+            'redirection' => 5,
+            'headers'     => array(),
+            'body'        => $data,
+        );
 
-        $options = array (
-                        CURLOPT_CUSTOMREQUEST => 'PUT',
-                        CURLOPT_POSTFIELDS    => $data
-                        ) + $options;
+        $response = wp_safe_remote_post( $uri, $args + $defaults );
 
-        $result = $this->_get($uri, $options);
+        if ( is_wp_error( $response ) ) {
+            return array( $response->get_error_message(), '0' );
+        }
 
-        return $result;
+        return array(
+            (string) wp_remote_retrieve_body( $response ),
+            (string) wp_remote_retrieve_response_code( $response ),
+        );
+    }
+
+    /**
+     * PUT data using WP HTTP API.
+     * Returns array( string $body, string $status_code ).
+     *
+     * @param string       $uri
+     * @param array|false  $data Assoc array for form/JSON body, or false for no body
+     * @param array        $args Extra WP HTTP args (headers, timeout, etc.)
+     * @return array{0:string,1:string}
+     */
+    public function _put( $uri, $data = array(), array $args = array() ) {
+        $defaults = array(
+            'method'      => 'PUT',
+            'timeout'     => 10,
+            'redirection' => 5,
+            'headers'     => array(),
+        );
+
+        // Attach body unless explicitly false.
+        if ( false !== $data ) {
+            $defaults['body'] = $data;
+        }
+
+        $response = wp_safe_remote_request( $uri, $args + $defaults );
+
+        if ( is_wp_error( $response ) ) {
+            return array( $response->get_error_message(), '0' );
+        }
+
+        return array(
+            (string) wp_remote_retrieve_body( $response ),
+            (string) wp_remote_retrieve_response_code( $response ),
+        );
     }
 
     /**
