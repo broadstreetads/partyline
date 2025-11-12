@@ -69,6 +69,7 @@ class Partyline_Core
 
         # -- Below ajax hook --
         add_action('wp_ajax_partyline_save_settings', array('Partyline_Ajax', 'saveSettings'));
+        add_action('wp_ajax_partyline_get_settings',  array('Partyline_Ajax', 'getSettings'));
 
         # -- Below is core functionality --
         add_action('admin_menu',            array($this, 'adminCallback'));
@@ -195,26 +196,10 @@ class Partyline_Core
     public function adminSettingsMenuCallback()
     {
         Partyline_Log::add('debug', "Admin settings page callback executed");
-        $data = array();
 
-        $data['api_key']            = Partyline_Utility::getOption(self::KEY_API_KEY);
-        $data['network_id']         = Partyline_Utility::getOption(self::KEY_NETWORK_ID);
-        $data['settings']           = Partyline_Utility::getSettings();
-        $data['key_valid']          = false;
-        $data['categories']         = get_categories(array('hide_empty' => false));
-        $data['tags']               = get_tags(array('hide_empty' => false));
-        $data['settings']           = Partyline_Utility::getSettings();
+        // NOTE: code for sending settings to js got moved to Ajax.php
 
-        if(!$data['api_key'])
-        {
-            //$data['errors'][] = '<strong>You dont have an API key set yet!</strong><ol><li>If you already have a Broadstreet account, <a href="http://my.broadstreetads.com/access-token">get your key here</a>.</li><li>If you don\'t have an account with us, <a target="blank" id="one-click-signup" href="#">then use our one-click signup</a>.</li></ol>';
-        }
-        else
-        {
-            //$api = $this->getBroadstreetClient();    
-        }
-
-        Partyline_View::load('admin/settings', $data);
+        Partyline_View::load('admin/settings');
     }
 
     /**

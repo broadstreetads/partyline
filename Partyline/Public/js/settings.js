@@ -2,18 +2,35 @@
     var app = angular.module('bs_zones', []);
 
     app.controller('ZoneCtrl', function($scope, $http) {
-        var bootstrap = window.bs_bootstrap;
         $scope.loadingMessage = null;
 
-        $scope.data = { settings: bootstrap.settings || {} };
+        // Get wordpress settings
+        $http.get(window.ajaxurl + '?action=partyline_get_settings', {
+            withCredentials: true // include logged-in cookies
+        }).then(function (response) {
+            var bootstrap = response.data.data;
+            console.log(bootstrap);
 
-        var catList = [], found = false;
-        for(var i = 0; i < bootstrap.categories.length; i++) {
-            catList.push({name: bootstrap.categories[i].cat_name, id: bootstrap.categories[i].cat_ID, selected: false, ticked: false});
-        }
+            $scope.data = { settings: bootstrap.settings || {} };
 
-        $scope.data.categories = catList;
+            var catList = [], found = false;
+            for(var i = 0; i < bootstrap.categories.length; i++) {
+                catList.push({name: bootstrap.categories[i].cat_name, id: bootstrap.categories[i].cat_ID, selected: false, ticked: false});
+            }
 
+            $scope.data.categories = catList;
+
+
+            if (!$scope.data.settings.partyline_key) {
+                $scope.data.settings.partyline_key = Math.random().toString(36).substring(2, 15);
+                $scope.save();
+            }
+
+        }).catch(function (err) {
+            console.error('Error fetching settings:', err);
+        });
+
+        // Should this be nested within .then() to prevent users accidentally saving bad settings?
         $scope.save = function() {
             console.log($scope.data.settings);
             $scope.loadingMessage = 'Saving ...';
@@ -25,11 +42,6 @@
                     $scope.loadingMessage = null;
                     alert('There was an error saving the zone information! Try again.');
                 });
-        }
-
-        if (!$scope.data.settings.partyline_key) {
-            $scope.data.settings.partyline_key = Math.random().toString(36).substring(2, 15);
-            $scope.save();
         }
     });
 
