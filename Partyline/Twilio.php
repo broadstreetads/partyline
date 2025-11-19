@@ -55,7 +55,7 @@ class Partyline_Twilio
             $twilio->from = $_POST['From'];
             $twilio->to = $_POST['To'];
         }
-
+        
         Partyline_Log::add('debug', 'Parsed Twilio body: ' . print_r($twilio, true));
 
         return $twilio;
@@ -67,5 +67,13 @@ class Partyline_Twilio
         $sanitized_message = htmlspecialchars($message, ENT_XML1 | ENT_QUOTES, 'UTF-8');
         // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
         echo "<Response><Message>{$sanitized_message}</Message></Response>";
+    }
+
+    /**
+     * The webhook url for twilio
+     */
+    public static function getWebhookUrl()
+    {
+        return  esc_url(home_url('/')) . 'partyline_twilio_webhook';
     }
 }

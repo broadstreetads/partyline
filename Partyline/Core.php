@@ -230,14 +230,11 @@ class Partyline_Core
      */
     public function catchTwilioWebhook()
     {
+
         $twilio = Partyline_Twilio::fromPost();
         // Check if the request has 'partyline_twilio_webhook' parameter.
         if ($twilio) {
             
-            require_once(ABSPATH . 'wp-admin/includes/image.php');
-            require_once(ABSPATH . 'wp-admin/includes/file.php');
-            require_once(ABSPATH . 'wp-admin/includes/media.php');
-
             $settings = Partyline_Utility::getSettings();
             $selected_category = isset($settings->partyline_category) ? $settings->partyline_category : 0;
 

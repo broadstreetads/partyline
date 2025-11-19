@@ -520,9 +520,6 @@ class Partyline_Utility
     public static function sideloadAuthenticatedImage( $image_url, $media_type = '' ) {
         Partyline_Log::add('debug', "Starting sideloadAuthenticatedImage for URL: $image_url with type: $media_type");
 
-        require_once ABSPATH . 'wp-admin/includes/file.php';
-        require_once ABSPATH . 'wp-admin/includes/image.php';
-
         // Twilio creds
         $settings     = self::getSettings();
         $account_sid  = $settings->twilio_account_sid ?? '';
@@ -546,7 +543,7 @@ class Partyline_Utility
         Partyline_Log::add('debug', "Requesting Twilio media (no redirect follow): $image_url");
         $resp1 = wp_remote_get( $image_url, $args1 );
 
-        if ( is_wp_error($resp1) ) {
+        if (is_wp_error($resp1)) {
             $msg = 'Error requesting Twilio media: ' . $resp1->get_error_message();
             Partyline_Log::add('error', $msg);
             return new WP_Error('twilio_media_request_failed', $msg);
@@ -576,7 +573,7 @@ class Partyline_Utility
             ];
             $resp2 = wp_remote_get( $location, $args2 );
 
-            if ( is_wp_error($resp2) ) {
+            if (is_wp_error($resp2)) {
                 $msg = 'Error fetching redirected media: ' . $resp2->get_error_message();
                 Partyline_Log::add('error', $msg);
                 return new WP_Error('twilio_media_fetch_failed', $msg);
@@ -642,77 +639,45 @@ class Partyline_Utility
 
         Partyline_Log::add('debug', "Resolved filename: $filename (MIME: $contentType)");
 
-        // --- Write to a temp file ---
-        $temp_file = tempnam( sys_get_temp_dir(), 'wp_twilio_media_' );
-        if ( $temp_file === false ) {
-            $msg = 'Failed to create temporary file.';
-            Partyline_Log::add('error', $msg);
-            return new WP_Error('tempfile_create_failed', $msg);
-        }
+        // --- Load into Media Library ---
+        Partyline_Log::add('debug', "Attempting to load file: $filename");
 
-        $bytes = file_put_contents( $temp_file, $file_body );
-        Partyline_Log::add('debug', "Wrote $bytes bytes to temporary file: $temp_file");
-
-        if ( $bytes === false || $bytes === 0 ) {
-            @wp_delete_file($temp_file);
-            $msg = 'Failed writing media to temporary file.';
-            Partyline_Log::add('error', $msg);
-            return new WP_Error('tempfile_write_failed', $msg);
-        }
-
-        // --- Sideload into Media Library ---
-        $file_array = [
-            'name'     => $filename,
-            'tmp_name' => $temp_file,
+        $headers = [
+            'content_disposition' => 'attachment; filename="' . $filename . '"',
+            'content_type' => $contentType,
         ];
 
-        $overrides = [
-            'test_form' => false,
-            'type'      => $contentType ?: null, // let WP sniff if unknown
-        ];
+        // Create REST request
+        $request = new WP_REST_Request();
+        $request->set_body($file_body);
+        $request->set_headers($headers);
+        $request->set_param('title', 'My Uploaded Image');
 
-        Partyline_Log::add('debug', "Attempting to sideload file: $filename");
-        $sideload = wp_handle_sideload( $file_array, $overrides );
-
-        if ( is_wp_error($sideload) ) {
-            @wp_delete_file($temp_file);
+        // Execute
+        $controller = new WP_REST_Attachments_Controller('attachment');
+        $sideload = $controller->create_item($request);
+        //print_r($sideload);
+        
+        if (is_wp_error($sideload)) {
             $msg = 'Error sideloading file: ' . $sideload->get_error_message();
             Partyline_Log::add('error', $msg);
             return new WP_Error('sideload_failed', $msg);
         }
 
-        $file_path = $sideload['file'] ?? '';
-        $file_url  = $sideload['url']  ?? '';
-        $file_type = $sideload['type'] ?? $contentType;
+        $file_path = $sideload->data['media_details']['file'] ?? '';
+        $file_url  = $sideload->data['source_url']  ?? '';
+        $file_type = $sideload->data['mime_type'] ?? $contentType;
 
         Partyline_Log::add('debug', 'Sideloaded file path: ' . $file_path);
         Partyline_Log::add('debug', 'Sideloaded file URL: ' . $file_url);
         Partyline_Log::add('debug', 'Sideloaded file type: ' . $file_type);
 
-        // Insert attachment
-        $attach = [
-            'post_title'     => sanitize_file_name( $base ),
-            'post_content'   => '',
-            'post_status'    => 'inherit',
-            'post_mime_type' => $file_type,
-        ];
-
-        Partyline_Log::add('debug', "Inserting attachment into media library");
-        $attachment_id = wp_insert_attachment( $attach, $file_path, 0 );
-
-        if ( is_wp_error($attachment_id) ) {
-            $msg = 'Failed to insert attachment: ' . $attachment_id->get_error_message();
-            Partyline_Log::add('error', $msg);
-            return new WP_Error('attachment_insert_failed', $msg);
-        }
+        $attachment_id = $sideload->data['id'];
 
         // Generate metadata / thumbnails
-        self::regenerateImageThumbnails( $attachment_id );
+        self::regenerateImageThumbnails($attachment_id);
 
         // Cleanup temp file
-        @wp_delete_file( $temp_file );
-        Partyline_Log::add('debug', "Cleaned up temporary file: $temp_file");
-
         Partyline_Log::add('debug', "sideloadAuthenticatedImage completed, returning attachment ID: $attachment_id");
         return (int) $attachment_id;
     }

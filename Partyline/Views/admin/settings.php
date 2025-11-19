@@ -2,7 +2,6 @@
 if (!defined('ABSPATH')) exit;
 ?>
 
-<script>window.bs_bootstrap = <?php echo json_encode($data) ?>;</script>
 <div id="main" ng-app="bs_zones">
     <?php Partyline_View::load('admin/global/header') ?>
     <div class="left_column" ng-controller="ZoneCtrl">
@@ -48,7 +47,7 @@ if (!defined('ABSPATH')) exit;
                     <div class="break"></div>                    
                     <div class="webhook-notice">
                         <strong>Your Twilio Webhook URL is:</strong>
-                        <span id="webhook-url"><?php echo esc_url( home_url( '/' ) ); ?>?partyline_twilio_webhook={{data.settings.partyline_key}}</span>
+                        <span id="webhook-url"><?php echo Partyline_Twilio::getWebhookUrl(); ?>?partyline_twilio_webhook={{data.settings.partyline_key}}</span>
                         <span class="copy-icon" onclick="copyToClipboard('#webhook-url')">
                             <span class="dashicons dashicons-admin-page"></span>
                         </span>

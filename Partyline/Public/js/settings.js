@@ -20,6 +20,26 @@
 
             $scope.data.categories = catList;
 
+            $scope.save = function() {
+                console.log($scope.data.settings);
+                $scope.loadingMessage = 'Saving ...';
+                var params = $scope.data.settings;
+
+                $http({
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                    },
+                    url: window.ajaxurl + '?action=partyline_save_settings',
+                    data: params,
+                })
+                    .success(function(response) {
+                        $scope.loadingMessage = null;
+                    }).error(function(response) {
+                        $scope.loadingMessage = null;
+                        alert('There was an error saving the zone information! Try again.');
+                    });
+            }
 
             if (!$scope.data.settings.partyline_key) {
                 $scope.data.settings.partyline_key = Math.random().toString(36).substring(2, 15);
@@ -29,20 +49,6 @@
         }).catch(function (err) {
             console.error('Error fetching settings:', err);
         });
-
-        // Should this be nested within .then() to prevent users accidentally saving bad settings?
-        $scope.save = function() {
-            console.log($scope.data.settings);
-            $scope.loadingMessage = 'Saving ...';
-            var params = $scope.data.settings;
-            $http.post(window.ajaxurl + '?action=partyline_save_settings', params)
-                .success(function(response) {
-                    $scope.loadingMessage = null;
-                }).error(function(response) {
-                    $scope.loadingMessage = null;
-                    alert('There was an error saving the zone information! Try again.');
-                });
-        }
     });
 
     window.copyToClipboard = function(element) {
