@@ -116,6 +116,23 @@ class Partyline_Core
     }
 
     /**
+     * Checks if this is a Partyline Admin page so we can serve css/js
+     */
+    public function isAdminPage()
+    {
+        if (!is_admin()) return false;
+
+        $page = isset($_GET['page']) ? sanitize_text_field(wp_unslash($_GET['page'])) : '';
+        if ($page === 'Partyline') return true;
+        if ($page === 'Partyline-Settings') return true;
+
+        // Special users page
+        if (isset($_GET['has_partyline_phone'])) return true;
+
+        return false;
+    }
+
+    /**
      * A callback executed when the admin page callback is a about to be called.
      *  Use this for loading stylesheets/css.
      */
@@ -128,7 +145,7 @@ class Partyline_Core
             PARTYLINE_VERSION
         );
         # Only register javascript and css if the Broadstreet admin page is loading
-        if(isset($_SERVER['QUERY_STRING']) && strstr($_SERVER['QUERY_STRING'], 'Partyline'))
+        if($this->isAdminPage())
         {
             wp_enqueue_style(
                 'partyline-styles', 

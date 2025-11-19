@@ -19,19 +19,37 @@ class Partyline_Ajax
      */
     public static function saveSettings()
     {
-        $settings = json_decode(file_get_contents("php://input"));
+        $raw_input = file_get_contents("php://input");
 
-        if($settings)
-        {
-            Partyline_Utility::setOption(Partyline_Core::KEY_SETTINGS, $settings);
-            $success = true;
+        if (strlen($raw_input) > 200000) // limit body size to 200kb to prevent abuse
+        { 
+            wp_send_json_error(array('message' => 'Request body too large.'), 400);
         }
         else
         {
-            $success = false;
+            $json = json_decode($raw_input, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE || !is_array($json)) // make sure json_decode doesn't throw an error
+            {
+                wp_send_json_error(array('message' => 'Invalid JSON.'), 400);
+            }
+            else {
+
+                // Explicitly retrieve and sanitize settings
+                $settings = array();
+                $settings['partyline_key'] = sanitize_text_field($json['partyline_key']);
+                $settings['email_notifications'] = sanitize_text_field($json['email_notifications']);
+                $settings['twilio_account_sid'] = sanitize_text_field($json['twilio_account_sid']);
+                $settings['twilio_auth_token'] = sanitize_text_field($json['twilio_auth_token']);
+
+                // Save sanitized settings
+                Partyline_Utility::setOption(Partyline_Core::KEY_SETTINGS, $settings);
+
+                // Done
+                wp_send_json_success();
+            }
         }
 
-        die(json_encode(array('success' => true)));
     }
 
     public static function getSettings()

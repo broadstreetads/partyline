@@ -28,7 +28,7 @@ class Partyline_Twilio
             $twilio = new Partyline_Twilio();
                         
             // Extract message content from Twilio's data.
-            $twilio->body = isset($_POST['Body']) ? $_POST['Body'] : '';
+            $twilio->body = isset($_POST['Body']) ? sanitize_text_field($_POST['Body']) : '';
 
             // Collect all media attachments from Twilio webhook
             $num_media = isset($_POST['NumMedia']) ? intval($_POST['NumMedia']) : 0;
@@ -37,8 +37,8 @@ class Partyline_Twilio
                     $url_key = 'MediaUrl' . $i;
                     $type_key = 'MediaContentType' . $i;
 
-                    $raw_url = isset($_POST[$url_key]) ? $_POST[$url_key] : '';
-                    $raw_type = isset($_POST[$type_key]) ? $_POST[$type_key] : '';
+                    $raw_url = isset($_POST[$url_key]) ? sanitize_text_field($_POST[$url_key]) : '';
+                    $raw_type = isset($_POST[$type_key]) ? sanitize_text_field($_POST[$type_key]) : '';
 
                     $media_url = filter_var($raw_url, FILTER_SANITIZE_URL);
                     $media_type = is_string($raw_type) ? preg_replace('/[^a-zA-Z0-9.+\-\/]/', '', $raw_type) : '';
@@ -52,8 +52,8 @@ class Partyline_Twilio
                 }
             }
 
-            $twilio->from = $_POST['From'];
-            $twilio->to = $_POST['To'];
+            $twilio->from = isset($_POST['From']) ? sanitize_text_field($_POST['From']) : '';
+            $twilio->to = isset($_POST['To']) ? sanitize_text_field($_POST['To']) : '';
         }
         
         Partyline_Log::add('debug', 'Parsed Twilio body: ' . print_r($twilio, true));
