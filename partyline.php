@@ -11,9 +11,11 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Text Domain: partyline
 */
 
+if (!defined('ABSPATH')) exit;
+
 define('PARTYLINE_VERSION', '1.1.0');
 
-require dirname(__FILE__) . '/Partyline/Core.php';
+require __DIR__ . '/Partyline/Core.php';
 
 # Start the beast
 $engine = new \BroadstreetAds\Partyline_Core;

@@ -11,16 +11,16 @@ if (!defined('ABSPATH')) exit;
  * @author Broadstreet Ads <labs@broadstreetads.com>
  */
 
-require_once dirname(__FILE__) . '/Ajax.php';
-require_once dirname(__FILE__) . '/Cache.php';
-require_once dirname(__FILE__) . '/Config.php';
-require_once dirname(__FILE__) . '/Benchmark.php';
-require_once dirname(__FILE__) . '/Log.php';
-require_once dirname(__FILE__) . '/Twilio.php';
-require_once dirname(__FILE__) . '/Utility.php';
-require_once dirname(__FILE__) . '/View.php';
-require_once dirname(__FILE__) . '/Exception.php';
-require_once dirname(__FILE__) . '/Vendor/Broadstreet.php';
+require_once __DIR__ . '/Ajax.php';
+require_once __DIR__ . '/Cache.php';
+require_once __DIR__ . '/Config.php';
+require_once __DIR__ . '/Benchmark.php';
+require_once __DIR__ . '/Log.php';
+require_once __DIR__ . '/Twilio.php';
+require_once __DIR__ . '/Utility.php';
+require_once __DIR__ . '/View.php';
+require_once __DIR__ . '/Exception.php';
+require_once __DIR__ . '/Vendor/Broadstreet.php';
 
 if (! class_exists('Partyline_Core')):
 
