@@ -1,4 +1,6 @@
 <?php
+namespace BroadstreetAds;
+if (!defined('ABSPATH')) exit;
 /**
  * This file contains a class which provides the AJAX callback functions required
  *  for Broadstreet.

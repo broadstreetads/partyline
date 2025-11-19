@@ -1,4 +1,7 @@
 <?php
+namespace BroadstreetAds;
+if (!defined('ABSPATH')) exit;
+
 /**
  * This file contains a custom Exception class for Broadstreet
  *

@@ -16,5 +16,5 @@ define('PARTYLINE_VERSION', '1.1.0');
 require dirname(__FILE__) . '/Partyline/Core.php';
 
 # Start the beast
-$engine = new Partyline_Core;
+$engine = new \BroadstreetAds\Partyline_Core;
 $engine->execute();

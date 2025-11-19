@@ -1,4 +1,7 @@
 <?php
+namespace BroadstreetAds;
+if (!defined('ABSPATH')) exit;
+
 /**
  * This is the PHP client for Broadstreet
  * @link http://broadstreetads.com
@@ -500,7 +503,7 @@ class Broadstreet
     }
 }
 
-class Broadstreet_GeneralException extends Exception {}
+class Broadstreet_GeneralException extends \Exception {}
 class Broadstreet_DependencyException extends Broadstreet_GeneralException {}
 class Broadstreet_AuthException extends Broadstreet_GeneralException {}
 class Broadstreet_ServerException extends Broadstreet_GeneralException {

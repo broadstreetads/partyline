@@ -1,4 +1,6 @@
 <?php
+namespace BroadstreetAds;
+if (!defined('ABSPATH')) exit;
 /**
  * This file contains a class for measuring performance of the search requests
  *  and internal functionality.

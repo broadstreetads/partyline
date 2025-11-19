@@ -1,4 +1,6 @@
 <?php
+namespace BroadstreetAds;
+if (!defined('ABSPATH')) exit;
 /**
  * This file contains a class for utility methods and/or wrappers for built-in
  *  Wordpress API calls

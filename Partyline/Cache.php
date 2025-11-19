@@ -1,4 +1,6 @@
 <?php
+namespace BroadstreetAds;
+if (!defined('ABSPATH')) exit;
 /**
  * Contains a class for caching things programmatically in Wordpress.
  *  Great for caching things that are a little expensive, like pulling a

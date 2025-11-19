@@ -1,4 +1,5 @@
-<?php 
+<?php
+namespace BroadstreetAds;
 if (!defined('ABSPATH')) exit;
 ?>
 <div style="width:600px; margin-top: 40px; text-align: center;">

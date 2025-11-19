@@ -1,4 +1,5 @@
 <?php
+namespace BroadstreetAds;
 if (!defined('ABSPATH')) exit;
 ?>
 

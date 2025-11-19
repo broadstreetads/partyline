@@ -1,5 +1,7 @@
 <?php
+namespace BroadstreetAds;
 if (!defined('ABSPATH')) exit;
+
 
 /**
  * This file acts as the 'Controller' of the application. It contains a class
