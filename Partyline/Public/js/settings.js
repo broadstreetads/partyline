@@ -9,7 +9,6 @@
             withCredentials: true // include logged-in cookies
         }).then(function (response) {
             var bootstrap = response.data.data;
-            console.log(bootstrap);
 
             $scope.data = { settings: bootstrap.settings || {} };
 
@@ -21,18 +20,10 @@
             $scope.data.categories = catList;
 
             $scope.save = function() {
-                console.log($scope.data.settings);
                 $scope.loadingMessage = 'Saving ...';
                 var params = $scope.data.settings;
 
-                $http({
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
-                    },
-                    url: window.ajaxurl + '?action=partyline_save_settings',
-                    data: params,
-                })
+                $http.post(window.ajaxurl + '?action=partyline_save_settings', params)
                     .success(function(response) {
                         $scope.loadingMessage = null;
                     }).error(function(response) {
