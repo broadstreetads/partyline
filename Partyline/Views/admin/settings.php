@@ -6,7 +6,7 @@ if (!defined('ABSPATH')) exit;
 <div id="main" ng-app="bs_zones">
     <?php Partyline_View::load('admin/global/header') ?>
     <div class="left_column" ng-controller="ZoneCtrl">
-        <?php if($errors): ?>
+        <?php if(isset($errors)): ?>
             <div class="box">
                 <div class="shadow_column">
                     <div class="title" style="">
@@ -31,138 +31,142 @@ if (!defined('ABSPATH')) exit;
             <div class="box">
                 <div class="title"><span class="dashicons dashicons-admin-generic"></span> Partyline Settings</div>
                 <div class="content">
-                    <div class="option">
-                        <div class="control-label">
-                            <div class="name nomargin">
-                                Partyline Key
+                    <form>
+                        <fieldset ng-disabled="formDisabled">
+                            <div class="option">
+                                <div class="control-label">
+                                    <div class="name nomargin">
+                                        Partyline Key
+                                    </div>
+                                    <div class="desc nomargin">
+                                        This is a password that will be used to authenticate requests to the Partyline API.
+                                    </div>
+                                </div>
+                                <div class="control-container">
+                                    <input ng-model="data.settings.partyline_key" type="text" placeholder="" />
+                                </div>
                             </div>
-                            <div class="desc nomargin">
-                                This is a password that will be used to authenticate requests to the Partyline API.
+                            <div class="clearfix"></div>
+                            <div class="break"></div>                    
+                            <div class="webhook-notice">
+                                <strong>Your Twilio Webhook URL is:</strong>
+                                <span id="webhook-url"><?php echo Partyline_Twilio::getWebhookUrl(); ?>?partyline_twilio_webhook={{data.settings.partyline_key}}</span>
+                                <span class="copy-icon" onclick="copyToClipboard('#webhook-url')">
+                                    <span class="dashicons dashicons-admin-page"></span>
+                                </span>
                             </div>
-                        </div>
-                        <div class="control-container">
-                            <input ng-model="data.settings.partyline_key" type="text" placeholder="" />
-                        </div>
-                    </div>
-                    <div class="clearfix"></div>
-                    <div class="break"></div>                    
-                    <div class="webhook-notice">
-                        <strong>Your Twilio Webhook URL is:</strong>
-                        <span id="webhook-url"><?php echo Partyline_Twilio::getWebhookUrl(); ?>?partyline_twilio_webhook={{data.settings.partyline_key}}</span>
-                        <span class="copy-icon" onclick="copyToClipboard('#webhook-url')">
-                            <span class="dashicons dashicons-admin-page"></span>
-                        </span>
-                    </div>
-					<div class="break"></div>
-                    <div class="option">
-                        <div class="control-label">
-                            <div class="name nomargin">
-                                Twilio Account SID
+        					<div class="break"></div>
+                            <div class="option">
+                                <div class="control-label">
+                                    <div class="name nomargin">
+                                        Twilio Account SID
+                                    </div>
+                                    <div class="desc nomargin">
+                                        You will find this on your <a href="https://twilio.com/console" target="_blank">Twilio Console &#x2197;</a>.
+                                    </div>
+                                </div>
+                                <div class="control-container">
+                                    <input ng-model="data.settings.twilio_account_sid" type="text" placeholder="" />
+                                </div>
                             </div>
-                            <div class="desc nomargin">
-                                You will find this on your <a href="https://twilio.com/console" target="_blank">Twilio Console &#x2197;</a>.
+                            <div class="clearfix"></div>
+                            <div class="break"></div>
+                            <div class="clearfix"></div>
+                            <div class="option">
+                                <div class="control-label">
+                                    <div class="name nomargin">
+                                        Twilio Auth Token
+                                    </div>
+                                    <div class="desc nomargin">
+                                        This is required to download images from Twilio. You will also find this on your <a href="https://twilio.com/console" target="_blank">Twilio Console &#x2197;</a>.
+                                    </div>
+                                </div>
+                                <div class="control-container">
+                                    <input ng-model="data.settings.twilio_auth_token" type="password" placeholder="" />
+                                </div>
                             </div>
-                        </div>
-                        <div class="control-container">
-                            <input ng-model="data.settings.twilio_account_sid" type="text" placeholder="" />
-                        </div>
-                    </div>
-                    <div class="clearfix"></div>
-                    <div class="break"></div>
-                    <div class="clearfix"></div>
-                    <div class="option">
-                        <div class="control-label">
-                            <div class="name nomargin">
-                                Twilio Auth Token
+                            <div class="clearfix"></div>
+        					<div class="break"></div>
+                            <div class="clearfix"></div>
+                            <div class="option">
+                                <div class="control-label">
+                                    <div class="name nomargin">
+                                        Partyline Category
+                                    </div>
+                                    <div class="desc nomargin">
+                                        Partylines come in from text message, and their content is inserted into a post. That post has a category.
+                                        Would you like to set a default category for Partylines? This is a good idea, especially so that you can create
+                                        dedicated Partyline archive pages and widgets.
+                                    </div>
+                                </div>
+                                <div class="control-container">
+                                    <select ng-model="data.settings.partyline_category">
+                                        <option ng-repeat="category in data.categories" value="{{category.id}}">{{category.name}}</option>
+                                    </select>
+                                </div>
                             </div>
-                            <div class="desc nomargin">
-                                This is required to download images from Twilio. You will also find this on your <a href="https://twilio.com/console" target="_blank">Twilio Console &#x2197;</a>.
+                            <div class="clearfix"></div>
+                            <div class="break"></div>
+                            <div class="option">
+                                <div class="control-label">
+                                    <div class="name nomargin">
+                                        ChatGPT API Key
+                                    </div>
+                                    <div class="desc nomargin">
+                                        Enter your OpenAI API key for ChatGPT integration
+                                    </div>
+                                </div>
+                                <div class="control-container">
+                                    <input ng-model="data.settings.chatgpt_api_key" type="password" placeholder="sk-..." />
+                                </div>
                             </div>
-                        </div>
-                        <div class="control-container">
-                            <input ng-model="data.settings.twilio_auth_token" type="password" placeholder="" />
-                        </div>
-                    </div>
-                    <div class="clearfix"></div>
-					<div class="break"></div>
-                    <div class="clearfix"></div>
-                    <div class="option">
-                        <div class="control-label">
-                            <div class="name nomargin">
-                                Partyline Category
+                            <div class="clearfix"></div>
+                            <div class="break"></div>
+                            <div class="option">
+                                <div class="control-label">
+                                    <div class="name nomargin">
+                                        ChatGPT Prompt
+                                    </div>
+                                    <div class="desc nomargin">
+                                        Custom prompt to use when generating content with ChatGPT
+                                    </div>
+                                </div>
+                                <div class="full-control-container" style="clear: both; display: block;">
+                                    <textarea placeholder="Enter your custom ChatGPT prompt here..." ng-model="data.settings.chatgpt_prompt" style="width: 100%; height: 120px;"></textarea>
+                                </div>
+                                <div style="clear:both;"></div>
                             </div>
-                            <div class="desc nomargin">
-                                Partylines come in from text message, and their content is inserted into a post. That post has a category.
-                                Would you like to set a default category for Partylines? This is a good idea, especially so that you can create
-                                dedicated Partyline archive pages and widgets.
+                            <div class="clearfix"></div>
+                            <div class="break"></div>
+                            <div class="option">
+                                <div class="control-label">
+                                    <div class="name nomargin">
+                                        Email Notifications
+                                    </div>
+                                    <div class="desc nomargin">
+                                        Enter email addresses (one per line) to receive notifications
+                                    </div>
+                                </div>
+                                <div class="full-control-container" style="clear: both; display: block;">
+                                    <textarea placeholder="admin@example.com&#10;editor@example.com&#10;notifications@example.com" ng-model="data.settings.email_notifications" style="width: 100%; height: 100px;"></textarea>
+                                </div>
+                                <div style="clear:both;"></div>
                             </div>
-                        </div>
-                        <div class="control-container">
-                            <select ng-model="data.settings.partyline_category">
-                                <option ng-repeat="category in data.categories" value="{{category.id}}">{{category.name}}</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="clearfix"></div>
-                    <div class="break"></div>
-                    <div class="option">
-                        <div class="control-label">
-                            <div class="name nomargin">
-                                ChatGPT API Key
+                            <div class="break"></div>
+                            <div class="option">
+                                <div class="control-label">
+                                    <div class="name nomargin">
+                                        <a target="_blank" href="https://broadstreetads.com/ad-platform/ad-formats/">Not sure what this is? Broadstreet is also an adserver.</a>
+                                    </div>
+                                </div>
+                                <div class="save-container">
+                                    <span class="success" id="save-success">Saved!</span>
+                                    <input type="button" value="Save" name="" ng-click="save()" />
+                                </div>
                             </div>
-                            <div class="desc nomargin">
-                                Enter your OpenAI API key for ChatGPT integration
-                            </div>
-                        </div>
-                        <div class="control-container">
-                            <input ng-model="data.settings.chatgpt_api_key" type="password" placeholder="sk-..." />
-                        </div>
-                    </div>
-                    <div class="clearfix"></div>
-                    <div class="break"></div>
-                    <div class="option">
-                        <div class="control-label">
-                            <div class="name nomargin">
-                                ChatGPT Prompt
-                            </div>
-                            <div class="desc nomargin">
-                                Custom prompt to use when generating content with ChatGPT
-                            </div>
-                        </div>
-                        <div class="full-control-container" style="clear: both; display: block;">
-                            <textarea placeholder="Enter your custom ChatGPT prompt here..." ng-model="data.settings.chatgpt_prompt" style="width: 100%; height: 120px;"></textarea>
-                        </div>
-                        <div style="clear:both;"></div>
-                    </div>
-                    <div class="clearfix"></div>
-                    <div class="break"></div>
-                    <div class="option">
-                        <div class="control-label">
-                            <div class="name nomargin">
-                                Email Notifications
-                            </div>
-                            <div class="desc nomargin">
-                                Enter email addresses (one per line) to receive notifications
-                            </div>
-                        </div>
-                        <div class="full-control-container" style="clear: both; display: block;">
-                            <textarea placeholder="admin@example.com&#10;editor@example.com&#10;notifications@example.com" ng-model="data.settings.email_notifications" style="width: 100%; height: 100px;"></textarea>
-                        </div>
-                        <div style="clear:both;"></div>
-                    </div>
-                    <div class="break"></div>
-                    <div class="option">
-                        <div class="control-label">
-                            <div class="name nomargin">
-                                <a target="_blank" href="https://broadstreetads.com/ad-platform/ad-formats/">Not sure what this is? Broadstreet is also an adserver.</a>
-                            </div>
-                        </div>
-                        <div class="save-container">
-                            <span class="success" id="save-success">Saved!</span>
-                            <input type="button" value="Save" name="" ng-click="save()" />
-                        </div>
-                    </div>
-                    <div class="clearfix"></div>
+                            <div class="clearfix"></div>
+                        </fieldset>
+                    </form>
                 </div>
             </div>
         </div>

@@ -3,12 +3,16 @@
 
     app.controller('ZoneCtrl', function($scope, $http) {
         $scope.loadingMessage = null;
+        $scope.formDisabled = true;
+        $scope.settings_nonce = '';
 
         // Get wordpress settings
         $http.get(window.ajaxurl + '?action=partyline_get_settings', {
             withCredentials: true // include logged-in cookies
         }).then(function (response) {
             var bootstrap = response.data.data;
+
+            $scope.settings_nonce = bootstrap.nonce; // store wp nonce for later use
 
             $scope.data = { settings: bootstrap.settings || {} };
 
@@ -19,13 +23,24 @@
 
             $scope.data.categories = catList;
 
+            if (parseInt(bootstrap.ok) === 1) {
+                // Ready for input
+                $scope.formDisabled = false;
+            }
+            else {
+                $scope.formDisabled = true;
+            }
+
             $scope.save = function() {
                 $scope.loadingMessage = 'Saving ...';
                 var params = $scope.data.settings;
+                $scope.formDisabled = true;
+                params.nonce = $scope.settings_nonce;
 
                 $http.post(window.ajaxurl + '?action=partyline_save_settings', params)
                     .success(function(response) {
                         $scope.loadingMessage = null;
+                        $scope.formDisabled = false;
                     }).error(function(response) {
                         $scope.loadingMessage = null;
                         alert('There was an error saving the zone information! Try again.');

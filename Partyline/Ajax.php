@@ -25,7 +25,7 @@ class Partyline_Ajax
         if (!current_user_can('manage_options')) {
             wp_send_json_error(['message' => 'Unauthorized'], 403);
         }
-        
+
         $raw_input = file_get_contents("php://input");
 
         if (strlen($raw_input) > 200000) // limit body size to 200kb to prevent abuse
@@ -42,6 +42,14 @@ class Partyline_Ajax
             }
             else {
 
+                $nonce = $json['nonce'] ?? '';
+
+                // Verify nonce manually
+                if (!wp_verify_nonce($nonce, 'partyline_save_settings'))
+                {
+                    wp_send_json_error('Invalid nonce');
+                }
+
                 // Explicitly retrieve and sanitize settings
                 $settings = array();
                 $settings['partyline_key'] = sanitize_text_field($json['partyline_key']);
@@ -53,7 +61,9 @@ class Partyline_Ajax
                 Partyline_Utility::setOption(Partyline_Core::KEY_SETTINGS, $settings);
 
                 // Done
-                wp_send_json_success();
+                $response = array();
+                $response['nonce'] = wp_create_nonce('partyline_save_settings'); // Generate new nonce for next request
+                wp_send_json_success($response);
             }
         }
 
@@ -69,7 +79,10 @@ class Partyline_Ajax
         }
 
         $data = array();
+        $data['ok']                 = '1'; // This flag just helps us know that json was parsed correctly and that the server is returning good data.
+        $data['nonce']              = wp_create_nonce('partyline_save_settings'); // Generate new nonce for next request
 
+        // Settings
         $data['api_key']            = Partyline_Utility::getOption(Partyline_Core::KEY_API_KEY);
         $data['network_id']         = Partyline_Utility::getOption(Partyline_Core::KEY_NETWORK_ID);
         $data['settings']           = Partyline_Utility::getSettings();
