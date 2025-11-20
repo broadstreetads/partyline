@@ -21,6 +21,11 @@ class Partyline_Ajax
      */
     public static function saveSettings()
     {
+        // Restrict to logged-in admins only
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => 'Unauthorized'], 403);
+        }
+        
         $raw_input = file_get_contents("php://input");
 
         if (strlen($raw_input) > 200000) // limit body size to 200kb to prevent abuse
@@ -59,7 +64,7 @@ class Partyline_Ajax
         Partyline_Log::add('debug', "Admin settings Partyline_Ajax::getSettings() callback executed");
 
         // Restrict to logged-in admins only
-        if (!current_user_can('manage_options') ) {
+        if (!current_user_can('manage_options')) {
             wp_send_json_error(['message' => 'Unauthorized'], 403);
         }
 

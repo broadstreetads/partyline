@@ -70,8 +70,8 @@ class Partyline_Core
         Partyline_Log::add('debug', "Registering hooks..");
 
         # -- Below ajax hook --
-        add_action('wp_ajax_partyline_save_settings', array('Partyline_Ajax', 'saveSettings'));
-        add_action('wp_ajax_partyline_get_settings',  array('Partyline_Ajax', 'getSettings'));
+        add_action('wp_ajax_partyline_save_settings', array('\BroadstreetAds\Partyline_Ajax', 'saveSettings'));
+        add_action('wp_ajax_partyline_get_settings',  array('\BroadstreetAds\Partyline_Ajax', 'getSettings'));
 
         # -- Below is core functionality --
         add_action('admin_menu',            array($this, 'adminCallback'));
