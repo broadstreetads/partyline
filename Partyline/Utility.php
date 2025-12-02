@@ -169,7 +169,7 @@ class Partyline_Utility
             self::$_settingsCache = Partyline_Utility::getOption(Partyline_Core::KEY_SETTINGS, (object)array());
         }
 
-        return self::$_settingsCache;
+        return (object)self::$_settingsCache;
     }
 
     /**
@@ -335,6 +335,8 @@ class Partyline_Utility
      */
     public static function parseContent($post_content)
     {
+        if (empty($post_content)) return;
+        
         Partyline_Log::add('debug', "Parsing content: " . $post_content);
 
         $components = array('title' => 'Post title', 'body' => 'Post Body', 'immediate' => false);

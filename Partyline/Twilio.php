@@ -70,10 +70,10 @@ class Partyline_Twilio
     }
 
     /**
-     * The webhook url for twilio
+     * The base webhook url for twilio
      */
     public static function getWebhookUrl()
     {
-        return  esc_url(home_url('/')) . 'partyline_twilio_webhook';
+        return  esc_url(home_url('/'));
     }
 }

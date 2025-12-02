@@ -231,8 +231,15 @@ class Partyline_Core
 
         if ( $selected_category ) {
 
-            $args = array (
-                'category' => $selected_category,
+            // One last sanitization step
+            if (ctype_digit($selected_category)) {
+                $db_category = absint($selected_category);
+            } else {
+                $db_category = sanitize_title($selected_category);
+            }
+
+            $args = array(
+                'category' => $db_category,
                 'posts_per_page' => -1,
                 'post_status' => 'draft'
             );
@@ -290,30 +297,36 @@ class Partyline_Core
 
             // Parse and append message body
             $components = Partyline_Utility::parseContent($twilio->body);
-            $post_content .= wpautop($components['body']);
+            if (is_array($components)) { // if body content is empty then this becomes null
+                $post_content .= wpautop($components['body']);
 
-            $post_content .= '<p><em>Submitted by ' . $author_name . '</em></p>';
+                $post_content .= '<p><em>Submitted by ' . $author_name . '</em></p>';
 
-            // Only create a post if we have content or attachments
-            if (!empty(trim($twilio->body)) || !empty($attachment_ids)) {
-                // Create a new post.
-                $post_id = wp_insert_post(array(
-                    'post_title'    => $components['title'],
-                    'post_content'  => $post_content,
-                    'post_status'   => $components['immediate'] ? 'publish' : 'draft',
-                    'post_author'   => $author_id,
-                    'post_category' => $selected_category ? array($selected_category) : array()
-                ));
+                // Only create a post if we have content or attachments
+                if (!empty(trim($twilio->body)) || !empty($attachment_ids)) {
+                    // Create a new post.
+                    $post_id = wp_insert_post(array(
+                        'post_title'    => $components['title'],
+                        'post_content'  => $post_content,
+                        'post_status'   => $components['immediate'] ? 'publish' : 'draft',
+                        'post_author'   => $author_id,
+                        'post_category' => $selected_category ? array($selected_category) : array()
+                    ));
 
-                // Set the first image attachment as the featured image
-                if (!empty($attachment_ids)) {
-                    set_post_thumbnail($post_id, $attachment_ids[0]);
+                    // Set the first image attachment as the featured image
+                    if (!empty($attachment_ids)) {
+                        set_post_thumbnail($post_id, $attachment_ids[0]);
+                    }
+
+                    Partyline_Utility::sendNotificationEmail($post_id, $twilio->from, $post_content, $components['title'], $author_name);
+                    Partyline_Log::add('debug', 'Twilio webhook received, and post ID ' . (int)$post_id . ' was created.');
+                }
+                else {
+                    Partyline_Log::add('debug', 'Twilio webhook received, but no post was created.');
                 }
 
-                Partyline_Utility::sendNotificationEmail($post_id, $twilio->from, $post_content, $components['title'], $author_name);
+                $twilio->sendResponse("Thank You! Not every post will always make it but if it's quality and authentic we'll sure as heck try!");
             }
-
-            $twilio->sendResponse("Thank You! Not every post will always make it but if it's quality and authentic we'll sure as heck try!");
             exit;
         }
     }

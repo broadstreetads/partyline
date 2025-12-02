@@ -52,10 +52,13 @@ class Partyline_Ajax
 
                 // Explicitly retrieve and sanitize settings
                 $settings = array();
-                $settings['partyline_key'] = sanitize_text_field($json['partyline_key']);
-                $settings['email_notifications'] = sanitize_text_field($json['email_notifications']);
-                $settings['twilio_account_sid'] = sanitize_text_field($json['twilio_account_sid']);
-                $settings['twilio_auth_token'] = sanitize_text_field($json['twilio_auth_token']);
+                if (isset($json['partyline_key'])) $settings['partyline_key'] = sanitize_text_field($json['partyline_key']);
+                if (isset($json['email_notifications'])) $settings['email_notifications'] = sanitize_text_field($json['email_notifications']);
+                if (isset($json['twilio_account_sid'])) $settings['twilio_account_sid'] = sanitize_text_field($json['twilio_account_sid']);
+                if (isset($json['twilio_auth_token'])) $settings['twilio_auth_token'] = sanitize_text_field($json['twilio_auth_token']);
+                if (isset($json['partyline_category'])) $settings['partyline_category'] = sanitize_text_field($json['partyline_category']);
+                if (isset($json['chatgpt_api_key'])) $settings['chatgpt_api_key'] = sanitize_text_field($json['chatgpt_api_key']);
+                if (isset($json['chatgpt_prompt'])) $settings['chatgpt_prompt'] = sanitize_text_field($json['chatgpt_prompt']);
 
                 // Save sanitized settings
                 Partyline_Utility::setOption(Partyline_Core::KEY_SETTINGS, $settings);
