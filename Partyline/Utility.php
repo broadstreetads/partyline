@@ -335,18 +335,28 @@ class Partyline_Utility
      */
     public static function parseContent($post_content)
     {
-        if (empty($post_content)) return;
-        
         Partyline_Log::add('debug', "Parsing content: " . $post_content);
 
-        $components = array('title' => 'Post title', 'body' => 'Post Body', 'immediate' => false);
+        $components = array('title' => 'Empty post', 'body' => '', 'immediate' => false);
+
         $post_content = trim($post_content);
+
+        if (empty($post_content) || !is_string($post_content)) {
+            return $components; // early exit if post content is blank
+        }
+
         $post_content = preg_split('/\n+/', $post_content);
         $post_content = array_map('trim', $post_content);
         $post_content = array_filter($post_content);
+        $post_content = array_values($post_content); // after array_filter(), reindex numerically
+
+        // Early exit if empty after filtering
+        if (count($post_content) === 0) {
+            return $components;
+        }
 
         // should it get posted right now?
-        if (preg_match('/^now/i', $post_content[0])) {
+        if (isset($post_content[0]) && preg_match('/^now/i', $post_content[0])) {
             $components['immediate'] = true;
             array_shift($post_content);
         }
@@ -652,15 +662,14 @@ class Partyline_Utility
         ];
 
         // Create REST request
-        $request = new WP_REST_Request();
+        $request = new \WP_REST_Request();
         $request->set_body($file_body);
         $request->set_headers($headers);
         $request->set_param('title', 'My Uploaded Image');
 
         // Execute
-        $controller = new WP_REST_Attachments_Controller('attachment');
+        $controller = new \WP_REST_Attachments_Controller('attachment');
         $sideload = $controller->create_item($request);
-        //print_r($sideload);
         
         if (is_wp_error($sideload)) {
             $msg = 'Error sideloading file: ' . $sideload->get_error_message();
