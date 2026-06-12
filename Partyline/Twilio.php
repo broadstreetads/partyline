@@ -17,43 +17,52 @@ class Partyline_Twilio
     
     public static function fromPost() {
         $twilio = null;
-        
+
         $settings = Partyline_Utility::getSettings();
         $partyline_key = $settings->partyline_key ?? '';
 
-        if ( isset( $_GET['partyline_twilio_webhook'] ) && $_GET['partyline_twilio_webhook'] === $partyline_key ) {
+        // Twilio webhooks are authenticated by a shared secret (`partyline_key`) in the URL,
+        // not by a WordPress nonce — Twilio's server cannot supply one.
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        $supplied_key = isset($_GET['partyline_twilio_webhook']) ? sanitize_text_field(wp_unslash($_GET['partyline_twilio_webhook'])) : '';
 
-            Partyline_Log::add('debug', 'Raw Twilio POST body: ' . file_get_contents('php://input'));
+        if ( $supplied_key !== '' && hash_equals( (string) $partyline_key, $supplied_key ) ) {
 
             $twilio = new Partyline_Twilio();
-                        
+
             // Extract message content from Twilio's data.
             // Body — allow basic punctuation, strip tags
+            // phpcs:ignore WordPress.Security.NonceVerification.Missing
             $twilio->body = isset($_POST['Body'])
-            ? sanitize_textarea_field( wp_unslash($_POST['Body']) )
-            : '';
+                ? sanitize_textarea_field( wp_unslash($_POST['Body']) )
+                : '';
 
             // Phone numbers — plain text sanitizer is fine
+            // phpcs:ignore WordPress.Security.NonceVerification.Missing
             $twilio->from = isset($_POST['From'])
                 ? sanitize_text_field( wp_unslash($_POST['From']) )
                 : '';
 
+            // phpcs:ignore WordPress.Security.NonceVerification.Missing
             $twilio->to = isset($_POST['To'])
                 ? sanitize_text_field( wp_unslash($_POST['To']) )
                 : '';
 
             // Collect all media attachments from Twilio webhook
+            // phpcs:ignore WordPress.Security.NonceVerification.Missing
             $num_media = isset($_POST['NumMedia']) ? intval($_POST['NumMedia']) : 0;
             if ($num_media > 0) {
                 for ($i = 0; $i < $num_media; $i++) {
                     $url_key = 'MediaUrl' . $i;
                     $type_key = 'MediaContentType' . $i;
 
-                    $raw_url = isset($_POST[$url_key]) ? $_POST[$url_key] : '';
-                    $raw_type = isset($_POST[$type_key]) ? $_POST[$type_key] : '';
+                    // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+                    $raw_url = isset($_POST[$url_key]) ? sanitize_text_field(wp_unslash($_POST[$url_key])) : '';
+                    // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+                    $raw_type = isset($_POST[$type_key]) ? sanitize_text_field(wp_unslash($_POST[$type_key])) : '';
 
-                    $media_url = filter_var($raw_url, FILTER_SANITIZE_URL);
-                    $media_type = is_string($raw_type) ? preg_replace('/[^a-zA-Z0-9.+\-\/]/', '', $raw_type) : '';
+                    $media_url = esc_url_raw($raw_url);
+                    $media_type = preg_replace('/[^a-zA-Z0-9.+\-\/]/', '', $raw_type);
 
                     if (!empty($media_url)) {
                         $twilio->attachments[] = (object) array(
@@ -64,8 +73,6 @@ class Partyline_Twilio
                 }
             }
         }
-
-        Partyline_Log::add('debug', 'Parsed Twilio body: ' . print_r($twilio, true));
 
         return $twilio;
     }

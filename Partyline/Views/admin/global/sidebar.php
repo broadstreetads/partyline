@@ -1,3 +1,4 @@
+<?php if ( ! defined( 'ABSPATH' ) ) exit; ?>
     <h3 style="margin-top: 0; padding-top: 0;">About Partyline</h3>
     <p>
         Partyline was developed at <a href="https://redbankgreen.com">redbankgreen.com</a> to help better tell the story of Red Bank, the community.

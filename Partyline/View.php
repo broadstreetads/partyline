@@ -5,6 +5,8 @@
  * @author Broadstreet Ads <labs@broadstreetads.com>
  */
 
+if ( ! defined( 'ABSPATH' ) ) exit;
+
 /**
  * This class contains methods for loading Broadstreet views
  */
@@ -18,7 +20,7 @@ class Partyline_View
      *  available to the view
      * @param bool $return Return the output instead of outputting it
      */
-    public static function load($file, $data = array(), $return = false, $eval = true)
+    public static function load($file, $data = array(), $return = false)
     {
         $file = dirname(__FILE__) . '/Views/' . $file . '.php';
 
@@ -39,18 +41,12 @@ class Partyline_View
 
         if(!$return)
         {
-            if($eval)
-                include($file);
-            else
-                readfile($file);
+            include($file);
         }
         else
         {
             ob_start();
-            if($eval)
-                include($file);
-            else
-                readfile($file);
+            include($file);
             return ob_get_clean();
         }
     }

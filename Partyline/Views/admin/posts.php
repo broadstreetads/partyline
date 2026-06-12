@@ -1,3 +1,4 @@
+<?php if ( ! defined( 'ABSPATH' ) ) exit; ?>
 <div id="main">
     <?php Partyline_View::load('admin/global/header') ?>
     <div class="left_column">

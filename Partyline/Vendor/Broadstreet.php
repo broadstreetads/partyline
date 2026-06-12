@@ -5,6 +5,8 @@
  * @author Broadstreet Ads <labs@broadstreetads.com>
  */
 
+if ( ! defined( 'ABSPATH' ) ) exit;
+
 if(!class_exists('Broadstreet')):
 
 /**

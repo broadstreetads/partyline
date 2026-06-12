@@ -96,7 +96,7 @@
 }
 
 li.toplevel_page_Partyline .wp-menu-image {
-	background-image: url(https://broadstreet-common.s3.amazonaws.com/broadstreet-net/partyline-p.png);
+	background-image: url(../img/partyline-p.png);
 	background-position: center center;
 	background-repeat: no-repeat;
 	background-size: 60%;
@@ -109,4 +109,48 @@ li.toplevel_page_Partyline.wp-menu-open .wp-menu-image {
 
 #bsa_sponsor_advertiser_selection input[type="text"], #bsa_sponsor_advertiser_selection input[type="password"] {
 	width: 100%;
+}
+
+.webhook-notice {
+    background-color: #f0f6fc;
+    border: 1px solid #c8d7e5;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.webhook-notice strong {
+    margin-right: 10px;
+}
+#webhook-url {
+    font-family: monospace;
+    background-color: #e1eaf2;
+    padding: 5px 10px;
+    border-radius: 4px;
+}
+.copy-icon {
+    cursor: pointer;
+    color: #0073aa;
+}
+.copy-icon:hover {
+    color: #00a0d2;
+}
+
+.partyline-settings-full-control {
+    clear: both;
+    display: block;
+}
+.partyline-settings-textarea {
+    width: 100%;
+    height: 120px;
+}
+.partyline-settings-textarea-short {
+    width: 100%;
+    height: 100px;
+}
+.partyline-clearboth {
+    clear: both;
 }
