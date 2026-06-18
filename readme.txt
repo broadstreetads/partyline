@@ -3,7 +3,7 @@ Contributors: katzgrau, broadstreetads
 Tags: community, local news, ai, sms, user generated content
 Requires at least: 5.0
 Tested up to: 7.0
-Stable tag: 1.2.1
+Stable tag: 1.2.2
 License: GPLv2
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -78,14 +78,6 @@ Optional. Used to clean up spelling/grammar of submitted messages and to generat
 - When it is sent: only if you have entered an OpenAI API key in the Partyline settings, and only at the moment an inbound SMS is being processed into a draft post.
 - Service: OpenAI, L.L.C. Terms of Use: https://openai.com/policies/terms-of-use . Privacy Policy: https://openai.com/policies/privacy-policy .
 
-**Broadstreet**
-
-Optional. Used only if you have entered a Broadstreet API key to associate Partyline with a Broadstreet network.
-
-- What is sent: your Broadstreet API key and the network ID you have configured, sent to `https://api.broadstreetads.com` to look up network information.
-- When it is sent: only when a Broadstreet API key has been configured and the settings page or a network lookup runs.
-- Service: Broadstreet Ads, Inc. Terms of Service: https://broadstreetads.com/terms/ . Privacy Policy: https://broadstreetads.com/privacy/ .
-
 == Screenshots ==
 
 1. The Partyline settings page.
@@ -94,6 +86,12 @@ Optional. Used only if you have entered a Broadstreet API key to associate Party
 4. An example of a post created by Partyline.
 
 == Changelog ==
+
+= 1.2.2 =
+* ENHANCEMENT: Removed the unused bundled Broadstreet API client (eliminates direct cURL usage and `Broadstreet*` class names)
+* ENHANCEMENT: Removed redundant `wp-admin/includes/*` requires from the Twilio webhook handler — the sideload helper loads what it needs
+* ENHANCEMENT: Renamed the `has_partyline_phone` query var to `partyline_has_phone` so the prefix leads
+* ENHANCEMENT: Dropped the Broadstreet entry from the External services section of the readme
 
 = 1.2.1 =
 * SECURITY: Settings AJAX endpoint now verifies a WordPress nonce, requires `manage_options`, and sanitizes every field before saving

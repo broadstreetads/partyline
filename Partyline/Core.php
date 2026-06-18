@@ -18,7 +18,6 @@ require_once dirname(__FILE__) . '/Twilio.php';
 require_once dirname(__FILE__) . '/Utility.php';
 require_once dirname(__FILE__) . '/View.php';
 require_once dirname(__FILE__) . '/Exception.php';
-require_once dirname(__FILE__) . '/Vendor/Broadstreet.php';
 
 if (! class_exists('Partyline_Core')):
 
@@ -29,8 +28,6 @@ if (! class_exists('Partyline_Core')):
  */
 class Partyline_Core
 {
-    CONST KEY_API_KEY           = 'Partyline_API_Key';
-    CONST KEY_NETWORK_ID        = 'Partyline_Network_Key';
     CONST KEY_SETTINGS          = 'Partyline_Settings';
     CONST DEFAULT_TITLE         = 'Partyline Post';
 
@@ -53,15 +50,7 @@ class Partyline_Core
     }
 
     /**
-     * Get a Broadstreet client
-     */
-    public function getBroadstreetClient()
-    {
-        return Partyline_Utility::getBroadstreetClient();
-    }
-
-    /**
-     * Register Wordpress hooks required for Broadstreet
+     * Register Wordpress hooks required for Partyline
      */
     private function _registerHooks()
     {
@@ -110,7 +99,7 @@ class Partyline_Core
         );
 
         add_submenu_page('Partyline', 'Settings', 'Settings', 'edit_pages', 'Partyline-Settings', array($this, 'adminSettingsMenuCallback'));
-        add_submenu_page('Partyline', 'All Partyliners', 'All Partyliners', 'list_users', 'users.php?has_partyline_phone=1');
+        add_submenu_page('Partyline', 'All Partyliners', 'All Partyliners', 'list_users', 'users.php?partyline_has_phone=1');
     }
 
     /**
@@ -193,26 +182,14 @@ class Partyline_Core
     public function adminSettingsMenuCallback()
     {
         Partyline_Log::add('debug', "Admin settings page callback executed");
-        $data = array();
 
-        $data['api_key']            = Partyline_Utility::getOption(self::KEY_API_KEY);
-        $data['network_id']         = Partyline_Utility::getOption(self::KEY_NETWORK_ID);
-        $data['settings']           = Partyline_Utility::getSettings();
-        $data['key_valid']          = false;
-        $data['categories']         = get_categories(array('hide_empty' => false));
-        $data['tags']               = get_tags(array('hide_empty' => false));
-        $data['settings']           = Partyline_Utility::getSettings();
+        $data = array(
+            'settings'   => Partyline_Utility::getSettings(),
+            'categories' => get_categories( array( 'hide_empty' => false ) ),
+            'errors'     => array(),
+        );
 
-        if(!$data['api_key'])
-        {
-            //$data['errors'][] = '<strong>You dont have an API key set yet!</strong><ol><li>If you already have a Broadstreet account, <a href="http://my.broadstreetads.com/access-token">get your key here</a>.</li><li>If you don\'t have an account with us, <a target="blank" id="one-click-signup" href="#">then use our one-click signup</a>.</li></ol>';
-        }
-        else
-        {
-            //$api = $this->getBroadstreetClient();    
-        }
-
-        Partyline_View::load('admin/settings', $data);
+        Partyline_View::load( 'admin/settings', $data );
     }
 
     /**
@@ -246,10 +223,6 @@ class Partyline_Core
         $twilio = Partyline_Twilio::fromPost();
         // Check if the request has 'partyline_twilio_webhook' parameter.
         if ($twilio) {
-            
-            require_once(ABSPATH . 'wp-admin/includes/image.php');
-            require_once(ABSPATH . 'wp-admin/includes/file.php');
-            require_once(ABSPATH . 'wp-admin/includes/media.php');
 
             $settings = Partyline_Utility::getSettings();
             $selected_category = isset($settings->partyline_category) ? $settings->partyline_category : 0;
@@ -327,7 +300,7 @@ class Partyline_Core
         global $pagenow;
         // Read-only check of a URL flag set by our submenu link; no state change, so a nonce isn't applicable.
         // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-        if (is_admin() && 'users.php' == $pagenow && isset($_GET['has_partyline_phone'])) {
+        if (is_admin() && 'users.php' == $pagenow && isset($_GET['partyline_has_phone'])) {
             ?>
             <div class="notice notice-info is-dismissible">
                 <p>
@@ -346,7 +319,7 @@ class Partyline_Core
         global $pagenow;
         // Read-only check of a URL flag set by our submenu link; no state change, so a nonce isn't applicable.
         // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-        if (is_admin() && 'users.php' == $pagenow && isset($_GET['has_partyline_phone'])) {
+        if (is_admin() && 'users.php' == $pagenow && isset($_GET['partyline_has_phone'])) {
             $meta_query = array(
                 array(
                     'key' => 'partyline_phone',

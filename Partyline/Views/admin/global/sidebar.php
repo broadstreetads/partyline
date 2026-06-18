@@ -33,6 +33,6 @@
                 To easily see all of your registered Partyliners at once, you can use this convenient link:
             </p>
             <p>
-                <a href="<?php echo esc_url( admin_url('users.php?has_partyline_phone=1') ); ?>" class="button">View All Partyliners</a>
+                <a href="<?php echo esc_url( admin_url('users.php?partyline_has_phone=1') ); ?>" class="button">View All Partyliners</a>
             </p>
         </div>    
