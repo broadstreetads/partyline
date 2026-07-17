@@ -7,6 +7,8 @@
  * @author Broadstreet Ads <labs@broadstreetads.com>
  */
 
+if ( ! defined( 'ABSPATH' ) ) exit;
+
 require_once dirname(__FILE__) . '/Ajax.php';
 require_once dirname(__FILE__) . '/Cache.php';
 require_once dirname(__FILE__) . '/Config.php';
@@ -16,7 +18,6 @@ require_once dirname(__FILE__) . '/Twilio.php';
 require_once dirname(__FILE__) . '/Utility.php';
 require_once dirname(__FILE__) . '/View.php';
 require_once dirname(__FILE__) . '/Exception.php';
-require_once dirname(__FILE__) . '/Vendor/Broadstreet.php';
 
 if (! class_exists('Partyline_Core')):
 
@@ -27,8 +28,6 @@ if (! class_exists('Partyline_Core')):
  */
 class Partyline_Core
 {
-    CONST KEY_API_KEY           = 'Partyline_API_Key';
-    CONST KEY_NETWORK_ID        = 'Partyline_Network_Key';
     CONST KEY_SETTINGS          = 'Partyline_Settings';
     CONST DEFAULT_TITLE         = 'Partyline Post';
 
@@ -51,15 +50,7 @@ class Partyline_Core
     }
 
     /**
-     * Get a Broadstreet client
-     */
-    public function getBroadstreetClient()
-    {
-        return Partyline_Utility::getBroadstreetClient();
-    }
-
-    /**
-     * Register Wordpress hooks required for Broadstreet
+     * Register Wordpress hooks required for Partyline
      */
     private function _registerHooks()
     {
@@ -104,11 +95,11 @@ class Partyline_Core
             'Partyline',
             array($this, 'adminMenuCallback'),
             $icon_url,
-            25
+            81
         );
 
         add_submenu_page('Partyline', 'Settings', 'Settings', 'edit_pages', 'Partyline-Settings', array($this, 'adminSettingsMenuCallback'));
-        add_submenu_page('Partyline', 'All Partyliners', 'All Partyliners', 'list_users', 'users.php?has_partyline_phone=1');
+        add_submenu_page('Partyline', 'All Partyliners', 'All Partyliners', 'list_users', 'users.php?partyline_has_phone=1');
     }
 
     /**
@@ -118,31 +109,52 @@ class Partyline_Core
     public function adminInitCallback()
     {
         wp_enqueue_style(
-			'partyline-admin-styles', 
+			'partyline-admin-styles',
 			Partyline_Utility::getCSSBaseURL() . 'admin.css',
 			array(),
 			PARTYLINE_VERSION
 			);
-        # Only register javascript and css if the Broadstreet admin page is loading
-        if(isset($_SERVER['QUERY_STRING']) && strstr($_SERVER['QUERY_STRING'], 'Partyline'))
+        # Only register javascript and css if the Partyline admin page is loading
+        $query_string = isset($_SERVER['QUERY_STRING']) ? sanitize_text_field(wp_unslash($_SERVER['QUERY_STRING'])) : '';
+        if($query_string && strstr($query_string, 'Partyline'))
         {
 			wp_enqueue_style(
-				'partyline-styles', 
+				'partyline-styles',
 				Partyline_Utility::getCSSBaseURL() . 'broadstreet.css',
 				array(),
 				PARTYLINE_VERSION
-			);            
+			);
             wp_enqueue_script(
 				'partyline-main',
 				Partyline_Utility::getJSBaseURL().'broadstreet.js',
-				array(),
-				PARTYLINE_VERSION
-			);           
+				array( 'jquery' ),
+				PARTYLINE_VERSION,
+				true
+			);
             wp_enqueue_script(
-				'angular-js',
-				Partyline_Utility::getJSBaseURL().'angular.min.js',
+				'partyline-settings',
+				Partyline_Utility::getJSBaseURL().'partyline-settings.js',
 				array(),
-				PARTYLINE_VERSION
+				PARTYLINE_VERSION,
+				false
+			);
+            wp_localize_script(
+				'partyline-settings',
+				'PartylineSettings',
+				array(
+					'ajaxUrl'     => admin_url( 'admin-ajax.php' ),
+					'nonce'       => wp_create_nonce( 'partyline_save_settings' ),
+					'webhookBase' => esc_url( home_url( '/' ) ) . '?partyline_twilio_webhook=',
+					'categories'  => get_categories( array( 'hide_empty' => false ) ),
+					'settings'    => Partyline_Utility::getSettings(),
+				)
+			);
+            wp_enqueue_script(
+				'alpinejs',
+				Partyline_Utility::getJSBaseURL().'alpine.min.js',
+				array( 'partyline-settings' ),
+				PARTYLINE_VERSION,
+				array('strategy' => 'defer')
 			);
         }
     }
@@ -170,26 +182,14 @@ class Partyline_Core
     public function adminSettingsMenuCallback()
     {
         Partyline_Log::add('debug', "Admin settings page callback executed");
-        $data = array();
 
-        $data['api_key']            = Partyline_Utility::getOption(self::KEY_API_KEY);
-        $data['network_id']         = Partyline_Utility::getOption(self::KEY_NETWORK_ID);
-        $data['settings']           = Partyline_Utility::getSettings();
-        $data['key_valid']          = false;
-        $data['categories']         = get_categories(array('hide_empty' => false));
-        $data['tags']               = get_tags(array('hide_empty' => false));
-        $data['settings']           = Partyline_Utility::getSettings();
+        $data = array(
+            'settings'   => Partyline_Utility::getSettings(),
+            'categories' => get_categories( array( 'hide_empty' => false ) ),
+            'errors'     => array(),
+        );
 
-        if(!$data['api_key'])
-        {
-            //$data['errors'][] = '<strong>You dont have an API key set yet!</strong><ol><li>If you already have a Broadstreet account, <a href="http://my.broadstreetads.com/access-token">get your key here</a>.</li><li>If you don\'t have an account with us, <a target="blank" id="one-click-signup" href="#">then use our one-click signup</a>.</li></ol>';
-        }
-        else
-        {
-            //$api = $this->getBroadstreetClient();    
-        }
-
-        Partyline_View::load('admin/settings', $data);
+        Partyline_View::load( 'admin/settings', $data );
     }
 
     /**
@@ -223,10 +223,6 @@ class Partyline_Core
         $twilio = Partyline_Twilio::fromPost();
         // Check if the request has 'partyline_twilio_webhook' parameter.
         if ($twilio) {
-            
-            require_once(ABSPATH . 'wp-admin/includes/image.php');
-            require_once(ABSPATH . 'wp-admin/includes/file.php');
-            require_once(ABSPATH . 'wp-admin/includes/media.php');
 
             $settings = Partyline_Utility::getSettings();
             $selected_category = isset($settings->partyline_category) ? $settings->partyline_category : 0;
@@ -256,7 +252,8 @@ class Partyline_Core
                             $attachment_ids[] = $attachment_id;
                             $post_content .= wp_get_attachment_image($attachment_id, 'full');
                         } else {
-                            Partyline_Log::add('debug', 'Failed to sideload media: ' . print_r($attachment_id, true));
+                            $error_detail = is_wp_error($attachment_id) ? $attachment_id->get_error_message() : (string) $attachment_id;
+                            Partyline_Log::add('debug', 'Failed to sideload media: ' . $error_detail);
                         }
                     }
                 }
@@ -301,7 +298,9 @@ class Partyline_Core
      */
     public function showPartylineUserNotice() {
         global $pagenow;
-        if (is_admin() && 'users.php' == $pagenow && isset($_GET['has_partyline_phone'])) {
+        // Read-only check of a URL flag set by our submenu link; no state change, so a nonce isn't applicable.
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        if (is_admin() && 'users.php' == $pagenow && isset($_GET['partyline_has_phone'])) {
             ?>
             <div class="notice notice-info is-dismissible">
                 <p>
@@ -318,7 +317,9 @@ class Partyline_Core
      */
     public function filterUsersByPartylinePhone($query) {
         global $pagenow;
-        if (is_admin() && 'users.php' == $pagenow && isset($_GET['has_partyline_phone'])) {
+        // Read-only check of a URL flag set by our submenu link; no state change, so a nonce isn't applicable.
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        if (is_admin() && 'users.php' == $pagenow && isset($_GET['partyline_has_phone'])) {
             $meta_query = array(
                 array(
                     'key' => 'partyline_phone',
@@ -393,9 +394,12 @@ class Partyline_Core
             return;
         }
 
+        // Nonce verification is handled by WordPress core's user-edit/user-new screens before this action fires.
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing
         if(isset($_POST['partyline_phone']))
         {
-            update_user_meta($user_id, 'partyline_phone', sanitize_text_field($_POST['partyline_phone']));
+            // phpcs:ignore WordPress.Security.NonceVerification.Missing
+            update_user_meta($user_id, 'partyline_phone', sanitize_text_field(wp_unslash($_POST['partyline_phone'])));
         }
     }
 }

@@ -149,41 +149,39 @@ class Partyline_Log
         $this->_logFile  = $logDirectory
                            . DIRECTORY_SEPARATOR
                            . 'log_'
-                           . date('Y-m-d')
+                           . gmdate('Y-m-d')
                            . '.txt';
 
         $this->_priority = $priority;
+
         if(!file_exists($logDirectory))
         {
-            @mkdir($logDirectory, self::$_defaultPermissions, TRUE);
+            wp_mkdir_p($logDirectory);
         }
 
-        if(file_exists($this->_logFile))
-        {
-            if (!is_writable($this->_logFile))
-            {
-                $this->_logStatus      = self::OPEN_FAILED;
-                $this->_messageQueue[] = "The file exists, but could not be opened for writing. Check that appropriate permissions have been set.";
-                return;
-            }
+        global $wp_filesystem;
+        if (!function_exists('WP_Filesystem')) {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+        }
+        if (!WP_Filesystem()) {
+            $this->_logStatus      = self::OPEN_FAILED;
+            $this->_messageQueue[] = "WP_Filesystem could not be initialized.";
+            return;
         }
 
-        if(($this->_fileHandle = @fopen($this->_logFile, "a" )))
-        {
-            $this->_logStatus      = self::LOG_OPEN;
-            $this->_messageQueue[] = "The log file was opened successfully.";
-        }
-        else
+        if($wp_filesystem->exists($this->_logFile) && !$wp_filesystem->is_writable($this->_logFile))
         {
             $this->_logStatus      = self::OPEN_FAILED;
-            $this->_messageQueue[] = "The file could not be opened. Check permissions.";
+            $this->_messageQueue[] = "The file exists, but could not be opened for writing. Check that appropriate permissions have been set.";
+            return;
         }
+
+        $this->_logStatus      = self::LOG_OPEN;
+        $this->_messageQueue[] = "The log file is ready.";
     }
 
     public function __destruct()
     {
-        if ($this->_fileHandle)
-            fclose($this->_fileHandle);
     }
 
     public function logInfo($line)
@@ -225,7 +223,11 @@ class Partyline_Log
         if ( $this->_logStatus == self::LOG_OPEN
              && $this->_priority != self::OFF)
         {
-            if (fwrite($this->_fileHandle, $line) === FALSE)
+            global $wp_filesystem;
+            $existing = $wp_filesystem->exists($this->_logFile)
+                ? $wp_filesystem->get_contents($this->_logFile)
+                : '';
+            if ($wp_filesystem->put_contents($this->_logFile, $existing . $line, FS_CHMOD_FILE) === false)
             {
                 $this->_messageQueue[] = "The file could not be written to. Check that appropriate permissions have been set.";
             }
@@ -234,7 +236,7 @@ class Partyline_Log
 
     private function _getTimeLine($level)
     {
-        $time = date(self::$_dateFormat);
+        $time = gmdate(self::$_dateFormat);
 
         switch($level)
         {
