@@ -4,3 +4,5 @@ Partyline/Test/*.*
 dist/*.*
 deploy
 build
+# Local dev doc — contains site-specific notes (kept out of the public repo)
+CLAUDE.md
