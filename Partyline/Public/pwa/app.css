@@ -1,0 +1,103 @@
+/* Partyline PWA — mobile-first app shell. Brand: lime #C3E617 / charcoal #1A1A1A */
+
+:root {
+	--lime: #c3e617;
+	--lime-dark: #a9c910;
+	--ink: #1a1a1a;
+	--paper: #ffffff;
+	--muted: #6b7280;
+	--danger: #e5484d;
+	--radius: 14px;
+	--safe-top: env(safe-area-inset-top, 0px);
+	--safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+	margin: 0;
+	height: 100%;
+	background: var(--ink);
+	color: var(--ink);
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+	overscroll-behavior: none;
+}
+
+#app {
+	display: flex;
+	flex-direction: column;
+	min-height: 100%;
+	background: var(--paper);
+	max-width: 640px;
+	margin: 0 auto;
+}
+
+/* Header */
+.pl-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: calc(12px + var(--safe-top)) 16px 12px;
+	background: var(--lime);
+	color: var(--ink);
+	position: sticky;
+	top: 0;
+	z-index: 10;
+}
+.pl-header .pl-brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 20px; letter-spacing: -0.02em; }
+.pl-header .pl-brand img { width: 28px; height: 28px; border-radius: 7px; display: block; }
+.pl-header .pl-user { font-size: 13px; font-weight: 600; opacity: 0.8; }
+
+/* Main */
+.pl-main { flex: 1; padding: 20px 16px calc(20px + var(--safe-bottom)); }
+
+.pl-hero { text-align: center; padding: 32px 8px; }
+.pl-hero h1 { font-size: 26px; margin: 0 0 8px; letter-spacing: -0.02em; }
+.pl-hero p { color: var(--muted); margin: 0 auto; max-width: 34ch; line-height: 1.5; }
+
+/* Buttons */
+.pl-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	width: 100%;
+	padding: 16px 20px;
+	border: none;
+	border-radius: var(--radius);
+	background: var(--ink);
+	color: var(--paper);
+	font-size: 17px;
+	font-weight: 700;
+	cursor: pointer;
+	transition: transform 0.08s ease, opacity 0.15s ease;
+}
+.pl-btn:active { transform: scale(0.98); }
+.pl-btn--primary { background: var(--ink); color: #fff; }
+.pl-btn--lime { background: var(--lime); color: var(--ink); }
+.pl-btn--ghost { background: transparent; color: var(--ink); border: 2px solid var(--ink); }
+.pl-btn[disabled] { opacity: 0.5; cursor: default; }
+
+.pl-actions { display: flex; flex-direction: column; gap: 12px; margin-top: 24px; }
+
+/* Install banner */
+.pl-install {
+	display: none;
+	align-items: center;
+	gap: 12px;
+	margin: 16px 0 0;
+	padding: 12px 14px;
+	background: #f4f7e4;
+	border: 1px solid var(--lime-dark);
+	border-radius: var(--radius);
+	font-size: 14px;
+}
+.pl-install.show { display: flex; }
+.pl-install .pl-btn { width: auto; padding: 10px 14px; font-size: 14px; }
+
+/* Footer */
+.pl-footer { padding: 16px; text-align: center; color: var(--muted); font-size: 12px; }
+
+/* Utility */
+.pl-hidden { display: none !important; }

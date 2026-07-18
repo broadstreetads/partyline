@@ -24,6 +24,12 @@ class Partyline_Pwa {
 	const REST_NAMESPACE = 'partyline/v1';
 	const WISPR_ENDPOINT = 'https://platform-api.wisprflow.ai/api/v1/dash/api';
 
+	/** URL path the installable app is served under (no slashes). */
+	const APP_PATH = 'partyline-app';
+
+	/** Bump to invalidate the service-worker precache. */
+	const PWA_ASSET_VERSION = '1';
+
 	/**
 	 * Register hooks. Bails immediately unless the PWA feature is enabled, so
 	 * production behavior is unchanged until someone flips the setting on.
@@ -34,6 +40,207 @@ class Partyline_Pwa {
 		}
 
 		add_action( 'rest_api_init', array( __CLASS__, 'registerRoutes' ) );
+
+		// Serve the installable app + service worker + manifest under /partyline-app/.
+		// Priority 0 so we intercept before redirect_canonical (priority 10) can act.
+		add_action( 'template_redirect', array( __CLASS__, 'maybeServeApp' ), 0 );
+	}
+
+	/* --------------------------------------------------------------------- */
+	/* PWA shell routing:  /partyline-app/  ·  /sw.js  ·  /manifest.webmanifest */
+	/* --------------------------------------------------------------------- */
+
+	/** Absolute URL of the app root. */
+	public static function appUrl( $sub = '' ) {
+		return self::secureUrl( home_url( '/' . self::APP_PATH . '/' . ltrim( $sub, '/' ) ) );
+	}
+
+	/** URL of a static asset under Public/pwa/. */
+	public static function assetUrl( $rel ) {
+		return self::secureUrl( plugins_url( 'Public/pwa/' . ltrim( $rel, '/' ), __FILE__ ) );
+	}
+
+	/**
+	 * PWAs require a secure context. This site's siteurl is http (the origin
+	 * sits behind Cloudflare's TLS), so home_url()/plugins_url() return http —
+	 * which the browser blocks as mixed content and which service workers
+	 * reject. Upgrade to https, except on local dev hosts (treated as secure
+	 * over http by browsers).
+	 */
+	private static function secureUrl( $url ) {
+		$host = wp_parse_url( $url, PHP_URL_HOST );
+		if ( $host && ! preg_match( '/(^localhost$)|(^127\.)|(^192\.168\.)|(\.local$)|(\.test$)/', $host ) ) {
+			return set_url_scheme( $url, 'https' );
+		}
+		return $url;
+	}
+
+	/**
+	 * If the current request targets /partyline-app[/...], serve the matching
+	 * resource and exit. Anything else falls through untouched.
+	 */
+	public static function maybeServeApp() {
+		$path = wp_parse_url( isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : '', PHP_URL_PATH );
+		$path = '/' . trim( (string) $path, '/' );
+		$base = '/' . self::APP_PATH;
+
+		if ( $path !== $base && 0 !== strpos( $path, $base . '/' ) ) {
+			return; // not ours
+		}
+
+		$sub = ltrim( substr( $path, strlen( $base ) ), '/' );
+
+		switch ( $sub ) {
+			case '':
+				self::serveShell();
+				break;
+			case 'sw.js':
+				self::serveServiceWorker();
+				break;
+			case 'manifest.webmanifest':
+				self::serveManifest();
+				break;
+			default:
+				return; // unknown sub-path -> let WordPress 404 it
+		}
+		exit;
+	}
+
+	/** The app shell HTML (login-gated). */
+	public static function serveShell() {
+		if ( ! is_user_logged_in() ) {
+			wp_safe_redirect( wp_login_url( self::appUrl() ) );
+			exit;
+		}
+
+		nocache_headers();
+		header( 'Content-Type: text/html; charset=utf-8' );
+
+		$user  = wp_get_current_user();
+		$name  = $user->display_name ? $user->display_name : $user->user_login;
+		$config = array(
+			'restBase' => esc_url_raw( rest_url( self::REST_NAMESPACE . '/' ) ),
+			'nonce'    => wp_create_nonce( 'wp_rest' ),
+			'swUrl'    => esc_url_raw( self::appUrl( 'sw.js' ) ),
+			'scope'    => '/' . self::APP_PATH . '/',
+			'user'     => array( 'name' => $name ),
+		);
+
+		$css  = esc_url( self::assetUrl( 'app.css' ) ) . '?v=' . self::PWA_ASSET_VERSION;
+		$js   = esc_url( self::assetUrl( 'app.js' ) ) . '?v=' . self::PWA_ASSET_VERSION;
+		$icon = esc_url( self::assetUrl( 'icons/icon-192.png' ) );
+		$apple = esc_url( self::assetUrl( 'icons/icon-180.png' ) );
+		$manifest = esc_url( self::appUrl( 'manifest.webmanifest' ) );
+
+		echo '<!doctype html><html lang="en"><head>';
+		echo '<meta charset="utf-8">';
+		echo '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">';
+		echo '<title>Partyline</title>';
+		echo '<link rel="manifest" href="' . $manifest . '">';
+		echo '<meta name="theme-color" content="#c3e617">';
+		echo '<meta name="mobile-web-app-capable" content="yes">';
+		echo '<meta name="apple-mobile-web-app-capable" content="yes">';
+		echo '<meta name="apple-mobile-web-app-status-bar-style" content="default">';
+		echo '<meta name="apple-mobile-web-app-title" content="Partyline">';
+		echo '<link rel="apple-touch-icon" href="' . $apple . '">';
+		echo '<link rel="icon" href="' . $icon . '">';
+		echo '<link rel="stylesheet" href="' . $css . '">';
+		echo '</head><body>';
+
+		echo '<div id="app">';
+		echo '<header class="pl-header">';
+		echo '<span class="pl-brand"><img src="' . $icon . '" alt=""> Partyline</span>';
+		echo '<span class="pl-user">' . esc_html( $name ) . '</span>';
+		echo '</header>';
+
+		echo '<main class="pl-main">';
+		echo '<div class="pl-hero"><h1>Send in a Partyline</h1><p>Snap a photo and talk it through — we\'ll turn it into a draft for the newsroom.</p></div>';
+
+		echo '<div id="pl-install" class="pl-install">';
+		echo '<span>Install Partyline to your home screen for one-tap access.</span>';
+		echo '<button id="pl-install-btn" class="pl-btn pl-btn--lime" type="button">Install</button>';
+		echo '</div>';
+
+		echo '<div class="pl-actions">';
+		echo '<button id="pl-start" class="pl-btn pl-btn--primary" type="button">Start a Partyline</button>';
+		echo '</div>';
+		echo '</main>';
+
+		echo '<footer class="pl-footer">redbankgreen · Partyline</footer>';
+		echo '</div>';
+
+		echo '<script>window.PARTYLINE_PWA=' . wp_json_encode( $config ) . ';</script>';
+		echo '<script src="' . $js . '" defer></script>';
+		echo '</body></html>';
+	}
+
+	/** The web app manifest. */
+	public static function serveManifest() {
+		nocache_headers();
+		header( 'Content-Type: application/manifest+json; charset=utf-8' );
+		echo wp_json_encode( array(
+			'name'             => 'Partyline',
+			'short_name'       => 'Partyline',
+			'description'      => 'Send a photo and a voice note to the redbankgreen newsroom.',
+			'start_url'        => self::appUrl(),
+			'scope'            => self::appUrl(),
+			'display'          => 'standalone',
+			'orientation'      => 'portrait',
+			'background_color' => '#ffffff',
+			'theme_color'      => '#c3e617',
+			'icons'            => array(
+				array(
+					'src'     => self::assetUrl( 'icons/icon-192.png' ),
+					'sizes'   => '192x192',
+					'type'    => 'image/png',
+					'purpose' => 'any maskable',
+				),
+				array(
+					'src'     => self::assetUrl( 'icons/icon-512.png' ),
+					'sizes'   => '512x512',
+					'type'    => 'image/png',
+					'purpose' => 'any maskable',
+				),
+			),
+		) );
+	}
+
+	/** The service worker script (must be served at the app scope path). */
+	public static function serveServiceWorker() {
+		nocache_headers();
+		header( 'Content-Type: application/javascript; charset=utf-8' );
+		header( 'Service-Worker-Allowed: /' . self::APP_PATH . '/' );
+
+		$cache = 'partyline-pwa-v' . self::PWA_ASSET_VERSION;
+		$precache = wp_json_encode( array(
+			self::assetUrl( 'app.css' ) . '?v=' . self::PWA_ASSET_VERSION,
+			self::assetUrl( 'app.js' ) . '?v=' . self::PWA_ASSET_VERSION,
+			self::assetUrl( 'icons/icon-192.png' ),
+			self::assetUrl( 'icons/icon-512.png' ),
+		) );
+
+		echo "/* Partyline PWA service worker */\n";
+		echo "const CACHE = " . wp_json_encode( $cache ) . ";\n";
+		echo "const PRECACHE = " . $precache . ";\n";
+		echo <<<'JS'
+self.addEventListener('install', function (e) {
+	e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(PRECACHE); }).then(function () { return self.skipWaiting(); }));
+});
+self.addEventListener('activate', function (e) {
+	e.waitUntil(caches.keys().then(function (keys) {
+		return Promise.all(keys.filter(function (k) { return k !== CACHE; }).map(function (k) { return caches.delete(k); }));
+	}).then(function () { return self.clients.claim(); }));
+});
+self.addEventListener('fetch', function (e) {
+	var req = e.request;
+	if (req.method !== 'GET') { return; }
+	var url = new URL(req.url);
+	// Never cache dynamic/authenticated endpoints.
+	if (url.pathname.indexOf('/wp-json/') !== -1 || url.pathname.indexOf('/wp-admin/') !== -1) { return; }
+	// Cache-first for our precached static assets; network otherwise.
+	e.respondWith(caches.match(req).then(function (hit) { return hit || fetch(req); }));
+});
+JS;
 	}
 
 	/** Is the PWA feature turned on? */
