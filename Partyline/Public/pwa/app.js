@@ -150,13 +150,17 @@
 	}
 
 	function onRecordingStopped() {
-		var blob = new Blob(chunks, { type: chunks[0] ? chunks[0].type : 'audio/webm' });
+		var type = chunks[0] ? chunks[0].type : ((recorder && recorder.mimeType) || 'audio/webm');
+		var blob = new Blob(chunks, { type: type });
 		setStatus('Transcribing…', 'busy');
 		$('#pl-rec-btn').setAttribute('disabled', 'disabled');
 
-		blobToWav16kBase64(blob).then(function (b64) {
-			return apiJson('transcribe', { audio: b64 });
-		}).then(function (res) {
+		// Upload the native recording (webm/mp4/…) — OpenAI Whisper accepts it
+		// directly, so no client-side resampling/encoding is needed.
+		var fd = new FormData();
+		fd.append('audio', blob, 'recording.' + extForType(type));
+
+		api('transcribe', { method: 'POST', body: fd }).then(function (res) {
 			state.transcript = res.text || '';
 			setStatus('Writing it up…', 'busy');
 			return apiJson('generate', { transcript: state.transcript });
@@ -172,61 +176,15 @@
 		});
 	}
 
-	// Decode -> resample to 16kHz mono -> 16-bit PCM WAV -> base64.
-	function blobToWav16kBase64(blob) {
-		var AC = window.AudioContext || window.webkitAudioContext;
-		var OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
-		return blob.arrayBuffer().then(function (buf) {
-			var ac = new AC();
-			return new Promise(function (resolve, reject) {
-				ac.decodeAudioData(buf, resolve, reject);
-			}).then(function (decoded) { ac.close(); return decoded; });
-		}).then(function (decoded) {
-			var frames = Math.ceil(decoded.duration * 16000);
-			var off = new OAC(1, frames, 16000);
-			var src = off.createBufferSource();
-			src.buffer = decoded;
-			src.connect(off.destination);
-			src.start(0);
-			return off.startRendering();
-		}).then(function (rendered) {
-			return base64FromBytes(new Uint8Array(encodeWav(rendered.getChannelData(0), 16000)));
-		});
-	}
-
-	function encodeWav(samples, rate) {
-		var buffer = new ArrayBuffer(44 + samples.length * 2);
-		var view = new DataView(buffer);
-		function str(off, s) { for (var i = 0; i < s.length; i++) { view.setUint8(off + i, s.charCodeAt(i)); } }
-		str(0, 'RIFF');
-		view.setUint32(4, 36 + samples.length * 2, true);
-		str(8, 'WAVE');
-		str(12, 'fmt ');
-		view.setUint32(16, 16, true);
-		view.setUint16(20, 1, true);   // PCM
-		view.setUint16(22, 1, true);   // mono
-		view.setUint32(24, rate, true);
-		view.setUint32(28, rate * 2, true);
-		view.setUint16(32, 2, true);
-		view.setUint16(34, 16, true);
-		str(36, 'data');
-		view.setUint32(40, samples.length * 2, true);
-		var offset = 44;
-		for (var i = 0; i < samples.length; i++) {
-			var s = Math.max(-1, Math.min(1, samples[i]));
-			view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-			offset += 2;
-		}
-		return buffer;
-	}
-
-	function base64FromBytes(bytes) {
-		var bin = '';
-		var chunk = 0x8000;
-		for (var i = 0; i < bytes.length; i += chunk) {
-			bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
-		}
-		return btoa(bin);
+	// Map a MediaRecorder mime type to a file extension Whisper recognizes.
+	function extForType(t) {
+		t = (t || '').toLowerCase();
+		if (t.indexOf('webm') > -1) { return 'webm'; }
+		if (t.indexOf('ogg') > -1 || t.indexOf('opus') > -1) { return 'ogg'; }
+		if (t.indexOf('mp4') > -1 || t.indexOf('m4a') > -1 || t.indexOf('aac') > -1) { return 'mp4'; }
+		if (t.indexOf('mpeg') > -1 || t.indexOf('mp3') > -1) { return 'mp3'; }
+		if (t.indexOf('wav') > -1) { return 'wav'; }
+		return 'webm';
 	}
 
 	/* --------------------------------------------------------------- */

@@ -180,32 +180,17 @@
                     <div class="option">
                         <div class="control-label">
                             <div class="name nomargin">
-                                Wispr Flow API Key
-                            </div>
-                            <div class="desc nomargin">
-                                Transcribes voice recordings from the app. Get one at
-                                <a href="https://wisprflow.ai/developers" target="_blank">Wispr Flow &#x2197;</a>.
-                                Without it, contributors can still type their story.
-                            </div>
-                        </div>
-                        <div class="control-container">
-                            <input x-model="settings.wispr_api_key" type="password" placeholder="" />
-                        </div>
-                    </div>
-                    <div class="clearfix"></div>
-                    <div class="break"></div>
-                    <div class="option">
-                        <div class="control-label">
-                            <div class="name nomargin">
                                 Transcription Dictionary
                             </div>
                             <div class="desc nomargin">
                                 Optional. Local names and terms (streets, people, places) to improve
-                                transcription accuracy — comma or line separated.
+                                voice transcription accuracy — comma or line separated. Voice is
+                                transcribed with OpenAI Whisper using the ChatGPT API key above;
+                                without a key, contributors can still type their story.
                             </div>
                         </div>
                         <div class="full-control-container partyline-settings-full-control">
-                            <textarea placeholder="Broad Street, Monmouth Street, Count Basie Center, Navesink" x-model="settings.wispr_dictionary" class="partyline-settings-textarea-short"></textarea>
+                            <textarea placeholder="Broad Street, Monmouth Street, Count Basie Center, Navesink" x-model="settings.transcription_dictionary" class="partyline-settings-textarea-short"></textarea>
                         </div>
                         <div class="partyline-clearboth"></div>
                     </div>

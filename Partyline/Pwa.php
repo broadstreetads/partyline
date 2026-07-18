@@ -4,7 +4,7 @@
  *
  * A second ingestion path alongside the Twilio SMS webhook: a logged-in
  * contributor uses the installable web app to capture a photo and dictate a
- * story, the audio is transcribed (Wispr Flow), AI drafts a title/body, and the
+ * story, the audio is transcribed (OpenAI Whisper), AI drafts a title/body, and
  * result is submitted as the same kind of draft post the SMS path creates.
  *
  * EVERYTHING here is gated behind the `pwa_enabled` setting (default off), so
@@ -21,14 +21,15 @@ if ( ! class_exists( 'Partyline_Pwa' ) ):
 
 class Partyline_Pwa {
 
-	const REST_NAMESPACE = 'partyline/v1';
-	const WISPR_ENDPOINT = 'https://platform-api.wisprflow.ai/api/v1/dash/api';
+	const REST_NAMESPACE   = 'partyline/v1';
+	const WHISPER_ENDPOINT = 'https://api.openai.com/v1/audio/transcriptions';
+	const WHISPER_MODEL    = 'whisper-1';
 
 	/** URL path the installable app is served under (no slashes). */
 	const APP_PATH = 'partyline-app';
 
 	/** Bump to invalidate the service-worker precache. */
-	const PWA_ASSET_VERSION = '3';
+	const PWA_ASSET_VERSION = '4';
 
 	/**
 	 * Register hooks. Bails immediately unless the PWA feature is enabled, so
@@ -343,77 +344,109 @@ JS;
 	}
 
 	/* --------------------------------------------------------------------- */
-	/* POST /transcribe  — { audio: base64 16kHz WAV, language?: 'en' }        */
+	/* POST /transcribe  — multipart audio file -> OpenAI Whisper -> text      */
 	/* --------------------------------------------------------------------- */
 	public static function restTranscribe( WP_REST_Request $request ) {
 		$settings = Partyline_Utility::getSettings();
-		$key = isset( $settings->wispr_api_key ) ? trim( $settings->wispr_api_key ) : '';
+		// Reuse the OpenAI key already configured for ChatGPT.
+		$key = isset( $settings->chatgpt_api_key ) ? trim( $settings->chatgpt_api_key ) : '';
 
 		if ( empty( $key ) ) {
-			return new WP_Error( 'partyline_no_wispr_key', 'Transcription is not configured.', array( 'status' => 500 ) );
+			return new WP_Error( 'partyline_no_openai_key', 'Transcription is not configured (missing OpenAI API key).', array( 'status' => 500 ) );
 		}
 
-		$audio = $request->get_param( 'audio' );
-		if ( empty( $audio ) || ! is_string( $audio ) ) {
+		if ( empty( $_FILES['audio'] ) || empty( $_FILES['audio']['tmp_name'] ) || ! is_uploaded_file( $_FILES['audio']['tmp_name'] ) ) {
 			return new WP_Error( 'partyline_no_audio', 'No audio provided.', array( 'status' => 400 ) );
 		}
 
-		// Accept a data: URL too, not just raw base64.
-		if ( false !== strpos( $audio, ',' ) && false !== strpos( substr( $audio, 0, 64 ), 'base64' ) ) {
-			$audio = substr( $audio, strpos( $audio, ',' ) + 1 );
+		$tmp  = $_FILES['audio']['tmp_name'];
+		$type = ! empty( $_FILES['audio']['type'] ) ? sanitize_text_field( $_FILES['audio']['type'] ) : 'application/octet-stream';
+		$name = isset( $_FILES['audio']['name'] ) ? sanitize_file_name( $_FILES['audio']['name'] ) : 'recording.webm';
+
+		// Whisper infers the container from the filename extension.
+		$allowed = array( 'flac', 'm4a', 'mp3', 'mp4', 'mpeg', 'mpga', 'oga', 'ogg', 'wav', 'webm' );
+		$ext     = strtolower( pathinfo( $name, PATHINFO_EXTENSION ) );
+		if ( ! in_array( $ext, $allowed, true ) ) {
+			$ext = self::extForMime( $type );
 		}
 
-		$language = $request->get_param( 'language' );
-		$language = $language ? sanitize_text_field( $language ) : 'en';
-
-		$properties = array(
-			'language' => $language,
-			'app_type' => 'other',
-		);
-		$dictionary = self::dictionary();
-		if ( ! empty( $dictionary ) ) {
-			$properties['dictionary'] = $dictionary;
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		$contents = file_get_contents( $tmp );
+		if ( false === $contents || '' === $contents ) {
+			return new WP_Error( 'partyline_bad_audio', 'Could not read the audio.', array( 'status' => 400 ) );
 		}
 
-		$response = wp_remote_post( self::WISPR_ENDPOINT, array(
+		$fields = array( 'model' => self::WHISPER_MODEL );
+		$terms  = self::dictionary();
+		if ( ! empty( $terms ) ) {
+			// Whisper's optional prompt biases spelling toward these proper nouns.
+			$fields['prompt'] = implode( ', ', $terms );
+		}
+
+		$boundary = 'partyline' . wp_generate_password( 16, false );
+		$body     = self::multipartBody( $fields, 'file', 'audio.' . $ext, $type, $contents, $boundary );
+
+		$response = wp_remote_post( self::WHISPER_ENDPOINT, array(
 			'timeout' => 60,
 			'headers' => array(
 				'Authorization' => 'Bearer ' . $key,
-				'Content-Type'  => 'application/json',
+				'Content-Type'  => 'multipart/form-data; boundary=' . $boundary,
 			),
-			'body'    => wp_json_encode( array(
-				'audio'      => $audio,
-				'properties' => $properties,
-			) ),
+			'body'    => $body,
 		) );
 
 		if ( is_wp_error( $response ) ) {
-			return new WP_Error( 'partyline_wispr_error', $response->get_error_message(), array( 'status' => 502 ) );
+			return new WP_Error( 'partyline_whisper_error', $response->get_error_message(), array( 'status' => 502 ) );
 		}
 
 		$code    = wp_remote_retrieve_response_code( $response );
 		$decoded = json_decode( wp_remote_retrieve_body( $response ), true );
 
 		if ( 200 !== (int) $code || ! isset( $decoded['text'] ) ) {
-			Partyline_Log::add( 'error', 'Wispr transcription failed (' . $code . '): ' . wp_remote_retrieve_body( $response ) );
-			return new WP_Error( 'partyline_wispr_failed', 'Transcription failed.', array( 'status' => 502 ) );
+			Partyline_Log::add( 'error', 'Whisper transcription failed (' . $code . '): ' . wp_remote_retrieve_body( $response ) );
+			return new WP_Error( 'partyline_whisper_failed', 'Transcription failed.', array( 'status' => 502 ) );
 		}
 
-		return rest_ensure_response( array(
-			'text'     => $decoded['text'],
-			'language' => isset( $decoded['detected_language'] ) ? $decoded['detected_language'] : $language,
-		) );
+		return rest_ensure_response( array( 'text' => trim( $decoded['text'] ) ) );
 	}
 
 	/**
-	 * Custom transcription vocabulary (local place names, etc.), from the
-	 * `wispr_dictionary` setting (comma/newline separated). Filterable.
+	 * Optional transcription vocabulary (local place names, etc.), from the
+	 * `transcription_dictionary` setting (comma/newline separated). Filterable.
 	 */
 	public static function dictionary() {
 		$settings = Partyline_Utility::getSettings();
-		$raw      = isset( $settings->wispr_dictionary ) ? (string) $settings->wispr_dictionary : '';
+		$raw      = isset( $settings->transcription_dictionary ) ? (string) $settings->transcription_dictionary : '';
 		$terms    = array_filter( array_map( 'trim', preg_split( '/[\n,]+/', $raw ) ) );
 		return apply_filters( 'partyline_pwa_dictionary', array_values( $terms ) );
+	}
+
+	/** Map an audio mime type to a file extension Whisper recognizes. */
+	private static function extForMime( $type ) {
+		$type = strtolower( (string) $type );
+		if ( false !== strpos( $type, 'webm' ) ) { return 'webm'; }
+		if ( false !== strpos( $type, 'ogg' ) || false !== strpos( $type, 'opus' ) ) { return 'ogg'; }
+		if ( false !== strpos( $type, 'mp4' ) || false !== strpos( $type, 'm4a' ) || false !== strpos( $type, 'aac' ) ) { return 'mp4'; }
+		if ( false !== strpos( $type, 'mpeg' ) || false !== strpos( $type, 'mp3' ) ) { return 'mp3'; }
+		if ( false !== strpos( $type, 'wav' ) ) { return 'wav'; }
+		return 'webm';
+	}
+
+	/** Build a multipart/form-data body with scalar fields plus one file part. */
+	private static function multipartBody( array $fields, $file_field, $filename, $filetype, $filecontents, $boundary ) {
+		$eol  = "\r\n";
+		$body = '';
+		foreach ( $fields as $fname => $fvalue ) {
+			$body .= '--' . $boundary . $eol;
+			$body .= 'Content-Disposition: form-data; name="' . $fname . '"' . $eol . $eol;
+			$body .= $fvalue . $eol;
+		}
+		$body .= '--' . $boundary . $eol;
+		$body .= 'Content-Disposition: form-data; name="' . $file_field . '"; filename="' . $filename . '"' . $eol;
+		$body .= 'Content-Type: ' . $filetype . $eol . $eol;
+		$body .= $filecontents . $eol;
+		$body .= '--' . $boundary . '--' . $eol;
+		return $body;
 	}
 
 	/* --------------------------------------------------------------------- */
