@@ -72,6 +72,7 @@
 			$('#pl-photo-camera').innerHTML = '<span>🔄</span> Retake';
 			$('#pl-photo-library').innerHTML = '<span>🖼️</span> Replace';
 			applyFilter(state.filter);
+			updateSubmit();
 		};
 		img.onerror = function () { URL.revokeObjectURL(url); setStatus('Could not load that image.', 'error'); };
 		img.src = url;
@@ -182,10 +183,10 @@
 			}
 			return api('generate', { method: 'POST', body: gfd });
 		}).then(function (gen) {
-			state.title = gen.title || '';
-			state.body = gen.body || '';
-			setStatus('✓ Got it!', null);
-			goToPreview(); // auto-advance to the (editable) review screen
+			if (gen.title) { $('#pl-title').value = gen.title; }
+			$('#pl-body').value = gen.body || state.transcript || '';
+			setStatus('✓ Written up below — edit if needed, or tap record to redo.', null);
+			updateSubmit();
 		}).catch(function (err) {
 			setStatus(err.message || 'Transcription failed.', 'error');
 		}).then(function () {
@@ -205,22 +206,24 @@
 	}
 
 	/* --------------------------------------------------------------- */
-	/* Continue -> preview -> submit                                    */
+	/* Submit gating + submit                                           */
 	/* --------------------------------------------------------------- */
-	function goToPreview() {
-		var img = $('#pl-preview-img');
-		bakePhoto().then(function (blob) {
-			state.photoBlob = blob;
-			if (blob) {
-				img.src = URL.createObjectURL(blob);
-				img.classList.remove('pl-hidden');
-			} else {
-				img.classList.add('pl-hidden');
-			}
-			$('#pl-title').value = state.title;
-			$('#pl-body').value = state.body;
-			show('screen-preview');
-		});
+
+	// Step 3 is enabled only once step 1 (photo) and step 2 (story) are done.
+	function updateSubmit() {
+		var hasPhoto = !!state.photoImg;
+		var hasStory = $('#pl-body').value.trim().length > 0;
+		$('#pl-submit').disabled = !(hasPhoto && hasStory);
+
+		var hint = $('#pl-submit-hint');
+		if (!hint) { return; }
+		if (hasPhoto && hasStory) {
+			hint.classList.add('pl-hidden');
+		} else {
+			hint.textContent = !hasPhoto && !hasStory ? 'Add a photo and a story to submit.'
+				: (!hasPhoto ? 'Add a photo to submit.' : 'Add a story to submit.');
+			hint.classList.remove('pl-hidden');
+		}
 	}
 
 	function submit() {
@@ -228,20 +231,22 @@
 		btn.disabled = true;
 		btn.textContent = 'Submitting…';
 
-		var fd = new FormData();
-		fd.append('title', $('#pl-title').value);
-		fd.append('body', $('#pl-body').value);
-		if (state.photoBlob) { fd.append('image', state.photoBlob, 'partyline.jpg'); }
-
-		api('submit', { method: 'POST', body: fd }).then(function (res) {
+		// Bake the photo (with its chosen filter) into a JPEG for upload.
+		bakePhoto().then(function (blob) {
+			var fd = new FormData();
+			fd.append('title', $('#pl-title').value);
+			fd.append('body', $('#pl-body').value);
+			if (blob) { fd.append('image', blob, 'partyline.jpg'); }
+			return api('submit', { method: 'POST', body: fd });
+		}).then(function (res) {
 			releaseStream(); // done capturing — free the mic
 			if (res.message) { $('#pl-success-msg').textContent = res.message; }
 			show('screen-success');
 		}).catch(function (err) {
 			alert(err.message || 'Submit failed.');
 		}).then(function () {
-			btn.disabled = false;
 			btn.textContent = 'Submit Partyline';
+			updateSubmit();
 		});
 	}
 
@@ -256,8 +261,9 @@
 		$('#pl-input-library').value = '';
 		$('#pl-title').value = '';
 		$('#pl-body').value = '';
-		setStatus('Tap to dictate — we\'ll write it up for you.', null);
+		setStatus('Tap to dictate — or type it below.', null);
 		applyFilter('none');
+		updateSubmit();
 	}
 
 	/* --------------------------------------------------------------- */
@@ -315,10 +321,6 @@
 		$('#pl-start').addEventListener('click', function () { show('screen-capture'); });
 		$('#pl-cancel').addEventListener('click', function () { reset(); show('screen-home'); });
 		$('#pl-again').addEventListener('click', function () { reset(); show('screen-home'); });
-		$('#pl-recagain').addEventListener('click', function () {
-			setStatus('Tap to dictate — we\'ll write it up for you.', null);
-			show('screen-capture');
-		});
 		$('#pl-submit').addEventListener('click', submit);
 
 		$('#pl-photo-camera').addEventListener('click', function () { $('#pl-input-camera').click(); });
@@ -326,7 +328,9 @@
 		function onPick(e) { if (e.target.files && e.target.files[0]) { handlePhotoFile(e.target.files[0]); } }
 		$('#pl-input-camera').addEventListener('change', onPick);
 		$('#pl-input-library').addEventListener('change', onPick);
-		$('#pl-write').addEventListener('click', goToPreview);
+
+		// Typing the story live-updates the submit gate.
+		$('#pl-body').addEventListener('input', updateSubmit);
 
 		var chips = document.querySelectorAll('.pl-chip');
 		for (var i = 0; i < chips.length; i++) {
@@ -334,6 +338,8 @@
 		}
 
 		$('#pl-rec-btn').addEventListener('click', toggleRecord);
+
+		updateSubmit(); // set the initial gated state
 	}
 
 	if (document.readyState === 'loading') {

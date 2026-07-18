@@ -34,7 +34,7 @@ class Partyline_Pwa {
 	const APP_PATH = 'partyline-app';
 
 	/** Bump to invalidate the service-worker precache. */
-	const PWA_ASSET_VERSION = '7';
+	const PWA_ASSET_VERSION = '8';
 
 	/**
 	 * Register hooks. Bails immediately unless the PWA feature is enabled, so
@@ -173,9 +173,11 @@ class Partyline_Pwa {
 		echo '<div class="pl-actions"><button id="pl-start" class="pl-btn pl-btn--primary" type="button">Start a Partyline</button></div>';
 		echo '</section>';
 
-		// --- CAPTURE ---
+		// --- CAPTURE (all three steps on one screen) ---
 		echo '<section id="screen-capture" class="pl-screen pl-hidden">';
-		echo '<h2 class="pl-step">1 · Photo</h2>';
+
+		// Step 1 — photo
+		echo '<h2 class="pl-step"><span class="pl-stepnum">1</span> Take or upload a photo</h2>';
 		echo '<input id="pl-input-camera" type="file" accept="image/*" capture="environment" hidden>';
 		echo '<input id="pl-input-library" type="file" accept="image/*" hidden>';
 		echo '<div class="pl-photo-actions">';
@@ -190,29 +192,24 @@ class Partyline_Pwa {
 		echo '<button class="pl-chip" data-filter="cool" type="button">Cool</button>';
 		echo '<button class="pl-chip" data-filter="vivid" type="button">Vivid</button>';
 		echo '</div>';
-		echo '<h2 class="pl-step">2 · Tell the story</h2>';
+
+		// Step 2 — story (dictate to auto-fill, or type). Fields live here.
+		echo '<h2 class="pl-step"><span class="pl-stepnum">2</span> Tell the story</h2>';
 		echo '<div class="pl-record">';
 		echo '<button id="pl-rec-btn" class="pl-recbtn" type="button" aria-label="Record"><span class="pl-recdot"></span></button>';
-		echo '<div id="pl-rec-status" class="pl-status">Tap to dictate — we\'ll write it up for you.</div>';
+		echo '<div id="pl-rec-status" class="pl-status">Tap to dictate — or type it below.</div>';
 		echo '</div>';
-		echo '<div class="pl-or"><span>or</span></div>';
-		echo '<button id="pl-write" class="pl-btn pl-btn--ghost" type="button">✍️ Write it myself</button>';
-		echo '<div class="pl-actions">';
-		echo '<button id="pl-cancel" class="pl-btn pl-btn--ghost" type="button">Cancel</button>';
-		echo '</div>';
-		echo '</section>';
-
-		// --- PREVIEW / EDIT ---
-		echo '<section id="screen-preview" class="pl-screen pl-hidden">';
-		echo '<h2 class="pl-step">3 · Review &amp; send</h2>';
-		echo '<img id="pl-preview-img" class="pl-preview-img pl-hidden" alt="">';
 		echo '<label class="pl-label" for="pl-title">Title</label>';
-		echo '<input id="pl-title" class="pl-input" type="text" placeholder="Headline">';
+		echo '<input id="pl-title" class="pl-input" type="text" placeholder="Headline (optional)">';
 		echo '<label class="pl-label" for="pl-body">Story</label>';
-		echo '<textarea id="pl-body" class="pl-textarea" rows="8" placeholder="What happened?"></textarea>';
+		echo '<textarea id="pl-body" class="pl-textarea" rows="6" placeholder="Dictate above, or type what happened…"></textarea>';
+
+		// Step 3 — submit (gated until steps 1 & 2 are done)
+		echo '<h2 class="pl-step"><span class="pl-stepnum">3</span> Submit</h2>';
+		echo '<p id="pl-submit-hint" class="pl-hint">Add a photo and a story to submit.</p>';
 		echo '<div class="pl-actions">';
-		echo '<button id="pl-submit" class="pl-btn pl-btn--primary" type="button">Submit Partyline</button>';
-		echo '<button id="pl-recagain" class="pl-btn pl-btn--ghost" type="button">🎤 Record again</button>';
+		echo '<button id="pl-submit" class="pl-btn pl-btn--primary" type="button" disabled>Submit Partyline</button>';
+		echo '<button id="pl-cancel" class="pl-btn pl-btn--ghost" type="button">Cancel</button>';
 		echo '</div>';
 		echo '</section>';
 

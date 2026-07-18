@@ -102,8 +102,23 @@ html, body {
 /* Steps / screens */
 .pl-screen { animation: plFade 0.2s ease; }
 @keyframes plFade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-.pl-step { font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 24px 0 10px; }
+.pl-step { display: flex; align-items: center; font-size: 17px; font-weight: 800; color: var(--ink); margin: 28px 0 12px; letter-spacing: -0.01em; }
 .pl-screen > .pl-step:first-child { margin-top: 4px; }
+.pl-stepnum {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 auto;
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	margin-right: 10px;
+	background: var(--ink);
+	color: #fff;
+	font-size: 13px;
+	font-weight: 800;
+}
+.pl-hint { font-size: 13px; color: var(--muted); margin: 0 0 12px; }
 
 /* Photo */
 .pl-photo-drop {
