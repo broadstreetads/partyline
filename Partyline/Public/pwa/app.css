@@ -122,7 +122,32 @@ html, body {
 	cursor: pointer;
 }
 .pl-photo-drop span { font-size: 28px; }
-.pl-photo-canvas { width: 100%; border-radius: var(--radius); display: block; background: #000; }
+.pl-photo-canvas { width: 100%; border-radius: var(--radius); display: block; background: #000; margin-top: 12px; }
+
+/* Photo choice: take vs. select */
+.pl-photo-actions { display: flex; gap: 10px; }
+.pl-photo-btn2 {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	aspect-ratio: 3 / 2;
+	border: 2px dashed #cbd5e1;
+	border-radius: var(--radius);
+	background: #f8fafc;
+	color: var(--muted);
+	font-size: 15px;
+	font-weight: 600;
+	cursor: pointer;
+}
+.pl-photo-btn2 span { font-size: 26px; }
+.pl-photo-btn2:active { background: #eef2f6; }
+
+/* "or" divider between dictate and type */
+.pl-or { display: flex; align-items: center; gap: 12px; margin: 16px 0 12px; color: var(--muted); font-size: 13px; }
+.pl-or::before, .pl-or::after { content: ""; flex: 1; height: 1px; background: #e5e7eb; }
 
 /* Filter chips */
 .pl-filters { display: flex; gap: 8px; overflow-x: auto; padding: 12px 0 2px; -webkit-overflow-scrolling: touch; }

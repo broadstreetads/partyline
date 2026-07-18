@@ -28,7 +28,7 @@ class Partyline_Pwa {
 	const APP_PATH = 'partyline-app';
 
 	/** Bump to invalidate the service-worker precache. */
-	const PWA_ASSET_VERSION = '2';
+	const PWA_ASSET_VERSION = '3';
 
 	/**
 	 * Register hooks. Bails immediately unless the PWA feature is enabled, so
@@ -161,7 +161,7 @@ class Partyline_Pwa {
 		echo '<section id="screen-home" class="pl-screen">';
 		echo '<div class="pl-hero"><h1>Send in a Partyline</h1><p>Snap a photo and talk it through — we\'ll turn it into a draft for the newsroom.</p></div>';
 		echo '<div id="pl-install" class="pl-install">';
-		echo '<span>Install Partyline to your home screen for one-tap access.</span>';
+		echo '<span id="pl-install-msg">Install Partyline to your home screen for one-tap access.</span>';
 		echo '<button id="pl-install-btn" class="pl-btn pl-btn--lime" type="button">Install</button>';
 		echo '</div>';
 		echo '<div class="pl-actions"><button id="pl-start" class="pl-btn pl-btn--primary" type="button">Start a Partyline</button></div>';
@@ -170,8 +170,12 @@ class Partyline_Pwa {
 		// --- CAPTURE ---
 		echo '<section id="screen-capture" class="pl-screen pl-hidden">';
 		echo '<h2 class="pl-step">1 · Photo</h2>';
-		echo '<input id="pl-photo-input" type="file" accept="image/*" capture="environment" hidden>';
-		echo '<button id="pl-photo-btn" class="pl-photo-drop" type="button"><span>📷</span> Take a photo</button>';
+		echo '<input id="pl-input-camera" type="file" accept="image/*" capture="environment" hidden>';
+		echo '<input id="pl-input-library" type="file" accept="image/*" hidden>';
+		echo '<div class="pl-photo-actions">';
+		echo '<button id="pl-photo-camera" class="pl-photo-btn2" type="button"><span>📷</span> Take photo</button>';
+		echo '<button id="pl-photo-library" class="pl-photo-btn2" type="button"><span>🖼️</span> Choose photo</button>';
+		echo '</div>';
 		echo '<canvas id="pl-photo-canvas" class="pl-photo-canvas pl-hidden"></canvas>';
 		echo '<div id="pl-filters" class="pl-filters pl-hidden">';
 		echo '<button class="pl-chip is-active" data-filter="none" type="button">Original</button>';
@@ -183,8 +187,10 @@ class Partyline_Pwa {
 		echo '<h2 class="pl-step">2 · Tell the story</h2>';
 		echo '<div class="pl-record">';
 		echo '<button id="pl-rec-btn" class="pl-recbtn" type="button" aria-label="Record"><span class="pl-recdot"></span></button>';
-		echo '<div id="pl-rec-status" class="pl-status">Tap to record — dictate or interview.</div>';
+		echo '<div id="pl-rec-status" class="pl-status">Tap to dictate — we\'ll write it up for you.</div>';
 		echo '</div>';
+		echo '<div class="pl-or"><span>or</span></div>';
+		echo '<button id="pl-write" class="pl-btn pl-btn--ghost" type="button">✍️ Write it myself</button>';
 		echo '<div class="pl-actions">';
 		echo '<button id="pl-continue" class="pl-btn pl-btn--primary" type="button" disabled>Continue</button>';
 		echo '<button id="pl-cancel" class="pl-btn pl-btn--ghost" type="button">Cancel</button>';

@@ -76,7 +76,8 @@
 			state.photoImg = img;
 			canvas.classList.remove('pl-hidden');
 			$('#pl-filters').classList.remove('pl-hidden');
-			$('#pl-photo-btn').innerHTML = '<span>🔄</span> Retake photo';
+			$('#pl-photo-camera').innerHTML = '<span>🔄</span> Retake';
+			$('#pl-photo-library').innerHTML = '<span>🖼️</span> Replace';
 			applyFilter(state.filter);
 			updateContinue();
 		};
@@ -277,11 +278,13 @@
 		state = { photoImg: null, filter: 'none', transcript: '', title: '', body: '' };
 		if (canvas) { canvas.classList.add('pl-hidden'); canvas.style.filter = ''; }
 		$('#pl-filters').classList.add('pl-hidden');
-		$('#pl-photo-btn').innerHTML = '<span>📷</span> Take a photo';
-		$('#pl-photo-input').value = '';
+		$('#pl-photo-camera').innerHTML = '<span>📷</span> Take photo';
+		$('#pl-photo-library').innerHTML = '<span>🖼️</span> Choose photo';
+		$('#pl-input-camera').value = '';
+		$('#pl-input-library').value = '';
 		$('#pl-title').value = '';
 		$('#pl-body').value = '';
-		setStatus('Tap to record — dictate or interview.', null);
+		setStatus('Tap to dictate — we\'ll write it up for you.', null);
 		applyFilter('none');
 		updateContinue();
 	}
@@ -299,9 +302,24 @@
 	function isStandalone() {
 		return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 	}
+	function isIos() {
+		return /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+			(navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); // iPadOS
+	}
 	function setupInstall() {
-		var banner = $('#pl-install'), button = $('#pl-install-btn');
+		var banner = $('#pl-install'), button = $('#pl-install-btn'), msg = $('#pl-install-msg');
+		// Already installed — nothing to prompt.
 		if (isStandalone() || !banner || !button) { return; }
+
+		// iOS Safari never fires beforeinstallprompt, so show manual instructions.
+		if (isIos()) {
+			msg.innerHTML = 'Install Partyline: tap the Share button, then <strong>Add to Home Screen</strong>.';
+			button.classList.add('pl-hidden');
+			banner.classList.add('show');
+			return;
+		}
+
+		// Android/desktop Chromium: use the native prompt when offered.
 		window.addEventListener('beforeinstallprompt', function (e) {
 			e.preventDefault();
 			deferredPrompt = e;
@@ -330,10 +348,12 @@
 		$('#pl-continue').addEventListener('click', goToPreview);
 		$('#pl-submit').addEventListener('click', submit);
 
-		$('#pl-photo-btn').addEventListener('click', function () { $('#pl-photo-input').click(); });
-		$('#pl-photo-input').addEventListener('change', function (e) {
-			if (e.target.files && e.target.files[0]) { handlePhotoFile(e.target.files[0]); }
-		});
+		$('#pl-photo-camera').addEventListener('click', function () { $('#pl-input-camera').click(); });
+		$('#pl-photo-library').addEventListener('click', function () { $('#pl-input-library').click(); });
+		function onPick(e) { if (e.target.files && e.target.files[0]) { handlePhotoFile(e.target.files[0]); } }
+		$('#pl-input-camera').addEventListener('change', onPick);
+		$('#pl-input-library').addEventListener('change', onPick);
+		$('#pl-write').addEventListener('click', goToPreview);
 
 		var chips = document.querySelectorAll('.pl-chip');
 		for (var i = 0; i < chips.length; i++) {
