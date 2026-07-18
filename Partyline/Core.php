@@ -18,6 +18,7 @@ require_once dirname(__FILE__) . '/Twilio.php';
 require_once dirname(__FILE__) . '/Utility.php';
 require_once dirname(__FILE__) . '/View.php';
 require_once dirname(__FILE__) . '/Exception.php';
+require_once dirname(__FILE__) . '/Pwa.php';
 
 if (! class_exists('Partyline_Core')):
 
@@ -77,6 +78,9 @@ class Partyline_Core
         # -- Filter users --
         add_action('pre_get_users', array($this, 'filterUsersByPartylinePhone'));
         add_action('admin_notices', array($this, 'showPartylineUserNotice'));
+
+        # -- PWA / REST submission channel (inert unless the feature is enabled) --
+        Partyline_Pwa::init();
     }
 
     /**
