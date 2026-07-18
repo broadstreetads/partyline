@@ -34,7 +34,7 @@ class Partyline_Pwa {
 	const APP_PATH = 'partyline-app';
 
 	/** Bump to invalidate the service-worker precache. */
-	const PWA_ASSET_VERSION = '5';
+	const PWA_ASSET_VERSION = '6';
 
 	/**
 	 * Register hooks. Bails immediately unless the PWA feature is enabled, so
@@ -198,7 +198,6 @@ class Partyline_Pwa {
 		echo '<div class="pl-or"><span>or</span></div>';
 		echo '<button id="pl-write" class="pl-btn pl-btn--ghost" type="button">✍️ Write it myself</button>';
 		echo '<div class="pl-actions">';
-		echo '<button id="pl-continue" class="pl-btn pl-btn--primary" type="button" disabled>Continue</button>';
 		echo '<button id="pl-cancel" class="pl-btn pl-btn--ghost" type="button">Cancel</button>';
 		echo '</div>';
 		echo '</section>';
@@ -213,7 +212,7 @@ class Partyline_Pwa {
 		echo '<textarea id="pl-body" class="pl-textarea" rows="8" placeholder="What happened?"></textarea>';
 		echo '<div class="pl-actions">';
 		echo '<button id="pl-submit" class="pl-btn pl-btn--primary" type="button">Submit Partyline</button>';
-		echo '<button id="pl-back" class="pl-btn pl-btn--ghost" type="button">Back</button>';
+		echo '<button id="pl-recagain" class="pl-btn pl-btn--ghost" type="button">🎤 Record again</button>';
 		echo '</div>';
 		echo '</section>';
 

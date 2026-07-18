@@ -72,7 +72,6 @@
 			$('#pl-photo-camera').innerHTML = '<span>🔄</span> Retake';
 			$('#pl-photo-library').innerHTML = '<span>🖼️</span> Replace';
 			applyFilter(state.filter);
-			updateContinue();
 		};
 		img.onerror = function () { URL.revokeObjectURL(url); setStatus('Could not load that image.', 'error'); };
 		img.src = url;
@@ -116,8 +115,7 @@
 	function toggleRecord() {
 		if (recording) { stopRecording(); return; }
 		if (!navigator.mediaDevices || !window.MediaRecorder) {
-			setStatus('Recording is not supported on this browser — you can type the story on the next screen.', 'error');
-			updateContinue();
+			setStatus('Recording is not supported on this browser — tap "Write it myself" to type your story.', 'error');
 			return;
 		}
 		navigator.mediaDevices.getUserMedia({ audio: true }).then(function (s) {
@@ -169,8 +167,8 @@
 		}).then(function (gen) {
 			state.title = gen.title || '';
 			state.body = gen.body || '';
-			setStatus('✓ Got it — tap Continue to review.', null);
-			updateContinue();
+			setStatus('✓ Got it!', null);
+			goToPreview(); // auto-advance to the (editable) review screen
 		}).catch(function (err) {
 			setStatus(err.message || 'Transcription failed.', 'error');
 		}).then(function () {
@@ -192,11 +190,6 @@
 	/* --------------------------------------------------------------- */
 	/* Continue -> preview -> submit                                    */
 	/* --------------------------------------------------------------- */
-	function updateContinue() {
-		var ready = !!state.photoImg || !!state.body || !!state.transcript;
-		$('#pl-continue').disabled = !ready;
-	}
-
 	function goToPreview() {
 		var img = $('#pl-preview-img');
 		bakePhoto().then(function (blob) {
@@ -246,7 +239,6 @@
 		$('#pl-body').value = '';
 		setStatus('Tap to dictate — we\'ll write it up for you.', null);
 		applyFilter('none');
-		updateContinue();
 	}
 
 	/* --------------------------------------------------------------- */
@@ -304,8 +296,10 @@
 		$('#pl-start').addEventListener('click', function () { show('screen-capture'); });
 		$('#pl-cancel').addEventListener('click', function () { reset(); show('screen-home'); });
 		$('#pl-again').addEventListener('click', function () { reset(); show('screen-home'); });
-		$('#pl-back').addEventListener('click', function () { show('screen-capture'); });
-		$('#pl-continue').addEventListener('click', goToPreview);
+		$('#pl-recagain').addEventListener('click', function () {
+			setStatus('Tap to dictate — we\'ll write it up for you.', null);
+			show('screen-capture');
+		});
 		$('#pl-submit').addEventListener('click', submit);
 
 		$('#pl-photo-camera').addEventListener('click', function () { $('#pl-input-camera').click(); });
