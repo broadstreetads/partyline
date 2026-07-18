@@ -113,6 +113,8 @@ class Partyline_Pwa {
 			exit;
 		}
 
+		// WordPress marked this URL a 404 (it matches no route); override to 200.
+		status_header( 200 );
 		nocache_headers();
 		header( 'Content-Type: text/html; charset=utf-8' );
 
@@ -221,6 +223,7 @@ class Partyline_Pwa {
 
 	/** The web app manifest. */
 	public static function serveManifest() {
+		status_header( 200 );
 		nocache_headers();
 		header( 'Content-Type: application/manifest+json; charset=utf-8' );
 		echo wp_json_encode( array(
@@ -252,6 +255,7 @@ class Partyline_Pwa {
 
 	/** The service worker script (must be served at the app scope path). */
 	public static function serveServiceWorker() {
+		status_header( 200 );
 		nocache_headers();
 		header( 'Content-Type: application/javascript; charset=utf-8' );
 		header( 'Service-Worker-Allowed: /' . self::APP_PATH . '/' );
