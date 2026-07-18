@@ -34,7 +34,7 @@ class Partyline_Pwa {
 	const APP_PATH = 'partyline-app';
 
 	/** Bump to invalidate the service-worker precache. */
-	const PWA_ASSET_VERSION = '8';
+	const PWA_ASSET_VERSION = '9';
 
 	/**
 	 * Register hooks. Bails immediately unless the PWA feature is enabled, so
@@ -126,6 +126,8 @@ class Partyline_Pwa {
 
 		$user  = wp_get_current_user();
 		$name  = $user->display_name ? $user->display_name : $user->user_login;
+		// Editors/admins may publish straight away instead of saving a draft.
+		$can_publish = current_user_can( 'edit_others_posts' );
 		$config = array(
 			'restBase' => esc_url_raw( rest_url( self::REST_NAMESPACE . '/' ) ),
 			'nonce'    => wp_create_nonce( 'wp_rest' ),
@@ -207,6 +209,9 @@ class Partyline_Pwa {
 		// Step 3 — submit (gated until steps 1 & 2 are done)
 		echo '<h2 class="pl-step"><span class="pl-stepnum">3</span> Submit</h2>';
 		echo '<p id="pl-submit-hint" class="pl-hint">Add a photo and a story to submit.</p>';
+		if ( $can_publish ) {
+			echo '<label class="pl-check"><input type="checkbox" id="pl-immediate"> Post immediately <span class="pl-check-note">(publish now, skip the draft)</span></label>';
+		}
 		echo '<div class="pl-actions">';
 		echo '<button id="pl-submit" class="pl-btn pl-btn--primary" type="button" disabled>Submit Partyline</button>';
 		echo '<button id="pl-cancel" class="pl-btn pl-btn--ghost" type="button">Cancel</button>';
@@ -583,6 +588,12 @@ JS;
 		$author_id   = $user->ID;
 		$author_name = $user->display_name ? $user->display_name : $user->user_login;
 
+		// "Post immediately" — only honored for users who can publish others'
+		// posts (editors/admins). Everyone else always gets a draft.
+		$immediate = $request->get_param( 'immediate' );
+		$immediate = ! empty( $immediate ) && 'false' !== $immediate && '0' !== $immediate;
+		$publish   = $immediate && current_user_can( 'edit_others_posts' );
+
 		$attachment_id = 0;
 		if ( $has_image ) {
 			$attachment_id = self::handleImageUpload( 'image' );
@@ -598,6 +609,7 @@ JS;
 			'author_id'     => $author_id,
 			'author_name'   => $author_name,
 			'from'          => $user->user_email,
+			'status'        => $publish ? 'publish' : 'draft',
 		) );
 
 		if ( is_wp_error( $post_id ) ) {
@@ -606,8 +618,12 @@ JS;
 
 		return rest_ensure_response( array(
 			'post_id'   => $post_id,
+			'published' => $publish,
 			'edit_link' => get_admin_url() . 'post.php?post=' . $post_id . '&action=edit',
-			'message'   => 'Thanks! Your Partyline was submitted as a draft.',
+			'view_link' => $publish ? get_permalink( $post_id ) : '',
+			'message'   => $publish
+				? 'Published! Your Partyline is live.'
+				: 'Thanks! Your Partyline was submitted as a draft.',
 		) );
 	}
 
@@ -631,6 +647,7 @@ JS;
 		$author_id     = isset( $args['author_id'] ) ? (int) $args['author_id'] : 1;
 		$author_name   = isset( $args['author_name'] ) ? $args['author_name'] : 'Anonymous Partyliner';
 		$from          = isset( $args['from'] ) ? $args['from'] : $author_name;
+		$status        = ( isset( $args['status'] ) && 'publish' === $args['status'] ) ? 'publish' : 'draft';
 
 		$post_content = '';
 		if ( $attachment_id ) {
@@ -642,7 +659,7 @@ JS;
 		$post_id = wp_insert_post( array(
 			'post_title'    => $title,
 			'post_content'  => $post_content,
-			'post_status'   => 'draft',
+			'post_status'   => $status,
 			'post_author'   => $author_id,
 			'post_category' => $category ? array( $category ) : array(),
 		), true );

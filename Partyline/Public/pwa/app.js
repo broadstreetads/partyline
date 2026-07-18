@@ -237,6 +237,8 @@
 			fd.append('title', $('#pl-title').value);
 			fd.append('body', $('#pl-body').value);
 			if (blob) { fd.append('image', blob, 'partyline.jpg'); }
+			var imm = $('#pl-immediate'); // only present for editors/admins
+			if (imm && imm.checked) { fd.append('immediate', '1'); }
 			return api('submit', { method: 'POST', body: fd });
 		}).then(function (res) {
 			releaseStream(); // done capturing — free the mic
