@@ -112,16 +112,33 @@
 		el.className = 'pl-status' + (kind ? ' is-' + kind : '');
 	}
 
+	// Acquire the mic once and keep it for the whole capture session, so tapping
+	// record again doesn't re-prompt / re-acquire the device. Released only when
+	// the contributor leaves the capture flow (submit / cancel / send another).
+	function ensureStream() {
+		if (stream && stream.active) { return Promise.resolve(stream); }
+		return navigator.mediaDevices.getUserMedia({ audio: true }).then(function (s) {
+			stream = s;
+			return s;
+		});
+	}
+
+	function releaseStream() {
+		if (stream) {
+			stream.getTracks().forEach(function (t) { t.stop(); });
+			stream = null;
+		}
+	}
+
 	function toggleRecord() {
 		if (recording) { stopRecording(); return; }
 		if (!navigator.mediaDevices || !window.MediaRecorder) {
 			setStatus('Recording is not supported on this browser — tap "Write it myself" to type your story.', 'error');
 			return;
 		}
-		navigator.mediaDevices.getUserMedia({ audio: true }).then(function (s) {
-			stream = s;
+		ensureStream().then(function (s) {
 			chunks = [];
-			recorder = new MediaRecorder(stream);
+			recorder = new MediaRecorder(s);
 			recorder.ondataavailable = function (e) { if (e.data && e.data.size) { chunks.push(e.data); } };
 			recorder.onstop = onRecordingStopped;
 			recorder.start();
@@ -129,7 +146,7 @@
 			$('#pl-rec-btn').classList.add('is-recording');
 			setStatus('Recording… tap to stop.', 'busy');
 		}).catch(function () {
-			setStatus('Microphone permission denied.', 'error');
+			setStatus('Microphone access was blocked. Allow it in your browser settings, or tap "Write it myself".', 'error');
 		});
 	}
 
@@ -137,7 +154,7 @@
 		recording = false;
 		$('#pl-rec-btn').classList.remove('is-recording');
 		if (recorder && recorder.state !== 'inactive') { recorder.stop(); }
-		if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
+		// Intentionally keep the mic stream open — released on exit via releaseStream().
 	}
 
 	function onRecordingStopped() {
@@ -217,6 +234,7 @@
 		if (state.photoBlob) { fd.append('image', state.photoBlob, 'partyline.jpg'); }
 
 		api('submit', { method: 'POST', body: fd }).then(function (res) {
+			releaseStream(); // done capturing — free the mic
 			if (res.message) { $('#pl-success-msg').textContent = res.message; }
 			show('screen-success');
 		}).catch(function (err) {
@@ -228,6 +246,7 @@
 	}
 
 	function reset() {
+		releaseStream(); // leaving the capture flow — free the mic
 		state = { photoImg: null, filter: 'none', transcript: '', title: '', body: '' };
 		if (canvas) { canvas.classList.add('pl-hidden'); canvas.style.filter = ''; }
 		$('#pl-filters').classList.add('pl-hidden');
