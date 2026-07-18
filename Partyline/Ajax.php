@@ -41,6 +41,11 @@ class Partyline_Ajax
             'chatgpt_api_key'      => isset( $incoming['chatgpt_api_key'] )     ? sanitize_text_field( $incoming['chatgpt_api_key'] )     : '',
             'chatgpt_prompt'       => isset( $incoming['chatgpt_prompt'] )      ? sanitize_textarea_field( $incoming['chatgpt_prompt'] )  : '',
             'email_notifications'  => isset( $incoming['email_notifications'] ) ? sanitize_textarea_field( $incoming['email_notifications'] ) : '',
+
+            // Contributor app (PWA)
+            'pwa_enabled'          => ! empty( $incoming['pwa_enabled'] ),
+            'wispr_api_key'        => isset( $incoming['wispr_api_key'] )       ? sanitize_text_field( $incoming['wispr_api_key'] )       : '',
+            'wispr_dictionary'     => isset( $incoming['wispr_dictionary'] )    ? sanitize_textarea_field( $incoming['wispr_dictionary'] ) : '',
         );
 
         Partyline_Utility::setOption( Partyline_Core::KEY_SETTINGS, $clean );

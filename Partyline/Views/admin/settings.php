@@ -152,6 +152,68 @@
                     <div class="option">
                         <div class="control-label">
                             <div class="name nomargin">
+                                Contributor App
+                            </div>
+                            <div class="desc nomargin">
+                                Enable the installable web app that lets logged-in contributors submit a
+                                Partyline with a photo and a voice note (or typed text). The camera + voice
+                                flow runs entirely in the browser.
+                            </div>
+                        </div>
+                        <div class="control-container">
+                            <label>
+                                <input type="checkbox" x-model="settings.pwa_enabled" />
+                                Enable the app
+                            </label>
+                        </div>
+                    </div>
+                    <div class="clearfix"></div>
+                    <div class="break"></div>
+                    <div class="webhook-notice" x-show="settings.pwa_enabled">
+                        <strong>Your Partyline app URL is:</strong>
+                        <span id="pwa-url"><?php echo esc_html( Partyline_Pwa::appUrl() ); ?></span>
+                        <span class="copy-icon" @click="window.partylineCopyToClipboard('#pwa-url')">
+                            <span class="dashicons dashicons-admin-page"></span>
+                        </span>
+                    </div>
+                    <div class="break"></div>
+                    <div class="option">
+                        <div class="control-label">
+                            <div class="name nomargin">
+                                Wispr Flow API Key
+                            </div>
+                            <div class="desc nomargin">
+                                Transcribes voice recordings from the app. Get one at
+                                <a href="https://wisprflow.ai/developers" target="_blank">Wispr Flow &#x2197;</a>.
+                                Without it, contributors can still type their story.
+                            </div>
+                        </div>
+                        <div class="control-container">
+                            <input x-model="settings.wispr_api_key" type="password" placeholder="" />
+                        </div>
+                    </div>
+                    <div class="clearfix"></div>
+                    <div class="break"></div>
+                    <div class="option">
+                        <div class="control-label">
+                            <div class="name nomargin">
+                                Transcription Dictionary
+                            </div>
+                            <div class="desc nomargin">
+                                Optional. Local names and terms (streets, people, places) to improve
+                                transcription accuracy — comma or line separated.
+                            </div>
+                        </div>
+                        <div class="full-control-container partyline-settings-full-control">
+                            <textarea placeholder="Broad Street, Monmouth Street, Count Basie Center, Navesink" x-model="settings.wispr_dictionary" class="partyline-settings-textarea-short"></textarea>
+                        </div>
+                        <div class="partyline-clearboth"></div>
+                    </div>
+                    <div class="clearfix"></div>
+                    <div class="break"></div>
+                    <div class="option">
+                        <div class="control-label">
+                            <div class="name nomargin">
                                 <a target="_blank" href="https://broadstreetads.com/ad-platform/ad-formats/">Not sure what this is? Broadstreet is also an adserver.</a>
                             </div>
                         </div>
