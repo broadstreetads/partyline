@@ -24,12 +24,17 @@ class Partyline_Pwa {
 	const REST_NAMESPACE   = 'partyline/v1';
 	const WHISPER_ENDPOINT = 'https://api.openai.com/v1/audio/transcriptions';
 	const WHISPER_MODEL    = 'whisper-1';
+	const CHAT_ENDPOINT    = 'https://api.openai.com/v1/chat/completions';
+	const STORY_MODEL      = 'gpt-4o-mini'; // multimodal: accepts the photo for context
+
+	/** Default editorial voice for the story rewrite (overridable via settings). */
+	const DEFAULT_STORY_PROMPT = 'You are an editor for redbankgreen, a community news site covering Red Bank, New Jersey. A reader has submitted a dictated account and possibly a photo. Rewrite their submission as a short, professional community-news blurb.';
 
 	/** URL path the installable app is served under (no slashes). */
 	const APP_PATH = 'partyline-app';
 
 	/** Bump to invalidate the service-worker precache. */
-	const PWA_ASSET_VERSION = '4';
+	const PWA_ASSET_VERSION = '5';
 
 	/**
 	 * Register hooks. Bails immediately unless the PWA feature is enabled, so
@@ -450,20 +455,116 @@ JS;
 	}
 
 	/* --------------------------------------------------------------------- */
-	/* POST /generate  — { transcript } -> { title, body } via existing GPT   */
+	/* POST /generate  — transcript (+ optional photo) -> {title, body}        */
 	/* --------------------------------------------------------------------- */
 	public static function restGenerate( WP_REST_Request $request ) {
 		$transcript = $request->get_param( 'transcript' );
 		$transcript = is_string( $transcript ) ? trim( wp_strip_all_tags( $transcript ) ) : '';
 
-		if ( '' === $transcript ) {
-			return new WP_Error( 'partyline_no_transcript', 'No transcript provided.', array( 'status' => 400 ) );
+		// Optional photo, base64'd into a data URL for the vision model.
+		$image_data_url = null;
+		if ( ! empty( $_FILES['image'] ) && ! empty( $_FILES['image']['tmp_name'] ) && is_uploaded_file( $_FILES['image']['tmp_name'] ) ) {
+			$type = ! empty( $_FILES['image']['type'] ) ? $_FILES['image']['type'] : 'image/jpeg';
+			if ( 0 === strpos( $type, 'image/' ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+				$bytes = file_get_contents( $_FILES['image']['tmp_name'] );
+				if ( false !== $bytes && '' !== $bytes ) {
+					$image_data_url = 'data:' . $type . ';base64,' . base64_encode( $bytes );
+				}
+			}
 		}
 
-		return rest_ensure_response( array(
-			'title' => Partyline_Utility::generateTitle( $transcript ),
-			'body'  => Partyline_Utility::gptClean( $transcript ),
+		if ( '' === $transcript && null === $image_data_url ) {
+			return new WP_Error( 'partyline_no_input', 'Nothing to write from.', array( 'status' => 400 ) );
+		}
+
+		return rest_ensure_response( self::generateStory( $transcript, $image_data_url ) );
+	}
+
+	/**
+	 * Rewrite a dictated account into a short, professional blurb + headline,
+	 * optionally using the photo for visual context. Returns array{title, body}.
+	 */
+	public static function generateStory( $transcript, $image_data_url = null ) {
+		$settings = Partyline_Utility::getSettings();
+		$key      = isset( $settings->chatgpt_api_key ) ? trim( $settings->chatgpt_api_key ) : '';
+
+		// No API key: hand back the raw transcript so the contributor can edit.
+		if ( empty( $key ) ) {
+			$words = str_word_count( $transcript, 1 );
+			return array(
+				'title' => $words ? ucfirst( implode( ' ', array_slice( $words, 0, 6 ) ) ) : Partyline_Core::DEFAULT_TITLE,
+				'body'  => $transcript,
+			);
+		}
+
+		$user_content = array( array(
+			'type' => 'text',
+			'text' => '' !== $transcript
+				? ( "Reader's dictated account:\n" . $transcript )
+				: 'The reader did not dictate anything — base the blurb on the photo.',
 		) );
+		if ( $image_data_url ) {
+			$user_content[] = array(
+				'type'      => 'image_url',
+				'image_url' => array( 'url' => $image_data_url, 'detail' => 'low' ),
+			);
+		}
+
+		$response = wp_remote_post( self::CHAT_ENDPOINT, array(
+			'timeout' => 60,
+			'headers' => array(
+				'Authorization' => 'Bearer ' . $key,
+				'Content-Type'  => 'application/json',
+			),
+			'body' => wp_json_encode( array(
+				'model'           => self::STORY_MODEL,
+				'max_tokens'      => 500,
+				'response_format' => array( 'type' => 'json_object' ),
+				'messages'        => array(
+					array( 'role' => 'system', 'content' => self::storyPrompt() ),
+					array( 'role' => 'user', 'content' => $user_content ),
+				),
+			) ),
+		) );
+
+		// On any failure, fall back to the transcript + a naive title.
+		$fallback = array(
+			'title' => Partyline_Utility::generateTitle( $transcript ),
+			'body'  => $transcript,
+		);
+
+		if ( is_wp_error( $response ) || 200 !== (int) wp_remote_retrieve_response_code( $response ) ) {
+			Partyline_Log::add( 'error', 'Story generation failed: ' . ( is_wp_error( $response ) ? $response->get_error_message() : wp_remote_retrieve_body( $response ) ) );
+			return $fallback;
+		}
+
+		$decoded = json_decode( wp_remote_retrieve_body( $response ), true );
+		$content = isset( $decoded['choices'][0]['message']['content'] ) ? $decoded['choices'][0]['message']['content'] : '';
+		$parsed  = json_decode( $content, true );
+
+		if ( ! is_array( $parsed ) || ( empty( $parsed['title'] ) && empty( $parsed['body'] ) ) ) {
+			return $fallback;
+		}
+
+		return array(
+			'title' => isset( $parsed['title'] ) ? sanitize_text_field( $parsed['title'] ) : $fallback['title'],
+			'body'  => isset( $parsed['body'] ) ? trim( wp_kses_post( $parsed['body'] ) ) : $transcript,
+		);
+	}
+
+	/** The editorial system prompt, plus the JSON output contract. */
+	public static function storyPrompt() {
+		$settings = Partyline_Utility::getSettings();
+		$prompt   = isset( $settings->story_prompt ) ? trim( $settings->story_prompt ) : '';
+		if ( '' === $prompt ) {
+			$prompt = self::DEFAULT_STORY_PROMPT;
+		}
+
+		return $prompt . "\n\n"
+			. 'Respond ONLY with a JSON object of the form {"title": "...", "body": "..."}. '
+			. 'The body must be a short, professional news blurb of 2-4 sentences in neutral third person. '
+			. 'The title must be a concise headline. Do not invent facts beyond the account and photo.';
 	}
 
 	/* --------------------------------------------------------------------- */

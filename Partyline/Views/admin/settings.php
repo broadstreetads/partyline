@@ -199,6 +199,24 @@
                     <div class="option">
                         <div class="control-label">
                             <div class="name nomargin">
+                                Story Prompt
+                            </div>
+                            <div class="desc nomargin">
+                                The editorial voice used to rewrite a contributor's dictated account (and
+                                their photo) into a short, professional blurb. Leave blank to use the
+                                built-in redbankgreen default.
+                            </div>
+                        </div>
+                        <div class="full-control-container partyline-settings-full-control">
+                            <textarea placeholder="You are an editor for redbankgreen, a community news site covering Red Bank, New Jersey. Rewrite the reader's submission as a short, professional community-news blurb." x-model="settings.story_prompt" class="partyline-settings-textarea"></textarea>
+                        </div>
+                        <div class="partyline-clearboth"></div>
+                    </div>
+                    <div class="clearfix"></div>
+                    <div class="break"></div>
+                    <div class="option">
+                        <div class="control-label">
+                            <div class="name nomargin">
                                 <a target="_blank" href="https://broadstreetads.com/ad-platform/ad-formats/">Not sure what this is? Broadstreet is also an adserver.</a>
                             </div>
                         </div>

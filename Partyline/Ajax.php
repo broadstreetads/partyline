@@ -46,6 +46,7 @@ class Partyline_Ajax
             // key above via Whisper — no separate key needed.
             'pwa_enabled'              => ! empty( $incoming['pwa_enabled'] ),
             'transcription_dictionary' => isset( $incoming['transcription_dictionary'] ) ? sanitize_textarea_field( $incoming['transcription_dictionary'] ) : '',
+            'story_prompt'             => isset( $incoming['story_prompt'] )             ? sanitize_textarea_field( $incoming['story_prompt'] )             : '',
         );
 
         Partyline_Utility::setOption( Partyline_Core::KEY_SETTINGS, $clean );

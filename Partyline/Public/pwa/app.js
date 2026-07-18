@@ -27,13 +27,6 @@
 			});
 		});
 	}
-	function apiJson(path, obj) {
-		return api(path, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(obj)
-		});
-	}
 	window.PartylineAPI = api;
 
 	/* --------------------------------------------------------------- */
@@ -163,7 +156,16 @@
 		api('transcribe', { method: 'POST', body: fd }).then(function (res) {
 			state.transcript = res.text || '';
 			setStatus('Writing it up…', 'busy');
-			return apiJson('generate', { transcript: state.transcript });
+			// Send the transcript + the photo (if any) so the model can use both.
+			var gfd = new FormData();
+			gfd.append('transcript', state.transcript);
+			if (state.photoImg) {
+				return bakePhoto().then(function (blob) {
+					if (blob) { gfd.append('image', blob, 'photo.jpg'); }
+					return api('generate', { method: 'POST', body: gfd });
+				});
+			}
+			return api('generate', { method: 'POST', body: gfd });
 		}).then(function (gen) {
 			state.title = gen.title || '';
 			state.body = gen.body || '';
