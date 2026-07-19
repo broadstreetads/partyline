@@ -34,7 +34,7 @@ class Partyline_Pwa {
 	const APP_PATH = 'partyline-app';
 
 	/** Bump to invalidate the service-worker precache. */
-	const PWA_ASSET_VERSION = '10';
+	const PWA_ASSET_VERSION = '11';
 
 	/**
 	 * Register hooks. Bails immediately unless the PWA feature is enabled, so
@@ -172,7 +172,17 @@ class Partyline_Pwa {
 		echo '<span id="pl-install-msg">Install Partyline to your home screen for one-tap access.</span>';
 		echo '<button id="pl-install-btn" class="pl-btn pl-btn--lime" type="button">Install</button>';
 		echo '</div>';
-		echo '<div class="pl-actions"><button id="pl-start" class="pl-btn pl-btn--primary" type="button">Start a Partyline</button></div>';
+		echo '<div class="pl-actions">';
+		echo '<button id="pl-start" class="pl-btn pl-btn--primary" type="button">Start a Partyline</button>';
+		echo '<button id="pl-open-drafts" class="pl-btn pl-btn--ghost" type="button">📁 Your Partylines</button>';
+		echo '</div>';
+		echo '</section>';
+
+		// --- DRAFTS / SAVED (local) ---
+		echo '<section id="screen-drafts" class="pl-screen pl-hidden">';
+		echo '<h2 class="pl-step" style="margin-top:4px;">Your Partylines</h2>';
+		echo '<div id="pl-drafts-list" class="pl-drafts"></div>';
+		echo '<div class="pl-actions"><button id="pl-drafts-back" class="pl-btn pl-btn--ghost" type="button">Back</button></div>';
 		echo '</section>';
 
 		// --- CAPTURE (all three steps on one screen) ---
@@ -214,7 +224,7 @@ class Partyline_Pwa {
 		}
 		echo '<div class="pl-actions">';
 		echo '<button id="pl-submit" class="pl-btn pl-btn--primary" type="button" disabled>Submit Partyline</button>';
-		echo '<button id="pl-cancel" class="pl-btn pl-btn--ghost" type="button">Cancel</button>';
+		echo '<button id="pl-cancel" class="pl-btn pl-btn--ghost" type="button">Save &amp; close</button>';
 		echo '</div>';
 		echo '</section>';
 

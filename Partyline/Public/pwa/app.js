@@ -73,6 +73,7 @@
 			$('#pl-photo-library').innerHTML = '<span>🖼️</span> Replace';
 			applyFilter(state.filter);
 			updateSubmit();
+			scheduleSave();
 		};
 		img.onerror = function () { URL.revokeObjectURL(url); setStatus('Could not load that image.', 'error'); };
 		img.src = url;
@@ -86,6 +87,7 @@
 		for (var i = 0; i < chips.length; i++) {
 			chips[i].classList.toggle('is-active', chips[i].getAttribute('data-filter') === name);
 		}
+		scheduleSave();
 	}
 
 	// Bake the current photo + filter into a JPEG blob for upload.
@@ -100,6 +102,220 @@
 			x.drawImage(state.photoImg, 0, 0, c.width, c.height);
 			c.toBlob(function (blob) { resolve(blob); }, 'image/jpeg', 0.9);
 		});
+	}
+
+	/* --------------------------------------------------------------- */
+	/* Local drafts (IndexedDB): autosave, revisit, delete              */
+	/* --------------------------------------------------------------- */
+	var DB_NAME = 'partyline-drafts', STORE = 'drafts', MAX_DRAFTS = 20;
+	var idbOK = !!window.indexedDB;
+	var draftId = null;   // the draft currently being edited
+	var saveTimer = null;
+	var thumbUrls = [];   // object URLs to revoke on list re-render
+
+	function openDB() {
+		return new Promise(function (resolve, reject) {
+			var req = indexedDB.open(DB_NAME, 1);
+			req.onupgradeneeded = function () {
+				var db = req.result;
+				if (!db.objectStoreNames.contains(STORE)) { db.createObjectStore(STORE, { keyPath: 'id' }); }
+			};
+			req.onsuccess = function () { resolve(req.result); };
+			req.onerror = function () { reject(req.error); };
+		});
+	}
+	function dbPut(entry) {
+		return openDB().then(function (db) { return new Promise(function (res, rej) {
+			var tx = db.transaction(STORE, 'readwrite'); tx.objectStore(STORE).put(entry);
+			tx.oncomplete = function () { res(entry); }; tx.onerror = function () { rej(tx.error); };
+		}); });
+	}
+	function dbDelete(id) {
+		return openDB().then(function (db) { return new Promise(function (res, rej) {
+			var tx = db.transaction(STORE, 'readwrite'); tx.objectStore(STORE).delete(id);
+			tx.oncomplete = function () { res(); }; tx.onerror = function () { rej(tx.error); };
+		}); });
+	}
+	function dbAll() {
+		return openDB().then(function (db) { return new Promise(function (res, rej) {
+			var tx = db.transaction(STORE, 'readonly'); var r = tx.objectStore(STORE).getAll();
+			r.onsuccess = function () { res(r.result || []); }; r.onerror = function () { rej(r.error); };
+		}); });
+	}
+
+	function newId() { return 'd' + Date.now() + '-' + Math.random().toString(36).slice(2, 8); }
+
+	// Unfiltered, downscaled JPEG of the current photo (or null).
+	function currentPhotoBlob() {
+		return new Promise(function (resolve) {
+			if (!state.photoImg || !canvas || canvas.classList.contains('pl-hidden')) { resolve(null); return; }
+			canvas.toBlob(function (b) { resolve(b); }, 'image/jpeg', 0.85);
+		});
+	}
+
+	function hasContent() {
+		return !!state.photoImg || $('#pl-title').value.trim() !== '' || $('#pl-body').value.trim() !== '';
+	}
+
+	function buildEntry(status, res) {
+		return currentPhotoBlob().then(function (photo) {
+			return {
+				id: draftId,
+				status: status,
+				wpStatus: status === 'sent' ? ((res && res.published) ? 'publish' : 'draft') : null,
+				title: $('#pl-title').value,
+				body: $('#pl-body').value,
+				filter: state.filter,
+				photo: photo,
+				editLink: (res && res.edit_link) || '',
+				viewLink: (res && res.view_link) || '',
+				updatedAt: Date.now()
+			};
+		});
+	}
+
+	function saveDraft() {
+		if (!idbOK || !hasContent()) { return Promise.resolve(); }
+		if (!draftId) { draftId = newId(); }
+		return buildEntry('draft').then(dbPut).then(prune);
+	}
+
+	function markSent(res) {
+		if (!idbOK) { return Promise.resolve(); }
+		if (!draftId) { draftId = newId(); }
+		return buildEntry('sent', res).then(dbPut).then(prune);
+	}
+
+	function scheduleSave() {
+		if (!idbOK) { return; }
+		clearTimeout(saveTimer);
+		saveTimer = setTimeout(saveDraft, 600);
+	}
+
+	function prune() {
+		return dbAll().then(function (all) {
+			all.sort(function (a, b) { return b.updatedAt - a.updatedAt; });
+			return Promise.all(all.slice(MAX_DRAFTS).map(function (e) { return dbDelete(e.id); }));
+		});
+	}
+
+	function timeAgo(ts) {
+		var s = Math.floor((Date.now() - ts) / 1000);
+		if (s < 60) { return 'just now'; }
+		var m = Math.floor(s / 60); if (m < 60) { return m + 'm ago'; }
+		var h = Math.floor(m / 60); if (h < 24) { return h + 'h ago'; }
+		return Math.floor(h / 24) + 'd ago';
+	}
+
+	function loadDraft(entry) {
+		reset();
+		draftId = entry.id;
+		$('#pl-title').value = entry.title || '';
+		$('#pl-body').value = entry.body || '';
+		state.transcript = entry.body || '';
+		if (entry.photo) {
+			var url = URL.createObjectURL(entry.photo);
+			var img = new Image();
+			img.onload = function () {
+				URL.revokeObjectURL(url);
+				canvas.width = img.naturalWidth;
+				canvas.height = img.naturalHeight;
+				cctx = canvas.getContext('2d');
+				cctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+				state.photoImg = img;
+				canvas.classList.remove('pl-hidden');
+				$('#pl-filters').classList.remove('pl-hidden');
+				$('#pl-photo-camera').innerHTML = '<span>🔄</span> Retake';
+				$('#pl-photo-library').innerHTML = '<span>🖼️</span> Replace';
+				applyFilter(entry.filter || 'none');
+				updateSubmit();
+			};
+			img.src = url;
+		}
+		updateSubmit();
+		show('screen-capture');
+	}
+
+	function renderDrafts() {
+		var list = $('#pl-drafts-list');
+		thumbUrls.forEach(function (u) { URL.revokeObjectURL(u); });
+		thumbUrls = [];
+		if (!idbOK) { list.innerHTML = '<p class="pl-hint">Saved drafts aren\'t available on this browser.</p>'; return; }
+		list.innerHTML = '<p class="pl-hint">Loading…</p>';
+		dbAll().then(function (all) {
+			all.sort(function (a, b) { return b.updatedAt - a.updatedAt; });
+			all = all.slice(0, MAX_DRAFTS);
+			if (!all.length) {
+				list.innerHTML = '<p class="pl-hint">Nothing saved yet. Your drafts and sent Partylines show up here.</p>';
+				return;
+			}
+			list.innerHTML = '';
+			all.forEach(function (e) { list.appendChild(draftRow(e)); });
+		}).catch(function () { list.innerHTML = '<p class="pl-hint">Couldn\'t load saved drafts.</p>'; });
+	}
+
+	function draftRow(e) {
+		var row = document.createElement('div');
+		row.className = 'pl-draft';
+
+		if (e.photo) {
+			var u = URL.createObjectURL(e.photo);
+			thumbUrls.push(u);
+			var im = document.createElement('img');
+			im.className = 'pl-draft-thumb';
+			im.src = u;
+			row.appendChild(im);
+		} else {
+			var ph = document.createElement('div');
+			ph.className = 'pl-draft-thumb pl-draft-noimg';
+			ph.textContent = '📝';
+			row.appendChild(ph);
+		}
+
+		var main = document.createElement('div');
+		main.className = 'pl-draft-main';
+		var t = document.createElement('div');
+		t.className = 'pl-draft-title';
+		t.textContent = (e.title && e.title.trim()) || (e.body && e.body.trim().slice(0, 50)) || 'Untitled';
+		var meta = document.createElement('div');
+		meta.className = 'pl-draft-meta';
+		var badge = document.createElement('span');
+		if (e.status === 'sent') {
+			var pub = e.wpStatus === 'publish';
+			badge.className = 'pl-badge ' + (pub ? 'is-published' : 'is-sent');
+			badge.textContent = pub ? 'Published' : 'Sent';
+		} else {
+			badge.className = 'pl-badge is-draft';
+			badge.textContent = 'Draft';
+		}
+		var time = document.createElement('span');
+		time.className = 'pl-draft-time';
+		time.textContent = timeAgo(e.updatedAt);
+		meta.appendChild(badge);
+		meta.appendChild(time);
+		main.appendChild(t);
+		main.appendChild(meta);
+		row.appendChild(main);
+
+		var del = document.createElement('button');
+		del.className = 'pl-draft-del';
+		del.setAttribute('aria-label', 'Delete');
+		del.textContent = '✕';
+		del.addEventListener('click', function (ev) {
+			ev.stopPropagation();
+			if (window.confirm('Delete this Partyline from this device?')) { dbDelete(e.id).then(renderDrafts); }
+		});
+		row.appendChild(del);
+
+		row.addEventListener('click', function () {
+			if (e.status === 'sent') {
+				var link = e.viewLink || e.editLink;
+				if (link) { window.open(link, '_blank'); }
+			} else {
+				loadDraft(e);
+			}
+		});
+		return row;
 	}
 
 	/* --------------------------------------------------------------- */
@@ -205,6 +421,7 @@
 			$('#pl-body').value = gen.body || state.transcript || '';
 			setStatus('✓ Written up below — edit if needed, or tap record to redo.', null);
 			updateSubmit();
+			scheduleSave();
 		}).catch(function (err) {
 			setStatus(err.message || 'Transcription failed.', 'error');
 		}).then(function () {
@@ -260,6 +477,8 @@
 			return api('submit', { method: 'POST', body: fd });
 		}).then(function (res) {
 			releaseStream(); // done capturing — free the mic
+			markSent(res);   // record it in the local "Your Partylines" list
+			draftId = null;  // next capture starts a fresh entry
 			if (res.message) { $('#pl-success-msg').textContent = res.message; }
 			show('screen-success');
 		}).catch(function (err) {
@@ -273,6 +492,7 @@
 	function reset() {
 		releaseStream(); // leaving the capture flow — free the mic
 		releaseWakeLock();
+		draftId = null;
 		state = { photoImg: null, filter: 'none', transcript: '', title: '', body: '' };
 		if (canvas) { canvas.classList.add('pl-hidden'); canvas.style.filter = ''; }
 		$('#pl-filters').classList.add('pl-hidden');
@@ -339,10 +559,18 @@
 		registerServiceWorker();
 		setupInstall();
 
-		$('#pl-start').addEventListener('click', function () { show('screen-capture'); });
-		$('#pl-cancel').addEventListener('click', function () { reset(); show('screen-home'); });
+		$('#pl-start').addEventListener('click', function () { reset(); show('screen-capture'); });
 		$('#pl-again').addEventListener('click', function () { reset(); show('screen-home'); });
 		$('#pl-submit').addEventListener('click', submit);
+
+		// Save & close: persist the in-progress draft, then return home.
+		$('#pl-cancel').addEventListener('click', function () {
+			saveDraft().then(function () { reset(); show('screen-home'); });
+		});
+
+		// "Your Partylines" list.
+		$('#pl-open-drafts').addEventListener('click', function () { renderDrafts(); show('screen-drafts'); });
+		$('#pl-drafts-back').addEventListener('click', function () { show('screen-home'); });
 
 		$('#pl-photo-camera').addEventListener('click', function () { $('#pl-input-camera').click(); });
 		$('#pl-photo-library').addEventListener('click', function () { $('#pl-input-library').click(); });
@@ -351,7 +579,8 @@
 		$('#pl-input-library').addEventListener('change', onPick);
 
 		// Typing the story live-updates the submit gate.
-		$('#pl-body').addEventListener('input', updateSubmit);
+		$('#pl-body').addEventListener('input', function () { updateSubmit(); scheduleSave(); });
+		$('#pl-title').addEventListener('input', scheduleSave);
 
 		var chips = document.querySelectorAll('.pl-chip');
 		for (var i = 0; i < chips.length; i++) {
