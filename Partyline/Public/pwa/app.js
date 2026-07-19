@@ -105,12 +105,28 @@
 	/* --------------------------------------------------------------- */
 	/* Voice record -> 16kHz WAV                                        */
 	/* --------------------------------------------------------------- */
-	var recorder = null, chunks = [], stream = null, recording = false;
+	var recorder = null, chunks = [], stream = null, recording = false, wakeLock = null;
 
 	function setStatus(msg, kind) {
 		var el = $('#pl-rec-status');
 		el.textContent = msg;
 		el.className = 'pl-status' + (kind ? ' is-' + kind : '');
+	}
+
+	// Keep the screen awake while recording so a long interview isn't cut off by
+	// the device's auto-lock (which also suspends the page/recorder on iOS).
+	function requestWakeLock() {
+		if (!('wakeLock' in navigator)) { return; }
+		navigator.wakeLock.request('screen').then(function (wl) {
+			wakeLock = wl;
+		}).catch(function () { /* non-fatal: not visible, or unsupported */ });
+	}
+
+	function releaseWakeLock() {
+		if (wakeLock) {
+			wakeLock.release().catch(function () {});
+			wakeLock = null;
+		}
 	}
 
 	// Acquire the mic once and keep it for the whole capture session, so tapping
@@ -146,6 +162,7 @@
 			recording = true;
 			$('#pl-rec-btn').classList.add('is-recording');
 			setStatus('Recording… tap to stop.', 'busy');
+			requestWakeLock();
 		}).catch(function () {
 			setStatus('Microphone access was blocked. Allow it in your browser settings, or tap "Write it myself".', 'error');
 		});
@@ -155,6 +172,7 @@
 		recording = false;
 		$('#pl-rec-btn').classList.remove('is-recording');
 		if (recorder && recorder.state !== 'inactive') { recorder.stop(); }
+		releaseWakeLock();
 		// Intentionally keep the mic stream open — released on exit via releaseStream().
 	}
 
@@ -254,6 +272,7 @@
 
 	function reset() {
 		releaseStream(); // leaving the capture flow — free the mic
+		releaseWakeLock();
 		state = { photoImg: null, filter: 'none', transcript: '', title: '', body: '' };
 		if (canvas) { canvas.classList.add('pl-hidden'); canvas.style.filter = ''; }
 		$('#pl-filters').classList.add('pl-hidden');
@@ -340,6 +359,12 @@
 		}
 
 		$('#pl-rec-btn').addEventListener('click', toggleRecord);
+
+		// The wake lock is auto-released when the page is hidden; re-acquire it
+		// if we come back while still recording.
+		document.addEventListener('visibilitychange', function () {
+			if (document.visibilityState === 'visible' && recording) { requestWakeLock(); }
+		});
 
 		updateSubmit(); // set the initial gated state
 	}

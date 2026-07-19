@@ -34,7 +34,7 @@ class Partyline_Pwa {
 	const APP_PATH = 'partyline-app';
 
 	/** Bump to invalidate the service-worker precache. */
-	const PWA_ASSET_VERSION = '9';
+	const PWA_ASSET_VERSION = '10';
 
 	/**
 	 * Register hooks. Bails immediately unless the PWA feature is enabled, so
