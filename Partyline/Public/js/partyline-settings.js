@@ -16,6 +16,13 @@
             settings.partyline_category = String(settings.partyline_category);
         }
 
+        // The contributor app is on by default.
+        if (settings.pwa_enabled === undefined) { settings.pwa_enabled = true; }
+        // Twilio (SMS) defaults on when credentials already exist (back-compat).
+        if (settings.twilio_enabled === undefined) {
+            settings.twilio_enabled = !!(settings.twilio_account_sid && String(settings.twilio_account_sid).length);
+        }
+
         return {
             loadingMessage: null,
             settings: settings,

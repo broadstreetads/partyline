@@ -34,19 +34,26 @@ class Partyline_Ajax
         }
 
         $clean = (object) array(
-            'partyline_key'        => isset( $incoming['partyline_key'] )       ? sanitize_text_field( $incoming['partyline_key'] )       : '',
-            'twilio_account_sid'   => isset( $incoming['twilio_account_sid'] )  ? sanitize_text_field( $incoming['twilio_account_sid'] )  : '',
-            'twilio_auth_token'    => isset( $incoming['twilio_auth_token'] )   ? sanitize_text_field( $incoming['twilio_auth_token'] )   : '',
-            'partyline_category'   => isset( $incoming['partyline_category'] )  ? absint( $incoming['partyline_category'] )               : 0,
-            'chatgpt_api_key'      => isset( $incoming['chatgpt_api_key'] )     ? sanitize_text_field( $incoming['chatgpt_api_key'] )     : '',
-            'chatgpt_prompt'       => isset( $incoming['chatgpt_prompt'] )      ? sanitize_textarea_field( $incoming['chatgpt_prompt'] )  : '',
-            'email_notifications'  => isset( $incoming['email_notifications'] ) ? sanitize_textarea_field( $incoming['email_notifications'] ) : '',
+            // Contributor app (PWA) — the primary channel. Enabled by default.
+            'pwa_enabled'          => array_key_exists( 'pwa_enabled', $incoming ) ? ! empty( $incoming['pwa_enabled'] ) : true,
+            'pwa_allow_anonymous'  => ! empty( $incoming['pwa_allow_anonymous'] ),
+            'turnstile_site_key'   => isset( $incoming['turnstile_site_key'] )   ? sanitize_text_field( $incoming['turnstile_site_key'] )   : '',
+            'turnstile_secret_key' => isset( $incoming['turnstile_secret_key'] ) ? sanitize_text_field( $incoming['turnstile_secret_key'] ) : '',
 
-            // Contributor app (PWA). Transcription uses the OpenAI (chatgpt_api_key)
-            // key above via Whisper — no separate key needed.
-            'pwa_enabled'              => ! empty( $incoming['pwa_enabled'] ),
+            // AI (OpenAI / ChatGPT) — optional. Enables auto-formatting + Whisper dictation.
+            'chatgpt_api_key'          => isset( $incoming['chatgpt_api_key'] )          ? sanitize_text_field( $incoming['chatgpt_api_key'] )          : '',
+            'ai_prompt'                => isset( $incoming['ai_prompt'] )                ? sanitize_textarea_field( $incoming['ai_prompt'] )                : '',
             'transcription_dictionary' => isset( $incoming['transcription_dictionary'] ) ? sanitize_textarea_field( $incoming['transcription_dictionary'] ) : '',
-            'story_prompt'             => isset( $incoming['story_prompt'] )             ? sanitize_textarea_field( $incoming['story_prompt'] )             : '',
+
+            // Twilio (SMS) — optional, secondary. Back-compat: default on when creds exist.
+            'twilio_enabled'       => array_key_exists( 'twilio_enabled', $incoming ) ? ! empty( $incoming['twilio_enabled'] ) : ! empty( $incoming['twilio_account_sid'] ),
+            'partyline_key'        => isset( $incoming['partyline_key'] )      ? sanitize_text_field( $incoming['partyline_key'] )      : '',
+            'twilio_account_sid'   => isset( $incoming['twilio_account_sid'] ) ? sanitize_text_field( $incoming['twilio_account_sid'] ) : '',
+            'twilio_auth_token'    => isset( $incoming['twilio_auth_token'] )  ? sanitize_text_field( $incoming['twilio_auth_token'] )  : '',
+
+            // General.
+            'partyline_category'   => isset( $incoming['partyline_category'] )  ? absint( $incoming['partyline_category'] )                    : 0,
+            'email_notifications'  => isset( $incoming['email_notifications'] ) ? sanitize_textarea_field( $incoming['email_notifications'] ) : '',
         );
 
         Partyline_Utility::setOption( Partyline_Core::KEY_SETTINGS, $clean );

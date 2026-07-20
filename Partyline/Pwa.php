@@ -26,19 +26,17 @@ class Partyline_Pwa {
 	const WHISPER_MODEL    = 'whisper-1';
 	const CHAT_ENDPOINT    = 'https://api.openai.com/v1/chat/completions';
 	const STORY_MODEL      = 'gpt-4o-mini'; // multimodal: accepts the photo for context
-
-	/** Default editorial voice for the story rewrite (overridable via settings). */
-	const DEFAULT_STORY_PROMPT = 'You are an editor for redbankgreen, a community news site covering Red Bank, New Jersey. A reader has submitted a dictated account and possibly a photo. Rewrite their submission as a short, professional community-news blurb.';
+	const TURNSTILE_VERIFY = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 
 	/** URL path the installable app is served under (no slashes). */
-	const APP_PATH = 'partyline-app';
+	const APP_PATH = 'partyline';
 
 	/** Bump to invalidate the service-worker precache. */
-	const PWA_ASSET_VERSION = '11';
+	const PWA_ASSET_VERSION = '12';
 
 	/**
-	 * Register hooks. Bails immediately unless the PWA feature is enabled, so
-	 * production behavior is unchanged until someone flips the setting on.
+	 * Register hooks. The contributor app is ON by default (see isEnabled), so
+	 * this normally runs; it bails only when the app is explicitly disabled.
 	 */
 	public static function init() {
 		if ( ! self::isEnabled() ) {
@@ -47,13 +45,30 @@ class Partyline_Pwa {
 
 		add_action( 'rest_api_init', array( __CLASS__, 'registerRoutes' ) );
 
-		// Serve the installable app + service worker + manifest under /partyline-app/.
+		// Serve the installable app + service worker + manifest under /partyline/.
 		// Priority 0 so we intercept before redirect_canonical (priority 10) can act.
 		add_action( 'template_redirect', array( __CLASS__, 'maybeServeApp' ), 0 );
 	}
 
+	/** Is the contributor app enabled? Defaults to ON unless explicitly disabled. */
+	public static function isEnabled() {
+		$s = Partyline_Utility::getSettings();
+		return ! isset( $s->pwa_enabled ) ? true : (bool) $s->pwa_enabled;
+	}
+
+	/** May people submit without logging in? Opt-in, default OFF. */
+	public static function allowAnonymous() {
+		$s = Partyline_Utility::getSettings();
+		return ! empty( $s->pwa_allow_anonymous );
+	}
+
+	/** The current visitor is submitting anonymously (not logged in, but allowed). */
+	public static function isAnonymousVisitor() {
+		return ! is_user_logged_in() && self::allowAnonymous();
+	}
+
 	/* --------------------------------------------------------------------- */
-	/* PWA shell routing:  /partyline-app/  ·  /sw.js  ·  /manifest.webmanifest */
+	/* PWA shell routing:  /partyline/  ·  /sw.js  ·  /manifest.webmanifest */
 	/* --------------------------------------------------------------------- */
 
 	/** Absolute URL of the app root. */
@@ -82,7 +97,7 @@ class Partyline_Pwa {
 	}
 
 	/**
-	 * If the current request targets /partyline-app[/...], serve the matching
+	 * If the current request targets /partyline[/...], serve the matching
 	 * resource and exit. Anything else falls through untouched.
 	 */
 	public static function maybeServeApp() {
@@ -112,9 +127,10 @@ class Partyline_Pwa {
 		exit;
 	}
 
-	/** The app shell HTML (login-gated). */
+	/** The app shell HTML. Logged-in gets the full app; anonymous (if allowed) a lighter one. */
 	public static function serveShell() {
-		if ( ! is_user_logged_in() ) {
+		$logged_in = is_user_logged_in();
+		if ( ! $logged_in && ! self::allowAnonymous() ) {
 			wp_safe_redirect( wp_login_url( self::appUrl() ) );
 			exit;
 		}
@@ -124,22 +140,28 @@ class Partyline_Pwa {
 		nocache_headers();
 		header( 'Content-Type: text/html; charset=utf-8' );
 
-		$user  = wp_get_current_user();
-		$name  = $user->display_name ? $user->display_name : $user->user_login;
-		// Editors/admins may publish straight away instead of saving a draft.
-		$can_publish = current_user_can( 'edit_others_posts' );
+		$settings      = Partyline_Utility::getSettings();
+		$anon          = ! $logged_in; // reaching here logged-out means anonymous is allowed
+		$user          = wp_get_current_user();
+		$name          = $logged_in ? ( $user->display_name ? $user->display_name : $user->user_login ) : '';
+		$can_publish   = current_user_can( 'edit_others_posts' ); // editors/admins: publish now
+		$turnstile_key = ( $anon && isset( $settings->turnstile_site_key ) ) ? trim( $settings->turnstile_site_key ) : '';
+
 		$config = array(
-			'restBase' => esc_url_raw( rest_url( self::REST_NAMESPACE . '/' ) ),
-			'nonce'    => wp_create_nonce( 'wp_rest' ),
-			'swUrl'    => esc_url_raw( self::appUrl( 'sw.js' ) ),
-			'scope'    => '/' . self::APP_PATH . '/',
-			'user'     => array( 'name' => $name ),
+			'restBase'     => esc_url_raw( rest_url( self::REST_NAMESPACE . '/' ) ),
+			'nonce'        => wp_create_nonce( 'wp_rest' ),
+			'swUrl'        => esc_url_raw( self::appUrl( 'sw.js' ) ),
+			'scope'        => '/' . self::APP_PATH . '/',
+			'user'         => array( 'name' => $name ),
+			'loggedIn'     => $logged_in,
+			'anon'         => $anon,
+			'turnstileKey' => $turnstile_key,
 		);
 
-		$css  = esc_url( self::assetUrl( 'app.css' ) ) . '?v=' . self::PWA_ASSET_VERSION;
-		$js   = esc_url( self::assetUrl( 'app.js' ) ) . '?v=' . self::PWA_ASSET_VERSION;
-		$icon = esc_url( self::assetUrl( 'icons/icon-192.png' ) );
-		$apple = esc_url( self::assetUrl( 'icons/icon-180.png' ) );
+		$css      = esc_url( self::assetUrl( 'app.css' ) ) . '?v=' . self::PWA_ASSET_VERSION;
+		$js       = esc_url( self::assetUrl( 'app.js' ) ) . '?v=' . self::PWA_ASSET_VERSION;
+		$icon     = esc_url( self::assetUrl( 'icons/icon-192.png' ) );
+		$apple    = esc_url( self::assetUrl( 'icons/icon-180.png' ) );
 		$manifest = esc_url( self::appUrl( 'manifest.webmanifest' ) );
 
 		echo '<!doctype html><html lang="en"><head>';
@@ -155,19 +177,25 @@ class Partyline_Pwa {
 		echo '<link rel="apple-touch-icon" href="' . $apple . '">';
 		echo '<link rel="icon" href="' . $icon . '">';
 		echo '<link rel="stylesheet" href="' . $css . '">';
+		if ( $turnstile_key ) {
+			echo '<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>';
+		}
 		echo '</head><body>';
 
 		echo '<div id="app">';
 		echo '<header class="pl-header">';
 		echo '<span class="pl-brand"><img src="' . $icon . '" alt=""> Partyline</span>';
-		echo '<span class="pl-user">' . esc_html( $name ) . '</span>';
+		echo '<span class="pl-user">' . esc_html( $logged_in ? $name : 'Guest' ) . '</span>';
 		echo '</header>';
 
 		echo '<main class="pl-main">';
 
 		// --- HOME ---
 		echo '<section id="screen-home" class="pl-screen">';
-		echo '<div class="pl-hero"><h1>Send in a Partyline</h1><p>Snap a photo and talk it through — we\'ll turn it into a draft for the newsroom.</p></div>';
+		$hero = $logged_in
+			? 'Snap a photo and talk it through — we\'ll write it up for the newsroom.'
+			: 'Snap a photo and tell us what\'s happening in Red Bank. We\'ll take it from there.';
+		echo '<div class="pl-hero"><h1>Send in a Partyline</h1><p>' . esc_html( $hero ) . '</p></div>';
 		echo '<div id="pl-install" class="pl-install">';
 		echo '<span id="pl-install-msg">Install Partyline to your home screen for one-tap access.</span>';
 		echo '<button id="pl-install-btn" class="pl-btn pl-btn--lime" type="button">Install</button>';
@@ -185,7 +213,7 @@ class Partyline_Pwa {
 		echo '<div class="pl-actions"><button id="pl-drafts-back" class="pl-btn pl-btn--ghost" type="button">Back</button></div>';
 		echo '</section>';
 
-		// --- CAPTURE (all three steps on one screen) ---
+		// --- CAPTURE (all steps on one screen) ---
 		echo '<section id="screen-capture" class="pl-screen pl-hidden">';
 
 		// Step 1 — photo
@@ -205,22 +233,34 @@ class Partyline_Pwa {
 		echo '<button class="pl-chip" data-filter="vivid" type="button">Vivid</button>';
 		echo '</div>';
 
-		// Step 2 — story (dictate to auto-fill, or type). Fields live here.
+		// Step 2 — story
 		echo '<h2 class="pl-step"><span class="pl-stepnum">2</span> Tell the story</h2>';
-		echo '<div class="pl-record">';
-		echo '<button id="pl-rec-btn" class="pl-recbtn" type="button" aria-label="Record"><span class="pl-recdot"></span></button>';
-		echo '<div id="pl-rec-status" class="pl-status">Tap to dictate — or type it below.</div>';
-		echo '</div>';
+		if ( $logged_in ) {
+			// Voice dictation + AI write-up are logged-in only.
+			echo '<div class="pl-record">';
+			echo '<button id="pl-rec-btn" class="pl-recbtn" type="button" aria-label="Record"><span class="pl-recdot"></span></button>';
+			echo '<div id="pl-rec-status" class="pl-status">Tap to dictate — or type it below.</div>';
+			echo '</div>';
+		}
+		if ( $anon ) {
+			echo '<label class="pl-label" for="pl-name">Your name</label>';
+			echo '<input id="pl-name" class="pl-input" type="text" autocomplete="name" placeholder="Jane Doe">';
+			echo '<label class="pl-label" for="pl-email">Your email</label>';
+			echo '<input id="pl-email" class="pl-input" type="email" autocomplete="email" placeholder="you@example.com">';
+		}
 		echo '<label class="pl-label" for="pl-title">Title</label>';
 		echo '<input id="pl-title" class="pl-input" type="text" placeholder="Headline (optional)">';
 		echo '<label class="pl-label" for="pl-body">Story</label>';
-		echo '<textarea id="pl-body" class="pl-textarea" rows="6" placeholder="Dictate above, or type what happened…"></textarea>';
+		echo '<textarea id="pl-body" class="pl-textarea" rows="6" placeholder="Tell us what happened…"></textarea>';
 
-		// Step 3 — submit (gated until steps 1 & 2 are done)
+		// Step 3 — submit
 		echo '<h2 class="pl-step"><span class="pl-stepnum">3</span> Submit</h2>';
 		echo '<p id="pl-submit-hint" class="pl-hint">Add a photo and a story to submit.</p>';
 		if ( $can_publish ) {
 			echo '<label class="pl-check"><input type="checkbox" id="pl-immediate"> Post immediately <span class="pl-check-note">(publish now, skip the draft)</span></label>';
+		}
+		if ( $turnstile_key ) {
+			echo '<div id="pl-turnstile" class="cf-turnstile pl-turnstile" data-sitekey="' . esc_attr( $turnstile_key ) . '" data-callback="plTurnstileCb" data-expired-callback="plTurnstileCb" data-error-callback="plTurnstileCb"></div>';
 		}
 		echo '<div class="pl-actions">';
 		echo '<button id="pl-submit" class="pl-btn pl-btn--primary" type="button" disabled>Submit Partyline</button>';
@@ -230,7 +270,7 @@ class Partyline_Pwa {
 
 		// --- SUCCESS ---
 		echo '<section id="screen-success" class="pl-screen pl-hidden">';
-		echo '<div class="pl-hero"><h1>🎉 Sent!</h1><p id="pl-success-msg">Your Partyline was submitted as a draft for the newsroom.</p></div>';
+		echo '<div class="pl-hero"><h1>🎉 Sent!</h1><p id="pl-success-msg">Your Partyline was submitted for the newsroom.</p></div>';
 		echo '<div class="pl-actions"><button id="pl-again" class="pl-btn pl-btn--lime" type="button">Send another</button></div>';
 		echo '</section>';
 
@@ -252,7 +292,7 @@ class Partyline_Pwa {
 		echo wp_json_encode( array(
 			'name'             => 'Partyline',
 			'short_name'       => 'Partyline',
-			'description'      => 'Send a photo and a voice note to the redbankgreen newsroom.',
+			'description'      => 'Send a photo and a story to the redbankgreen newsroom.',
 			'start_url'        => self::appUrl(),
 			'scope'            => self::appUrl(),
 			'display'          => 'standalone',
@@ -315,48 +355,44 @@ self.addEventListener('fetch', function (e) {
 JS;
 	}
 
-	/** Is the PWA feature turned on? */
-	public static function isEnabled() {
-		$settings = Partyline_Utility::getSettings();
-		return ! empty( $settings->pwa_enabled );
-	}
-
 	/**
-	 * Register REST routes. Every route requires a logged-in user (WordPress
-	 * cookie auth + the standard `X-WP-Nonce` header the PWA will send).
+	 * Register REST routes. AI routes (transcribe/generate) are always
+	 * logged-in only. /submit allows anonymous when the setting is on.
 	 */
 	public static function registerRoutes() {
-		$auth = array( __CLASS__, 'permissionLoggedIn' );
-
 		register_rest_route( self::REST_NAMESPACE, '/transcribe', array(
 			'methods'             => 'POST',
 			'callback'            => array( __CLASS__, 'restTranscribe' ),
-			'permission_callback' => $auth,
+			'permission_callback' => array( __CLASS__, 'permissionLoggedIn' ),
 		) );
 
 		register_rest_route( self::REST_NAMESPACE, '/generate', array(
 			'methods'             => 'POST',
 			'callback'            => array( __CLASS__, 'restGenerate' ),
-			'permission_callback' => $auth,
+			'permission_callback' => array( __CLASS__, 'permissionLoggedIn' ),
 		) );
 
 		register_rest_route( self::REST_NAMESPACE, '/submit', array(
 			'methods'             => 'POST',
 			'callback'            => array( __CLASS__, 'restSubmit' ),
-			'permission_callback' => $auth,
+			'permission_callback' => array( __CLASS__, 'permissionSubmit' ),
 		) );
 	}
 
-	/** Permission callback: logged-in users only. */
+	/** Logged-in only (used for the AI endpoints). */
 	public static function permissionLoggedIn() {
 		if ( is_user_logged_in() ) {
 			return true;
 		}
-		return new WP_Error(
-			'partyline_not_logged_in',
-			'You must be logged in to submit a Partyline.',
-			array( 'status' => 401 )
-		);
+		return new WP_Error( 'partyline_not_logged_in', 'You must be logged in to use this.', array( 'status' => 401 ) );
+	}
+
+	/** Submit: logged-in, or anonymous when that's allowed. */
+	public static function permissionSubmit() {
+		if ( is_user_logged_in() || self::allowAnonymous() ) {
+			return true;
+		}
+		return new WP_Error( 'partyline_not_logged_in', 'You must be logged in to submit a Partyline.', array( 'status' => 401 ) );
 	}
 
 	/* --------------------------------------------------------------------- */
@@ -564,17 +600,12 @@ JS;
 		);
 	}
 
-	/** The editorial system prompt, plus the JSON output contract. */
+	/** The shared editorial voice, plus the blurb + JSON output contract. */
 	public static function storyPrompt() {
-		$settings = Partyline_Utility::getSettings();
-		$prompt   = isset( $settings->story_prompt ) ? trim( $settings->story_prompt ) : '';
-		if ( '' === $prompt ) {
-			$prompt = self::DEFAULT_STORY_PROMPT;
-		}
-
-		return $prompt . "\n\n"
+		return Partyline_Utility::aiPrompt() . "\n\n"
+			. 'Rewrite the reader\'s submission (and photo, if provided) as a short community-news item. '
 			. 'Respond ONLY with a JSON object of the form {"title": "...", "body": "..."}. '
-			. 'The body must be a short, professional news blurb of 2-4 sentences in neutral third person. '
+			. 'The body must be a short, professional blurb of 2-4 sentences in neutral third person. '
 			. 'The title must be a concise headline. Do not invent facts beyond the account and photo.';
 	}
 
@@ -582,24 +613,48 @@ JS;
 	/* POST /submit  — multipart: title, body, optional image file            */
 	/* --------------------------------------------------------------------- */
 	public static function restSubmit( WP_REST_Request $request ) {
-		$title = trim( (string) $request->get_param( 'title' ) );
-		$body  = trim( (string) $request->get_param( 'body' ) );
+		$anon = self::isAnonymousVisitor();
 
+		$title     = sanitize_text_field( trim( (string) $request->get_param( 'title' ) ) );
+		$body      = wp_kses_post( trim( (string) $request->get_param( 'body' ) ) );
 		$has_image = ! empty( $_FILES['image'] ) && ! empty( $_FILES['image']['name'] );
+
+		$submitter = null;
+		if ( $anon ) {
+			// Anonymous submissions require name + email, a photo, story text, and
+			// a valid Cloudflare Turnstile token.
+			$sub_name  = sanitize_text_field( (string) $request->get_param( 'name' ) );
+			$sub_email = sanitize_email( (string) $request->get_param( 'email' ) );
+
+			if ( '' === $sub_name || ! is_email( $sub_email ) ) {
+				return new WP_Error( 'partyline_contact', 'Please provide your name and a valid email address.', array( 'status' => 400 ) );
+			}
+			if ( '' === $body || ! $has_image ) {
+				return new WP_Error( 'partyline_incomplete', 'A photo and a story are both required.', array( 'status' => 400 ) );
+			}
+			$verify = self::verifyTurnstile( (string) $request->get_param( 'turnstile' ) );
+			if ( is_wp_error( $verify ) ) {
+				return $verify;
+			}
+			$submitter = array( 'name' => $sub_name, 'email' => $sub_email );
+		}
 
 		if ( '' === $title && '' === $body && ! $has_image ) {
 			return new WP_Error( 'partyline_empty', 'Nothing to submit.', array( 'status' => 400 ) );
 		}
 
-		$title = sanitize_text_field( $title );
-		$body  = wp_kses_post( $body );
+		if ( $anon ) {
+			$author_id   = 1; // attribute anonymous posts to the site admin
+			$author_name = $submitter['name'];
+			$from        = $submitter['email'];
+		} else {
+			$user        = wp_get_current_user();
+			$author_id   = $user->ID;
+			$author_name = $user->display_name ? $user->display_name : $user->user_login;
+			$from        = $user->user_email;
+		}
 
-		$user        = wp_get_current_user();
-		$author_id   = $user->ID;
-		$author_name = $user->display_name ? $user->display_name : $user->user_login;
-
-		// "Post immediately" — only honored for users who can publish others'
-		// posts (editors/admins). Everyone else always gets a draft.
+		// "Post immediately" — editors/admins only (never anonymous).
 		$immediate = $request->get_param( 'immediate' );
 		$immediate = ! empty( $immediate ) && 'false' !== $immediate && '0' !== $immediate;
 		$publish   = $immediate && current_user_can( 'edit_others_posts' );
@@ -618,8 +673,9 @@ JS;
 			'attachment_id' => $attachment_id,
 			'author_id'     => $author_id,
 			'author_name'   => $author_name,
-			'from'          => $user->user_email,
+			'from'          => $from,
 			'status'        => $publish ? 'publish' : 'draft',
+			'submitter'     => $submitter,
 		) );
 
 		if ( is_wp_error( $post_id ) ) {
@@ -629,12 +685,46 @@ JS;
 		return rest_ensure_response( array(
 			'post_id'   => $post_id,
 			'published' => $publish,
-			'edit_link' => get_admin_url() . 'post.php?post=' . $post_id . '&action=edit',
+			'edit_link' => is_user_logged_in() ? ( get_admin_url() . 'post.php?post=' . $post_id . '&action=edit' ) : '',
 			'view_link' => $publish ? get_permalink( $post_id ) : '',
 			'message'   => $publish
 				? 'Published! Your Partyline is live.'
-				: 'Thanks! Your Partyline was submitted as a draft.',
+				: ( $anon ? 'Thanks! Your Partyline was submitted for review.' : 'Thanks! Your Partyline was submitted as a draft.' ),
 		) );
+	}
+
+	/** Verify a Cloudflare Turnstile token for anonymous submissions. */
+	private static function verifyTurnstile( $token ) {
+		$settings = Partyline_Utility::getSettings();
+		$secret   = isset( $settings->turnstile_secret_key ) ? trim( $settings->turnstile_secret_key ) : '';
+
+		if ( '' === $secret ) {
+			return new WP_Error( 'partyline_turnstile_unconfigured', 'Public submissions are temporarily unavailable.', array( 'status' => 503 ) );
+		}
+		if ( '' === $token ) {
+			return new WP_Error( 'partyline_turnstile', 'Please complete the verification.', array( 'status' => 400 ) );
+		}
+
+		$ip   = '';
+		foreach ( array( 'HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR' ) as $k ) {
+			if ( ! empty( $_SERVER[ $k ] ) ) {
+				$ip = sanitize_text_field( trim( explode( ',', wp_unslash( $_SERVER[ $k ] ) )[0] ) );
+				break;
+			}
+		}
+
+		$resp = wp_remote_post( self::TURNSTILE_VERIFY, array(
+			'timeout' => 15,
+			'body'    => array( 'secret' => $secret, 'response' => $token, 'remoteip' => $ip ),
+		) );
+		if ( is_wp_error( $resp ) ) {
+			return new WP_Error( 'partyline_turnstile', 'Verification failed, please try again.', array( 'status' => 502 ) );
+		}
+		$data = json_decode( wp_remote_retrieve_body( $resp ), true );
+		if ( empty( $data['success'] ) ) {
+			return new WP_Error( 'partyline_turnstile', 'Verification failed, please try again.', array( 'status' => 403 ) );
+		}
+		return true;
 	}
 
 	/**
@@ -681,6 +771,12 @@ JS;
 		if ( $attachment_id ) {
 			set_post_thumbnail( $post_id, $attachment_id );
 			wp_update_post( array( 'ID' => $attachment_id, 'post_parent' => $post_id ) );
+		}
+
+		// Hold onto anonymous submitters' contact info for follow-up.
+		if ( ! empty( $args['submitter'] ) && is_array( $args['submitter'] ) ) {
+			update_post_meta( $post_id, '_partyline_submitter_name', sanitize_text_field( $args['submitter']['name'] ) );
+			update_post_meta( $post_id, '_partyline_submitter_email', sanitize_email( $args['submitter']['email'] ) );
 		}
 
 		Partyline_Utility::sendNotificationEmail( $post_id, $from, $post_content, $title, $author_name );

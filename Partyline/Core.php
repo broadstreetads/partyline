@@ -224,6 +224,17 @@ class Partyline_Core
      */
     public function catchTwilioWebhook()
     {
+        // Twilio (SMS) is a secondary, optional channel. Skip when disabled.
+        // Back-compat: if the toggle was never set, treat it as on when Twilio
+        // credentials already exist (so existing SMS intake keeps working).
+        $settings  = Partyline_Utility::getSettings();
+        $twilio_on = isset($settings->twilio_enabled)
+            ? (bool) $settings->twilio_enabled
+            : ! empty($settings->twilio_account_sid);
+        if (! $twilio_on) {
+            return;
+        }
+
         $twilio = Partyline_Twilio::fromPost();
         // Check if the request has 'partyline_twilio_webhook' parameter.
         if ($twilio) {

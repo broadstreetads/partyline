@@ -9,6 +9,13 @@
 
 	var CFG = window.PARTYLINE_PWA || {};
 	var $ = function (sel) { return document.querySelector(sel); };
+	var IS_ANON = !!CFG.anon; // anonymous submitter: no dictation, needs name/email + Turnstile
+
+	function turnstileToken() {
+		var el = document.querySelector('#pl-turnstile [name="cf-turnstile-response"]') ||
+			document.querySelector('[name="cf-turnstile-response"]');
+		return el ? el.value : '';
+	}
 
 	/* --------------------------------------------------------------- */
 	/* REST helpers                                                     */
@@ -325,6 +332,7 @@
 
 	function setStatus(msg, kind) {
 		var el = $('#pl-rec-status');
+		if (!el) { return; } // no dictation UI (anonymous mode)
 		el.textContent = msg;
 		el.className = 'pl-status' + (kind ? ' is-' + kind : '');
 	}
@@ -444,22 +452,36 @@
 	/* Submit gating + submit                                           */
 	/* --------------------------------------------------------------- */
 
-	// Step 3 is enabled only once step 1 (photo) and step 2 (story) are done.
+	// Step 3 is enabled only once the required steps are done.
 	function updateSubmit() {
-		var hasPhoto = !!state.photoImg;
-		var hasStory = $('#pl-body').value.trim().length > 0;
-		$('#pl-submit').disabled = !(hasPhoto && hasStory);
+		var need = [];
+		if (!state.photoImg) { need.push('a photo'); }
+		if ($('#pl-body').value.trim().length === 0) { need.push('a story'); }
+
+		if (IS_ANON) {
+			var nameEl = $('#pl-name'), emailEl = $('#pl-email');
+			var name = nameEl ? nameEl.value.trim() : '';
+			var email = emailEl ? emailEl.value.trim() : '';
+			var emailOk = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
+			if (!name) { need.push('your name'); }
+			if (!emailOk) { need.push('your email'); }
+			if (CFG.turnstileKey && !turnstileToken()) { need.push('the verification'); }
+		}
+
+		$('#pl-submit').disabled = need.length > 0;
 
 		var hint = $('#pl-submit-hint');
 		if (!hint) { return; }
-		if (hasPhoto && hasStory) {
+		if (need.length === 0) {
 			hint.classList.add('pl-hidden');
 		} else {
-			hint.textContent = !hasPhoto && !hasStory ? 'Add a photo and a story to submit.'
-				: (!hasPhoto ? 'Add a photo to submit.' : 'Add a story to submit.');
+			hint.textContent = 'Add ' + need.join(', ') + ' to submit.';
 			hint.classList.remove('pl-hidden');
 		}
 	}
+
+	// Cloudflare Turnstile calls this when the check passes/expires.
+	window.plTurnstileCb = function () { updateSubmit(); };
 
 	function submit() {
 		var btn = $('#pl-submit');
@@ -474,6 +496,11 @@
 			if (blob) { fd.append('image', blob, 'partyline.jpg'); }
 			var imm = $('#pl-immediate'); // only present for editors/admins
 			if (imm && imm.checked) { fd.append('immediate', '1'); }
+			if (IS_ANON) {
+				if ($('#pl-name')) { fd.append('name', $('#pl-name').value); }
+				if ($('#pl-email')) { fd.append('email', $('#pl-email').value); }
+				fd.append('turnstile', turnstileToken());
+			}
 			return api('submit', { method: 'POST', body: fd });
 		}).then(function (res) {
 			releaseStream(); // done capturing — free the mic
@@ -502,6 +529,9 @@
 		$('#pl-input-library').value = '';
 		$('#pl-title').value = '';
 		$('#pl-body').value = '';
+		if ($('#pl-name')) { $('#pl-name').value = ''; }
+		if ($('#pl-email')) { $('#pl-email').value = ''; }
+		if (window.turnstile && CFG.turnstileKey) { try { window.turnstile.reset(); } catch (e) {} }
 		setStatus('Tap to dictate — or type it below.', null);
 		applyFilter('none');
 		updateSubmit();
@@ -581,13 +611,16 @@
 		// Typing the story live-updates the submit gate.
 		$('#pl-body').addEventListener('input', function () { updateSubmit(); scheduleSave(); });
 		$('#pl-title').addEventListener('input', scheduleSave);
+		if ($('#pl-name')) { $('#pl-name').addEventListener('input', updateSubmit); }
+		if ($('#pl-email')) { $('#pl-email').addEventListener('input', updateSubmit); }
 
 		var chips = document.querySelectorAll('.pl-chip');
 		for (var i = 0; i < chips.length; i++) {
 			chips[i].addEventListener('click', function () { applyFilter(this.getAttribute('data-filter')); });
 		}
 
-		$('#pl-rec-btn').addEventListener('click', toggleRecord);
+		var recBtn = $('#pl-rec-btn'); // absent in anonymous mode
+		if (recBtn) { recBtn.addEventListener('click', toggleRecord); }
 
 		// The wake lock is auto-released when the page is hidden; re-acquire it
 		// if we come back while still recording.

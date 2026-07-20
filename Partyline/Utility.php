@@ -291,8 +291,23 @@ class Partyline_Utility
             return implode(' ', array_slice($words, 0, 5));
         }
 
-        $prompt = isset($settings->chatgpt_prompt) ? $settings->chatgpt_prompt : 'Generate a short, catchy title for this content:';
+        $prompt = self::aiPrompt() . "\n\nWrite a short, catchy headline for the following. Reply with ONLY the headline, nothing else.";
         return self::gptCall($prompt, $original_body, $default);
+    }
+
+    /**
+     * The single shared editorial voice/prompt (settings `ai_prompt`), used by
+     * both the contributor app (story rewrite) and the SMS path (title). Each
+     * caller appends its own task. Falls back to a neutral community-news voice.
+     */
+    public static function aiPrompt()
+    {
+        $settings = self::getSettings();
+        $prompt = isset($settings->ai_prompt) ? trim($settings->ai_prompt) : '';
+        if ($prompt === '') {
+            $prompt = 'You are an editor for redbankgreen, a community news site covering Red Bank, New Jersey. Write in a clear, neutral, professional community-news style.';
+        }
+        return $prompt;
     }
 
     /**

@@ -124,6 +124,7 @@ html, body {
 .pl-check { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; font-size: 15px; font-weight: 700; color: var(--ink); cursor: pointer; }
 .pl-check input { width: 20px; height: 20px; flex: 0 0 auto; accent-color: var(--ink); }
 .pl-check-note { font-weight: 400; color: var(--muted); font-size: 13px; }
+.pl-turnstile { margin: 4px 0 14px; }
 
 /* Photo */
 .pl-photo-drop {
