@@ -32,7 +32,7 @@ class Partyline_Pwa {
 	const APP_PATH = 'partyline';
 
 	/** Bump to invalidate the service-worker precache. */
-	const PWA_ASSET_VERSION = '12';
+	const PWA_ASSET_VERSION = '13';
 
 	/**
 	 * Register hooks. The contributor app is ON by default (see isEnabled), so
@@ -304,13 +304,13 @@ class Partyline_Pwa {
 					'src'     => self::assetUrl( 'icons/icon-192.png' ),
 					'sizes'   => '192x192',
 					'type'    => 'image/png',
-					'purpose' => 'any maskable',
+					'purpose' => 'any',
 				),
 				array(
 					'src'     => self::assetUrl( 'icons/icon-512.png' ),
 					'sizes'   => '512x512',
 					'type'    => 'image/png',
-					'purpose' => 'any maskable',
+					'purpose' => 'any',
 				),
 			),
 		) );
