@@ -95,9 +95,10 @@
                         </div>
                         <div class="control-container">
                             <select x-model="settings.partyline_category">
-                                <template x-for="category in categories" :key="category.id">
-                                    <option :value="category.id" x-text="category.name"></option>
-                                </template>
+                                <option value="">&mdash; Select a category &mdash;</option>
+                                <?php foreach ( (array) $categories as $cat ): ?>
+                                    <option value="<?php echo esc_attr( $cat->term_id ); ?>"><?php echo esc_html( $cat->name ); ?></option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
                     </div>

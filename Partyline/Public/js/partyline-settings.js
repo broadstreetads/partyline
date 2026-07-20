@@ -4,12 +4,21 @@
     window.zoneCtrl = function () {
         var bootstrap = (typeof window.PartylineSettings !== 'undefined') ? window.PartylineSettings : {};
         var categories = (bootstrap.categories || []).map(function (c) {
-            return { id: c.cat_ID, name: c.cat_name };
+            return { id: String(c.cat_ID), name: c.cat_name };
         });
+
+        var settings = bootstrap.settings || {};
+        // wp_localize_script leaves nested numbers as numbers, but the <select>
+        // option values are strings. Without this coercion Alpine can't match the
+        // saved category to an option and falls back to the first one — so the
+        // saved value looks like it "didn't stick" on reload.
+        if (settings.partyline_category !== undefined && settings.partyline_category !== null) {
+            settings.partyline_category = String(settings.partyline_category);
+        }
 
         return {
             loadingMessage: null,
-            settings: bootstrap.settings || {},
+            settings: settings,
             categories: categories,
             webhookBase: bootstrap.webhookBase || '',
 
