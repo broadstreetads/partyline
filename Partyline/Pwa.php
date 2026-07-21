@@ -160,8 +160,8 @@ class Partyline_Pwa {
 
 		$css      = esc_url( self::assetUrl( 'app.css' ) ) . '?v=' . self::PWA_ASSET_VERSION;
 		$js       = esc_url( self::assetUrl( 'app.js' ) ) . '?v=' . self::PWA_ASSET_VERSION;
-		$icon     = esc_url( self::assetUrl( 'icons/icon-192.png' ) );
-		$apple    = esc_url( self::assetUrl( 'icons/icon-180.png' ) );
+		$icon     = esc_url( self::assetUrl( 'icons/icon-192.png' ) ) . '?v=' . self::PWA_ASSET_VERSION;
+		$apple    = esc_url( self::assetUrl( 'icons/icon-180.png' ) ) . '?v=' . self::PWA_ASSET_VERSION;
 		$manifest = esc_url( self::appUrl( 'manifest.webmanifest' ) );
 
 		echo '<!doctype html><html lang="en"><head>';
@@ -301,13 +301,13 @@ class Partyline_Pwa {
 			'theme_color'      => '#c3e617',
 			'icons'            => array(
 				array(
-					'src'     => self::assetUrl( 'icons/icon-192.png' ),
+					'src'     => self::assetUrl( 'icons/icon-192.png' ) . '?v=' . self::PWA_ASSET_VERSION,
 					'sizes'   => '192x192',
 					'type'    => 'image/png',
 					'purpose' => 'any',
 				),
 				array(
-					'src'     => self::assetUrl( 'icons/icon-512.png' ),
+					'src'     => self::assetUrl( 'icons/icon-512.png' ) . '?v=' . self::PWA_ASSET_VERSION,
 					'sizes'   => '512x512',
 					'type'    => 'image/png',
 					'purpose' => 'any',
@@ -327,8 +327,8 @@ class Partyline_Pwa {
 		$precache = wp_json_encode( array(
 			self::assetUrl( 'app.css' ) . '?v=' . self::PWA_ASSET_VERSION,
 			self::assetUrl( 'app.js' ) . '?v=' . self::PWA_ASSET_VERSION,
-			self::assetUrl( 'icons/icon-192.png' ),
-			self::assetUrl( 'icons/icon-512.png' ),
+			self::assetUrl( 'icons/icon-192.png' ) . '?v=' . self::PWA_ASSET_VERSION,
+			self::assetUrl( 'icons/icon-512.png' ) . '?v=' . self::PWA_ASSET_VERSION,
 		) );
 
 		echo "/* Partyline PWA service worker */\n";
