@@ -1,11 +1,13 @@
-/* Partyline PWA — mobile-first app shell. Brand: lime #C3E617 / charcoal #1A1A1A */
+/* Partyline PWA — mobile-first app shell. Neutral charcoal system; the app
+   icon is the only splash of color. */
 
 :root {
-	--lime: #c3e617;
-	--lime-dark: #a9c910;
-	--ink: #1a1a1a;
+	--ink: #18181b;       /* near-black — primary / brand */
+	--ink-2: #27272a;     /* pressed / hover on dark */
 	--paper: #ffffff;
-	--muted: #6b7280;
+	--surface: #f4f4f5;   /* subtle fills (drop zones, chips, banners) */
+	--line: #e4e4e7;      /* hairline borders */
+	--muted: #71717a;     /* secondary text */
 	--danger: #e5484d;
 	--radius: 14px;
 	--safe-top: env(safe-area-inset-top, 0px);
@@ -39,15 +41,15 @@ html, body {
 	justify-content: space-between;
 	gap: 12px;
 	padding: calc(12px + var(--safe-top)) 16px 12px;
-	background: var(--lime);
-	color: var(--ink);
+	background: var(--ink);
+	color: var(--paper);
 	position: sticky;
 	top: 0;
 	z-index: 10;
 }
 .pl-header .pl-brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 20px; letter-spacing: -0.02em; }
 .pl-header .pl-brand img { width: 28px; height: 28px; border-radius: 7px; display: block; }
-.pl-header .pl-user { font-size: 13px; font-weight: 600; opacity: 0.8; }
+.pl-header .pl-user { font-size: 13px; font-weight: 600; color: rgba(255, 255, 255, 0.65); }
 
 /* Main */
 .pl-main { flex: 1; padding: 20px 16px calc(20px + var(--safe-bottom)); }
@@ -74,10 +76,10 @@ html, body {
 	transition: transform 0.08s ease, opacity 0.15s ease;
 }
 .pl-btn:active { transform: scale(0.98); }
-.pl-btn--primary { background: var(--ink); color: #fff; }
-.pl-btn--lime { background: var(--lime); color: var(--ink); }
-.pl-btn--ghost { background: transparent; color: var(--ink); border: 2px solid var(--ink); }
-.pl-btn[disabled] { opacity: 0.5; cursor: default; }
+.pl-btn--primary { background: var(--ink); color: var(--paper); }
+.pl-btn--lime { background: var(--ink); color: var(--paper); }
+.pl-btn--ghost { background: transparent; color: var(--ink); border: 2px solid var(--line); }
+.pl-btn[disabled] { opacity: 0.4; cursor: default; }
 
 .pl-actions { display: flex; flex-direction: column; gap: 12px; margin-top: 24px; }
 
@@ -88,8 +90,8 @@ html, body {
 	gap: 12px;
 	margin: 16px 0 0;
 	padding: 12px 14px;
-	background: #f4f7e4;
-	border: 1px solid var(--lime-dark);
+	background: var(--surface);
+	border: 1px solid var(--line);
 	border-radius: var(--radius);
 	font-size: 14px;
 }
@@ -222,7 +224,7 @@ html, body {
 	color: var(--ink);
 	background: #fff;
 }
-.pl-input:focus, .pl-textarea:focus { outline: none; border-color: var(--lime-dark); }
+.pl-input:focus, .pl-textarea:focus { outline: none; border-color: var(--ink); }
 .pl-textarea { resize: vertical; line-height: 1.5; }
 
 /* Saved drafts list */

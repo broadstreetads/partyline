@@ -32,7 +32,7 @@ class Partyline_Pwa {
 	const APP_PATH = 'partyline';
 
 	/** Bump to invalidate the service-worker precache. */
-	const PWA_ASSET_VERSION = '13';
+	const PWA_ASSET_VERSION = '14';
 
 	/**
 	 * Register hooks. The contributor app is ON by default (see isEnabled), so
@@ -169,7 +169,7 @@ class Partyline_Pwa {
 		echo '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">';
 		echo '<title>Partyline</title>';
 		echo '<link rel="manifest" href="' . $manifest . '">';
-		echo '<meta name="theme-color" content="#c3e617">';
+		echo '<meta name="theme-color" content="#18181b">';
 		echo '<meta name="mobile-web-app-capable" content="yes">';
 		echo '<meta name="apple-mobile-web-app-capable" content="yes">';
 		echo '<meta name="apple-mobile-web-app-status-bar-style" content="default">';
@@ -298,7 +298,7 @@ class Partyline_Pwa {
 			'display'          => 'standalone',
 			'orientation'      => 'portrait',
 			'background_color' => '#ffffff',
-			'theme_color'      => '#c3e617',
+			'theme_color'      => '#18181b',
 			'icons'            => array(
 				array(
 					'src'     => self::assetUrl( 'icons/icon-192.png' ) . '?v=' . self::PWA_ASSET_VERSION,
