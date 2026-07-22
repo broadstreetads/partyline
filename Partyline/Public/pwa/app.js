@@ -17,6 +17,27 @@
 		return el ? el.value : '';
 	}
 
+	// Remember anonymous submitters' contact info on this device for next time.
+	var CONTACT_KEY = 'partyline-contact';
+	function applyContact() {
+		if (!IS_ANON) { return; }
+		var c;
+		try { c = JSON.parse(localStorage.getItem(CONTACT_KEY) || '{}'); } catch (e) { c = {}; }
+		if ($('#pl-name') && c.name) { $('#pl-name').value = c.name; }
+		if ($('#pl-email') && c.email) { $('#pl-email').value = c.email; }
+		if ($('#pl-phone') && c.phone) { $('#pl-phone').value = c.phone; }
+	}
+	function saveContact() {
+		if (!IS_ANON) { return; }
+		try {
+			localStorage.setItem(CONTACT_KEY, JSON.stringify({
+				name:  $('#pl-name')  ? $('#pl-name').value.trim()  : '',
+				email: $('#pl-email') ? $('#pl-email').value.trim() : '',
+				phone: $('#pl-phone') ? $('#pl-phone').value.trim() : ''
+			}));
+		} catch (e) {}
+	}
+
 	/* --------------------------------------------------------------- */
 	/* REST helpers                                                     */
 	/* --------------------------------------------------------------- */
@@ -459,12 +480,15 @@
 		if ($('#pl-body').value.trim().length === 0) { need.push('a story'); }
 
 		if (IS_ANON) {
-			var nameEl = $('#pl-name'), emailEl = $('#pl-email');
+			var nameEl = $('#pl-name'), emailEl = $('#pl-email'), phoneEl = $('#pl-phone');
 			var name = nameEl ? nameEl.value.trim() : '';
 			var email = emailEl ? emailEl.value.trim() : '';
+			var phone = phoneEl ? phoneEl.value.trim() : '';
 			var emailOk = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
+			var phoneOk = phone.replace(/\D/g, '').length >= 7;
 			if (!name) { need.push('your name'); }
 			if (!emailOk) { need.push('your email'); }
+			if (!phoneOk) { need.push('your phone'); }
 			if (CFG.turnstileKey && !turnstileToken()) { need.push('the verification'); }
 		}
 
@@ -501,6 +525,7 @@
 			if (IS_ANON) {
 				if ($('#pl-name')) { fd.append('name', $('#pl-name').value); }
 				if ($('#pl-email')) { fd.append('email', $('#pl-email').value); }
+				if ($('#pl-phone')) { fd.append('phone', $('#pl-phone').value); }
 				fd.append('turnstile', turnstileToken());
 			}
 			return api('submit', { method: 'POST', body: fd });
@@ -531,8 +556,7 @@
 		$('#pl-input-library').value = '';
 		$('#pl-title').value = '';
 		$('#pl-body').value = '';
-		if ($('#pl-name')) { $('#pl-name').value = ''; }
-		if ($('#pl-email')) { $('#pl-email').value = ''; }
+		// Keep the contact fields (name/email/phone) — they persist for next time.
 		if (window.turnstile && CFG.turnstileKey) { try { window.turnstile.reset(); } catch (e) {} }
 		setStatus('Tap to dictate — or type it below.', null);
 		applyFilter('none');
@@ -613,8 +637,11 @@
 		// Typing the story live-updates the submit gate.
 		$('#pl-body').addEventListener('input', function () { updateSubmit(); scheduleSave(); });
 		$('#pl-title').addEventListener('input', scheduleSave);
-		if ($('#pl-name')) { $('#pl-name').addEventListener('input', updateSubmit); }
-		if ($('#pl-email')) { $('#pl-email').addEventListener('input', updateSubmit); }
+		function onContactInput() { updateSubmit(); saveContact(); }
+		if ($('#pl-name')) { $('#pl-name').addEventListener('input', onContactInput); }
+		if ($('#pl-email')) { $('#pl-email').addEventListener('input', onContactInput); }
+		if ($('#pl-phone')) { $('#pl-phone').addEventListener('input', onContactInput); }
+		applyContact(); // pre-fill saved contact info (anonymous)
 
 		var chips = document.querySelectorAll('.pl-chip');
 		for (var i = 0; i < chips.length; i++) {

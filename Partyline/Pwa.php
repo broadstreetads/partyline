@@ -32,7 +32,7 @@ class Partyline_Pwa {
 	const APP_PATH = 'partyline';
 
 	/** Bump to invalidate the service-worker precache. */
-	const PWA_ASSET_VERSION = '15';
+	const PWA_ASSET_VERSION = '16';
 
 	/**
 	 * Register hooks. The contributor app is ON by default (see isEnabled), so
@@ -247,6 +247,8 @@ class Partyline_Pwa {
 			echo '<input id="pl-name" class="pl-input" type="text" autocomplete="name" placeholder="Jane Doe">';
 			echo '<label class="pl-label" for="pl-email">Your email</label>';
 			echo '<input id="pl-email" class="pl-input" type="email" autocomplete="email" placeholder="you@example.com">';
+			echo '<label class="pl-label" for="pl-phone">Your phone</label>';
+			echo '<input id="pl-phone" class="pl-input" type="tel" autocomplete="tel" placeholder="(732) 555-0123">';
 		}
 		echo '<label class="pl-label" for="pl-title">Title</label>';
 		echo '<input id="pl-title" class="pl-input" type="text" placeholder="Headline (optional)">';
@@ -603,10 +605,9 @@ JS;
 	/** The shared editorial voice, plus the blurb + JSON output contract. */
 	public static function storyPrompt() {
 		return Partyline_Utility::aiPrompt() . "\n\n"
-			. 'Rewrite the reader\'s submission (and photo, if provided) as a short community-news item. '
 			. 'Respond ONLY with a JSON object of the form {"title": "...", "body": "..."}. '
-			. 'The body must be a short, professional blurb of 2-4 sentences in neutral third person. '
-			. 'The title must be a concise headline. Do not invent facts beyond the account and photo.';
+			. 'The "body" is the reader\'s submission cleaned up per the instructions above, staying as close as possible to their original wording. '
+			. 'The "title" is a short, factual headline for it. Do not invent facts beyond the submission and photo.';
 	}
 
 	/* --------------------------------------------------------------------- */
@@ -625,9 +626,10 @@ JS;
 			// a valid Cloudflare Turnstile token.
 			$sub_name  = sanitize_text_field( (string) $request->get_param( 'name' ) );
 			$sub_email = sanitize_email( (string) $request->get_param( 'email' ) );
+			$sub_phone = sanitize_text_field( (string) $request->get_param( 'phone' ) );
 
-			if ( '' === $sub_name || ! is_email( $sub_email ) ) {
-				return new WP_Error( 'partyline_contact', 'Please provide your name and a valid email address.', array( 'status' => 400 ) );
+			if ( '' === $sub_name || ! is_email( $sub_email ) || strlen( preg_replace( '/\D/', '', $sub_phone ) ) < 7 ) {
+				return new WP_Error( 'partyline_contact', 'Please provide your name, a valid email, and a phone number.', array( 'status' => 400 ) );
 			}
 			if ( '' === $body || ! $has_image ) {
 				return new WP_Error( 'partyline_incomplete', 'A photo and a story are both required.', array( 'status' => 400 ) );
@@ -636,7 +638,7 @@ JS;
 			if ( is_wp_error( $verify ) ) {
 				return $verify;
 			}
-			$submitter = array( 'name' => $sub_name, 'email' => $sub_email );
+			$submitter = array( 'name' => $sub_name, 'email' => $sub_email, 'phone' => $sub_phone );
 		}
 
 		if ( '' === $title && '' === $body && ! $has_image ) {
@@ -778,9 +780,14 @@ JS;
 		}
 
 		// Hold onto anonymous submitters' contact info for follow-up.
+		$submitter_phone = '';
 		if ( ! empty( $args['submitter'] ) && is_array( $args['submitter'] ) ) {
 			update_post_meta( $post_id, '_partyline_submitter_name', sanitize_text_field( $args['submitter']['name'] ) );
 			update_post_meta( $post_id, '_partyline_submitter_email', sanitize_email( $args['submitter']['email'] ) );
+			if ( ! empty( $args['submitter']['phone'] ) ) {
+				$submitter_phone = sanitize_text_field( $args['submitter']['phone'] );
+				update_post_meta( $post_id, '_partyline_submitter_phone', $submitter_phone );
+			}
 		}
 
 		Partyline_Utility::sendNotificationEmail( array(
@@ -791,6 +798,7 @@ JS;
 			'description'   => $body,
 			'original'      => isset( $args['original'] ) ? $args['original'] : '',
 			'attachment_id' => $attachment_id,
+			'phone'         => $submitter_phone,
 		) );
 
 		return $post_id;

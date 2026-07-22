@@ -444,6 +444,7 @@ class Partyline_Utility
         $description = isset($args['description']) ? (string) $args['description'] : '';
         $original    = isset($args['original']) ? trim((string) $args['original']) : '';
         $attach_id   = isset($args['attachment_id']) ? (int) $args['attachment_id'] : 0;
+        $phone       = isset($args['phone']) ? trim((string) $args['phone']) : '';
 
         $logo      = set_url_scheme(self::getImageBaseURL() . 'partyline-black.png', 'https');
         $edit_link = get_admin_url() . 'post.php?post=' . $post_id . '&action=edit';
@@ -473,6 +474,9 @@ class Partyline_Utility
         $meta = 'Submitted by <strong style="color:#52525b;">' . esc_html($author) . '</strong>';
         if ($from !== '') {
             $meta .= ' &middot; ' . esc_html($from);
+        }
+        if ($phone !== '') {
+            $meta .= ' &middot; ' . esc_html($phone);
         }
 
         ob_start();
