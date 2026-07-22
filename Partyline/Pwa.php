@@ -1073,6 +1073,9 @@ JS;
 			return $post_id;
 		}
 
+		// Mark this as a Partyline submission so the publish notifier can find it.
+		update_post_meta( $post_id, '_partyline_submission', 1 );
+
 		if ( $attachment_id ) {
 			set_post_thumbnail( $post_id, $attachment_id );
 			wp_update_post( array( 'ID' => $attachment_id, 'post_parent' => $post_id ) );
@@ -1099,6 +1102,12 @@ JS;
 			'attachment_id' => $attachment_id,
 			'phone'         => $submitter_phone,
 		) );
+
+		// Published immediately (editor/admin "post now")? Notify the Partyliner
+		//  now, since transition_post_status fired before this meta existed.
+		if ( 'publish' === $status ) {
+			Partyline_Utility::notifyPartylinePublished( $post_id );
+		}
 
 		return $post_id;
 	}

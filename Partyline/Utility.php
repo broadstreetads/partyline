@@ -527,6 +527,146 @@ class Partyline_Utility
     }
 
     /**
+     * When a Partyline post is published, make sure it's attributed to the
+     *  registered Partyliner (if we can identify them) and email them that it's
+     *  live. Safe to call more than once — it only acts on Partyline posts, and
+     *  only sends once (guarded by a post-meta flag).
+     *
+     * @param int $post_id
+     */
+    public static function notifyPartylinePublished( $post_id )
+    {
+        $post_id = (int) $post_id;
+        $post    = get_post( $post_id );
+
+        if ( ! $post || 'publish' !== $post->post_status ) {
+            return;
+        }
+        // Only act on posts that came in through Partyline.
+        if ( ! get_post_meta( $post_id, '_partyline_submission', true ) ) {
+            return;
+        }
+        // Notify at most once per post.
+        if ( get_post_meta( $post_id, '_partyline_published_notified', true ) ) {
+            return;
+        }
+
+        $sub_email = sanitize_email( (string) get_post_meta( $post_id, '_partyline_submitter_email', true ) );
+        $sub_phone = (string) get_post_meta( $post_id, '_partyline_submitter_phone', true );
+        $sub_name  = (string) get_post_meta( $post_id, '_partyline_submitter_name', true );
+
+        // Resolve the registered/known user: submitter email, then phone, then
+        //  the post author (when it's a real, non-admin account).
+        $user = null;
+        if ( $sub_email ) {
+            $uid = email_exists( $sub_email );
+            if ( $uid ) {
+                $user = get_userdata( $uid );
+            }
+        }
+        if ( ! $user && '' !== $sub_phone ) {
+            $user = Partyline_Core::getUserByPhoneNumber( $sub_phone );
+        }
+        if ( ! $user ) {
+            $author = get_userdata( (int) $post->post_author );
+            if ( $author && 1 !== (int) $author->ID ) {
+                $user = $author;
+            }
+        }
+
+        // Mark as notified BEFORE any wp_update_post below, so the author change
+        //  can't re-enter this method through transition_post_status.
+        update_post_meta( $post_id, '_partyline_published_notified', 1 );
+
+        // Attribute the published post to the known Partyliner.
+        if ( $user && (int) $post->post_author !== (int) $user->ID ) {
+            wp_update_post( array( 'ID' => $post_id, 'post_author' => (int) $user->ID ) );
+        }
+
+        // Who to email, and under what name.
+        $to   = $user ? $user->user_email : $sub_email;
+        $name = $user ? ( $user->display_name ? $user->display_name : $user->user_login ) : $sub_name;
+
+        if ( ! is_email( $to ) ) {
+            return; // no known contact for this submission
+        }
+
+        self::sendPublishedEmail( $post_id, $to, $name );
+    }
+
+    /**
+     * Email a Partyliner that their submission has been published.
+     *
+     * @param int    $post_id
+     * @param string $to    Recipient email.
+     * @param string $name  Recipient display name (optional).
+     */
+    public static function sendPublishedEmail( $post_id, $to, $name = '' )
+    {
+        $post_id = (int) $post_id;
+        if ( ! is_email( $to ) ) {
+            return;
+        }
+
+        $title    = get_the_title( $post_id );
+        $permalink = get_permalink( $post_id );
+        $greeting = ( '' !== trim( (string) $name ) ) ? 'Hi ' . $name . ',' : 'Hi there,';
+        $logo     = set_url_scheme( self::getImageBaseURL() . 'partyline-black.png', 'https' );
+
+        $img_url = '';
+        if ( has_post_thumbnail( $post_id ) ) {
+            $img_url = get_the_post_thumbnail_url( $post_id, 'large' );
+            if ( $img_url ) {
+                $img_url = set_url_scheme( $img_url, 'https' );
+            }
+        }
+
+        $subject = 'Your Partyline is live: ' . wp_strip_all_tags( $title );
+
+        ob_start();
+        ?>
+<div style="background:#f4f4f5;margin:0;padding:24px 12px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+    <tr><td align="center">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="border-collapse:collapse;max-width:600px;width:100%;background:#ffffff;border:1px solid #e4e4e7;border-radius:16px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+        <tr><td style="padding:28px 24px 20px;text-align:center;border-bottom:1px solid #f0f0f1;">
+          <img src="<?php echo esc_url( $logo ); ?>" width="170" alt="Partyline" style="display:inline-block;width:170px;max-width:60%;height:auto;">
+        </td></tr>
+        <tr><td style="padding:22px 28px 0;">
+          <span style="display:inline-block;background:#16a34a;color:#ffffff;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:5px 11px;border-radius:999px;">Published</span>
+        </td></tr>
+        <tr><td style="padding:16px 28px 0;color:#3f3f46;font-size:15px;line-height:1.6;">
+          <?php echo esc_html( $greeting ); ?>
+        </td></tr>
+        <tr><td style="padding:8px 28px 0;color:#3f3f46;font-size:15px;line-height:1.65;">
+          Great news &mdash; your Partyline is now live on redbankgreen. Thanks for helping tell the story of our community.
+        </td></tr>
+        <?php if ( $img_url ): ?>
+        <tr><td style="padding:20px 28px 0;">
+          <img src="<?php echo esc_url( $img_url ); ?>" alt="" style="display:block;width:100%;max-width:544px;height:auto;border-radius:12px;border:1px solid #eeeeee;">
+        </td></tr>
+        <?php endif; ?>
+        <tr><td style="padding:18px 28px 0;">
+          <h1 style="margin:0;font-size:22px;line-height:1.28;color:#18181b;font-weight:800;"><?php echo esc_html( $title ); ?></h1>
+        </td></tr>
+        <tr><td style="padding:22px 28px 6px;">
+          <a href="<?php echo esc_url( $permalink ); ?>" style="display:inline-block;background:#18181b;color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:13px 22px;border-radius:12px;">View your Partyline &rarr;</a>
+        </td></tr>
+        <tr><td style="padding:20px 28px 26px;margin-top:6px;border-top:1px solid #f0f0f1;color:#a1a1aa;font-size:13px;line-height:1.6;">
+          Got another story or photo? Send us a Partyline anytime.
+        </td></tr>
+      </table>
+      <div style="max-width:600px;margin:14px auto 0;color:#a1a1aa;font-size:12px;text-align:center;">redbankgreen &middot; Partyline</div>
+    </td></tr>
+  </table>
+</div>
+        <?php
+        $html = (string) ob_get_clean();
+
+        wp_mail( $to, $subject, $html, array( 'Content-Type: text/html; charset=UTF-8' ) );
+    }
+
+    /**
      * Download a Twilio-hosted media item and add it to the Media Library.
      * Handles accounts with/without "Enforce HTTP Auth on Media URLs".
      *

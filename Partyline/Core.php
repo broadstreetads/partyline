@@ -64,7 +64,10 @@ class Partyline_Core
         add_action('admin_menu', 	array($this, 'adminCallback'     ));
         add_action('admin_init', 	array($this, 'adminInitCallback' ));
         add_action('init', array($this, 'catchTwilioWebhook'));
-        
+
+        # -- Notify the Partyliner (and attribute authorship) when published --
+        add_action('transition_post_status', array($this, 'onPartylineTransition'), 10, 3);
+
         # -- User profile --
         add_action('show_user_profile', array($this, 'addPartylinePhoneField'));
         add_action('edit_user_profile', array($this, 'addPartylinePhoneField'));
@@ -404,6 +407,13 @@ class Partyline_Core
                     'post_category' => $selected_category ? array($selected_category) : array()
                 ));
 
+                // Mark as a Partyline submission and remember the sender's number
+                //  so the publish notifier can identify/attribute the Partyliner.
+                if ($post_id && !is_wp_error($post_id)) {
+                    update_post_meta($post_id, '_partyline_submission', 1);
+                    update_post_meta($post_id, '_partyline_submitter_phone', $twilio->from);
+                }
+
                 // Set the first image attachment as the featured image
                 if (!empty($attachment_ids)) {
                     set_post_thumbnail($post_id, $attachment_ids[0]);
@@ -426,11 +436,33 @@ class Partyline_Core
                     'original'      => $twilio->body,
                     'attachment_id' => !empty($attachment_ids) ? $attachment_ids[0] : 0,
                 ));
+
+                // Published immediately? Notify the Partyliner now (the status
+                //  transition fired before the Partyline meta was written).
+                if ($post_id && !is_wp_error($post_id) && !empty($components['immediate'])) {
+                    Partyline_Utility::notifyPartylinePublished($post_id);
+                }
             }
 
             $twilio->sendResponse("Thank You! Not every post will always make it but if it's quality and authentic we'll sure as heck try!");
             exit;
         }
+    }
+
+    /**
+     * Fires whenever a post changes status. When a Partyline post becomes
+     *  published (from any non-published state), attribute it to the registered
+     *  Partyliner and email them that it's live.
+     */
+    public function onPartylineTransition($new_status, $old_status, $post)
+    {
+        if ('publish' !== $new_status || 'publish' === $old_status) {
+            return;
+        }
+        if (! $post || 'post' !== $post->post_type) {
+            return;
+        }
+        Partyline_Utility::notifyPartylinePublished($post->ID);
     }
 
     public function sendErrorEmail($message) {
