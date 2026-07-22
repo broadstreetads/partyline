@@ -209,6 +209,12 @@
                                 submissions into a clean blurb and enable <strong>voice dictation</strong>
                                 (transcribed with Whisper) in the app. Without a key, contributors just type
                                 their story and it's saved as-is.
+                                <br><br>
+                                <strong>Where to get a key:</strong> sign in at
+                                <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys &#x2197;</a>,
+                                click <em>Create new secret key</em>, and paste it here. You'll also need
+                                <a href="https://platform.openai.com/settings/organization/billing/overview" target="_blank" rel="noopener">billing / credits &#x2197;</a>
+                                on the account for it to work.
                             </div>
                         </div>
                         <div class="control-container">
