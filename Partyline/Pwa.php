@@ -32,7 +32,7 @@ class Partyline_Pwa {
 	const APP_PATH = 'partyline';
 
 	/** Bump to invalidate the service-worker precache. */
-	const PWA_ASSET_VERSION = '16';
+	const PWA_ASSET_VERSION = '17';
 
 	/**
 	 * Register hooks. The contributor app is ON by default (see isEnabled), so
@@ -65,6 +65,12 @@ class Partyline_Pwa {
 	/** The current visitor is submitting anonymously (not logged in, but allowed). */
 	public static function isAnonymousVisitor() {
 		return ! is_user_logged_in() && self::allowAnonymous();
+	}
+
+	/** Is the public Partyliner signup page open? Opt-in, default OFF. */
+	public static function signupEnabled() {
+		$s = Partyline_Utility::getSettings();
+		return ! empty( $s->partyliner_signup_enabled );
 	}
 
 	/* --------------------------------------------------------------------- */
@@ -120,6 +126,12 @@ class Partyline_Pwa {
 				break;
 			case 'manifest.webmanifest':
 				self::serveManifest();
+				break;
+			case 'signup':
+				self::serveSignup();
+				break;
+			case 'confirm':
+				self::serveConfirm();
 				break;
 			default:
 				return; // unknown sub-path -> let WordPress 404 it
@@ -358,6 +370,183 @@ self.addEventListener('fetch', function (e) {
 JS;
 	}
 
+	/* --------------------------------------------------------------------- */
+	/* Public Partyliner signup:  /partyline/signup  +  /partyline/confirm    */
+	/* --------------------------------------------------------------------- */
+
+	/** Full URL of the signup page. */
+	public static function signupUrl() {
+		return self::appUrl( 'signup' );
+	}
+
+	/** Wrap body HTML in a minimal, app-styled standalone page. */
+	private static function renderPage( $body ) {
+		$css  = esc_url( self::assetUrl( 'app.css' ) ) . '?v=' . self::PWA_ASSET_VERSION;
+		$icon = esc_url( self::assetUrl( 'icons/icon-192.png' ) ) . '?v=' . self::PWA_ASSET_VERSION;
+		$settings      = Partyline_Utility::getSettings();
+		$turnstile_key = isset( $settings->turnstile_site_key ) ? trim( $settings->turnstile_site_key ) : '';
+
+		$html  = '<!doctype html><html lang="en"><head><meta charset="utf-8">';
+		$html .= '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">';
+		$html .= '<title>Partyline</title><meta name="theme-color" content="#18181b">';
+		$html .= '<link rel="icon" href="' . $icon . '"><link rel="stylesheet" href="' . $css . '">';
+		if ( $turnstile_key ) {
+			$html .= '<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>';
+		}
+		$html .= '</head><body><div id="app">';
+		$html .= '<header class="pl-header"><span class="pl-brand"><img src="' . $icon . '" alt=""> Partyline</span></header>';
+		$html .= '<main class="pl-main">' . $body . '</main>';
+		$html .= '<footer class="pl-footer">redbankgreen &middot; Partyline</footer>';
+		$html .= '</div></body></html>';
+		return $html;
+	}
+
+	/** GET /partyline/signup — the public signup form. */
+	public static function serveSignup() {
+		status_header( 200 );
+		nocache_headers();
+		header( 'Content-Type: text/html; charset=utf-8' );
+
+		if ( ! self::signupEnabled() ) {
+			echo self::renderPage( '<section class="pl-screen"><div class="pl-hero"><h1>Signups are closed</h1><p>Public signup isn\'t open right now.</p></div></section>' );
+			return;
+		}
+
+		$settings      = Partyline_Utility::getSettings();
+		$turnstile_key = isset( $settings->turnstile_site_key ) ? trim( $settings->turnstile_site_key ) : '';
+
+		$b  = '<section id="screen-signup" class="pl-screen">';
+		$b .= '<div class="pl-hero"><h1>Become a Partyliner</h1><p>Sign up to send in photos and stories from around town. We&rsquo;ll email you to confirm.</p></div>';
+		$b .= '<label class="pl-label" for="s-name">Name</label><input id="s-name" class="pl-input" type="text" autocomplete="name" placeholder="Jane Doe">';
+		$b .= '<label class="pl-label" for="s-email">Email</label><input id="s-email" class="pl-input" type="email" autocomplete="email" placeholder="you@example.com">';
+		$b .= '<label class="pl-label" for="s-phone">Phone</label><input id="s-phone" class="pl-input" type="tel" autocomplete="tel" placeholder="(732) 555-0123">';
+		$b .= '<label class="pl-label" for="s-address">Address <span style="color:#a1a1aa;font-weight:400;">(optional)</span></label><input id="s-address" class="pl-input" type="text" autocomplete="street-address" placeholder="123 Broad St, Red Bank">';
+		if ( $turnstile_key ) {
+			$b .= '<div id="s-turnstile" class="cf-turnstile pl-turnstile" data-sitekey="' . esc_attr( $turnstile_key ) . '" data-callback="sTurnstileCb"></div>';
+		}
+		$b .= '<div class="pl-actions"><button id="s-submit" class="pl-btn pl-btn--primary" type="button" disabled>Sign up</button></div>';
+		$b .= '<p id="s-status" class="pl-status"></p>';
+		$b .= '</section>';
+
+		$cfg = wp_json_encode( array(
+			'restBase'     => esc_url_raw( rest_url( self::REST_NAMESPACE . '/' ) ),
+			'nonce'        => wp_create_nonce( 'wp_rest' ),
+			'turnstileKey' => $turnstile_key,
+		) );
+
+		$b .= '<script>window.PL_SIGNUP=' . $cfg . ';</script>';
+		$b .= '<script src="' . esc_url( self::assetUrl( 'signup.js' ) ) . '?v=' . self::PWA_ASSET_VERSION . '" defer></script>';
+
+		echo self::renderPage( $b );
+	}
+
+	/** GET /partyline/confirm?token=… — activate the account from an email link. */
+	public static function serveConfirm() {
+		status_header( 200 );
+		nocache_headers();
+		header( 'Content-Type: text/html; charset=utf-8' );
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended — the token IS the secret.
+		$token = isset( $_GET['token'] ) ? sanitize_text_field( wp_unslash( $_GET['token'] ) ) : '';
+		$data  = $token ? get_transient( 'partyline_signup_' . $token ) : false;
+
+		if ( ! is_array( $data ) || empty( $data['email'] ) ) {
+			echo self::renderPage( '<section class="pl-screen"><div class="pl-hero"><h1>Link expired</h1><p>This confirmation link is invalid or has already been used. Please sign up again.</p></div><div class="pl-actions"><a class="pl-btn pl-btn--primary" href="' . esc_url( self::signupUrl() ) . '">Sign up again</a></div></section>' );
+			return;
+		}
+
+		$uid = Partyline_Utility::findOrCreatePartyliner( $data );
+		delete_transient( 'partyline_signup_' . $token );
+
+		if ( is_wp_error( $uid ) ) {
+			echo self::renderPage( '<section class="pl-screen"><div class="pl-hero"><h1>Something went wrong</h1><p>' . esc_html( $uid->get_error_message() ) . '</p></div><div class="pl-actions"><a class="pl-btn pl-btn--primary" href="' . esc_url( self::signupUrl() ) . '">Try again</a></div></section>' );
+			return;
+		}
+
+		echo self::renderPage( '<section class="pl-screen"><div class="pl-hero"><h1>🎉 You&rsquo;re in!</h1><p>Your Partyliner account is confirmed. Tap below to send your first Partyline.</p></div><div class="pl-actions"><a class="pl-btn pl-btn--primary" href="' . esc_url( self::appUrl() ) . '">Open Partyline</a></div></section>' );
+	}
+
+	/** POST /partyline/v1/signup — validate, Turnstile, email a confirmation link. */
+	public static function restSignup( WP_REST_Request $request ) {
+		if ( ! self::signupEnabled() ) {
+			return new WP_Error( 'partyline_signup_off', 'Signups are not open.', array( 'status' => 403 ) );
+		}
+
+		$name    = sanitize_text_field( (string) $request->get_param( 'name' ) );
+		$email   = sanitize_email( (string) $request->get_param( 'email' ) );
+		$phone   = sanitize_text_field( (string) $request->get_param( 'phone' ) );
+		$address = sanitize_textarea_field( (string) $request->get_param( 'address' ) );
+
+		if ( '' === $name || ! is_email( $email ) || strlen( preg_replace( '/\D/', '', $phone ) ) < 7 ) {
+			return new WP_Error( 'partyline_signup_fields', 'Please provide your name, a valid email, and a phone number.', array( 'status' => 400 ) );
+		}
+
+		// Verify Turnstile only when it's configured.
+		$settings = Partyline_Utility::getSettings();
+		if ( ! empty( $settings->turnstile_site_key ) ) {
+			$verify = self::verifyTurnstile( (string) $request->get_param( 'turnstile' ) );
+			if ( is_wp_error( $verify ) ) {
+				return $verify;
+			}
+		}
+
+		$generic = rest_ensure_response( array(
+			'message' => 'Thanks! Check your email to confirm your Partyliner account.',
+		) );
+
+		// Already a member? Don't leak that; just nudge them to the app.
+		if ( email_exists( $email ) ) {
+			self::sendSignupEmail( $email, $name, self::appUrl(), 'already' );
+			return $generic;
+		}
+
+		$token = wp_generate_password( 32, false );
+		set_transient( 'partyline_signup_' . $token, array(
+			'name'    => $name,
+			'email'   => $email,
+			'phone'   => Partyline_Utility::normalizePhone( $phone ),
+			'address' => $address,
+		), 2 * DAY_IN_SECONDS );
+
+		$confirm_url = add_query_arg( 'token', rawurlencode( $token ), self::appUrl( 'confirm' ) );
+		self::sendSignupEmail( $email, $name, $confirm_url, 'confirm' );
+
+		return $generic;
+	}
+
+	/** Send the signup confirmation (or "already a member") email. */
+	private static function sendSignupEmail( $email, $name, $url, $type ) {
+		$greeting = $name !== '' ? 'Hi ' . $name . ',' : 'Hi there,';
+		if ( 'already' === $type ) {
+			$intro = 'You&rsquo;re already a Partyliner. Thanks! Whenever you spot something worth sharing, use the link below to send it in.';
+			$cta   = 'Open Partyline';
+			$subj  = 'You\'re already a Partyliner';
+		} else {
+			$intro = 'Thanks for signing up to be a Partyliner. Confirm your account with the button below and you&rsquo;re all set to send in photos and stories.';
+			$cta   = 'Confirm my account';
+			$subj  = 'Confirm your Partyliner account';
+		}
+
+		$logo = set_url_scheme( Partyline_Utility::getImageBaseURL() . 'partyline-black.png', 'https' );
+
+		ob_start();
+		?>
+<div style="background:#f4f4f5;margin:0;padding:24px 12px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;"><tr><td align="center">
+    <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="border-collapse:collapse;max-width:600px;width:100%;background:#fff;border:1px solid #e4e4e7;border-radius:16px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+      <tr><td style="padding:28px 24px 22px;text-align:center;border-bottom:1px solid #f0f0f1;"><img src="<?php echo esc_url( $logo ); ?>" width="170" alt="Partyline" style="width:170px;max-width:60%;height:auto;"></td></tr>
+      <tr><td style="padding:26px 30px 4px;color:#3f3f46;font-size:15px;line-height:1.6;"><?php echo esc_html( $greeting ); ?></td></tr>
+      <tr><td style="padding:8px 30px 0;color:#3f3f46;font-size:15px;line-height:1.65;"><?php echo wp_kses_post( $intro ); ?></td></tr>
+      <tr><td style="padding:24px 30px 8px;"><a href="<?php echo esc_url( $url ); ?>" style="display:inline-block;background:#18181b;color:#fff;text-decoration:none;font-weight:700;font-size:15px;padding:13px 24px;border-radius:12px;"><?php echo esc_html( $cta ); ?></a></td></tr>
+      <tr><td style="padding:8px 30px 28px;color:#a1a1aa;font-size:12px;line-height:1.6;">If you didn&rsquo;t request this, you can ignore this email.</td></tr>
+    </table>
+    <div style="max-width:600px;margin:14px auto 0;color:#a1a1aa;font-size:12px;text-align:center;">redbankgreen &middot; Partyline</div>
+  </td></tr></table>
+</div>
+		<?php
+		wp_mail( $email, $subj, (string) ob_get_clean(), array( 'Content-Type: text/html; charset=UTF-8' ) );
+	}
+
 	/**
 	 * Register REST routes. AI routes (transcribe/generate) are always
 	 * logged-in only. /submit allows anonymous when the setting is on.
@@ -379,6 +568,12 @@ JS;
 			'methods'             => 'POST',
 			'callback'            => array( __CLASS__, 'restSubmit' ),
 			'permission_callback' => array( __CLASS__, 'permissionSubmit' ),
+		) );
+
+		register_rest_route( self::REST_NAMESPACE, '/signup', array(
+			'methods'             => 'POST',
+			'callback'            => array( __CLASS__, 'restSignup' ),
+			'permission_callback' => array( __CLASS__, 'signupEnabled' ),
 		) );
 	}
 

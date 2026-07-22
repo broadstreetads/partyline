@@ -757,4 +757,116 @@ class Partyline_Utility
 			return new WP_Error( 'regenerate_error', 'Failed to generate new attachment metadata.' );
 		}
 	}
+
+    /* --------------------------------------------------------------------- */
+    /* Partyliners (contributor accounts) + phone normalization              */
+    /* --------------------------------------------------------------------- */
+
+    /**
+     * Normalize a phone number to E.164 (e.g. +17325551234) so it matches the
+     * `From` Twilio sends. US-centric with a best-effort fallback; filterable.
+     */
+    public static function normalizePhone( $raw, $default_cc = '1' )
+    {
+        $raw     = trim( (string) $raw );
+        $plus    = ( strpos( $raw, '+' ) === 0 );
+        $digits  = preg_replace( '/\D/', '', $raw );
+        if ( $digits === '' ) {
+            return '';
+        }
+        if ( $plus ) {
+            $e164 = '+' . $digits;
+        } elseif ( strlen( $digits ) === 11 && $digits[0] === '1' ) {
+            $e164 = '+' . $digits;
+        } elseif ( strlen( $digits ) === 10 ) {
+            $e164 = '+' . $default_cc . $digits;
+        } else {
+            $e164 = '+' . $digits;
+        }
+        return apply_filters( 'partyline_normalize_phone', $e164, $raw );
+    }
+
+    /** Last 10 digits of a phone, for loose matching. */
+    public static function phoneLast10( $phone )
+    {
+        return substr( preg_replace( '/\D/', '', (string) $phone ), -10 );
+    }
+
+    /**
+     * Find an existing Partyliner (by email, then phone) or create a new one in
+     * the locked-down `partyliner` role. Returns the user ID or WP_Error.
+     *
+     * @param array $args name, email, phone, address
+     */
+    public static function findOrCreatePartyliner( $args )
+    {
+        $name    = isset( $args['name'] ) ? sanitize_text_field( $args['name'] ) : '';
+        $email   = isset( $args['email'] ) ? sanitize_email( $args['email'] ) : '';
+        $phone   = isset( $args['phone'] ) ? self::normalizePhone( $args['phone'] ) : '';
+        $address = isset( $args['address'] ) ? sanitize_textarea_field( $args['address'] ) : '';
+
+        if ( ! is_email( $email ) ) {
+            return new WP_Error( 'partyline_bad_email', 'A valid email address is required.' );
+        }
+
+        // Dedupe: email first, then phone.
+        $user_id = email_exists( $email );
+        if ( ! $user_id && $phone !== '' ) {
+            $found = Partyline_Core::getUserByPhoneNumber( $phone );
+            if ( $found ) {
+                $user_id = $found->ID;
+            }
+        }
+
+        if ( $user_id ) {
+            self::savePartylinerMeta( $user_id, $name, $phone, $address );
+            return (int) $user_id;
+        }
+
+        // Create a new, minimal-capability Partyliner (random password, no login needed).
+        $base = sanitize_user( current( explode( '@', $email ) ), true );
+        if ( $base === '' ) {
+            $base = 'partyliner';
+        }
+        $username = $base;
+        $n = 1;
+        while ( username_exists( $username ) ) {
+            $username = $base . $n;
+            $n++;
+        }
+
+        $user_id = wp_insert_user( array(
+            'user_login'   => $username,
+            'user_email'   => $email,
+            'user_pass'    => wp_generate_password( 24, true, true ),
+            'display_name' => $name !== '' ? $name : $username,
+            'role'         => 'partyliner',
+        ) );
+        if ( is_wp_error( $user_id ) ) {
+            return $user_id;
+        }
+
+        self::savePartylinerMeta( $user_id, $name, $phone, $address );
+        return (int) $user_id;
+    }
+
+    /** Store a Partyliner's contact details in user meta. */
+    public static function savePartylinerMeta( $user_id, $name, $phone, $address )
+    {
+        if ( $phone !== '' ) {
+            update_user_meta( $user_id, 'partyline_phone', self::normalizePhone( $phone ) );
+        }
+        if ( $address !== '' ) {
+            update_user_meta( $user_id, 'partyline_address', $address );
+        }
+        if ( $name !== '' ) {
+            $parts = preg_split( '/\s+/', trim( $name ), 2 );
+            update_user_meta( $user_id, 'first_name', $parts[0] );
+            if ( isset( $parts[1] ) ) {
+                update_user_meta( $user_id, 'last_name', $parts[1] );
+            }
+            wp_update_user( array( 'ID' => $user_id, 'display_name' => $name ) );
+        }
+        update_user_meta( $user_id, 'partyline_is_partyliner', 1 );
+    }
 }

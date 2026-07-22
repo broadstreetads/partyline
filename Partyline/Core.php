@@ -79,8 +79,22 @@ class Partyline_Core
         add_action('pre_get_users', array($this, 'filterUsersByPartylinePhone'));
         add_action('admin_notices', array($this, 'showPartylineUserNotice'));
 
+        # -- Partyliner (contributor) role --
+        add_action('init', array($this, 'registerPartylinerRole'));
+
         # -- PWA / REST submission channel (inert unless the feature is enabled) --
         Partyline_Pwa::init();
+    }
+
+    /**
+     * Register the locked-down "Partyliner" role used for contributor accounts.
+     * Read-only: enough to be a post author for attribution, nothing more.
+     */
+    public function registerPartylinerRole()
+    {
+        if (!get_role('partyliner')) {
+            add_role('partyliner', 'Partyliner', array('read' => true));
+        }
     }
 
     /**
@@ -103,8 +117,8 @@ class Partyline_Core
         );
 
         add_submenu_page('Partyline', 'Settings', 'Settings', 'edit_pages', 'Partyline-Settings', array($this, 'adminSettingsMenuCallback'));
+        add_submenu_page('Partyline', 'Partyliners', 'Partyliners', 'list_users', 'Partyline-Partyliners', array($this, 'adminPartylinersCallback'));
         add_submenu_page('Partyline', 'How-To', 'How-To', 'edit_pages', 'Partyline-HowTo', array($this, 'adminHowToCallback'));
-        add_submenu_page('Partyline', 'All Partyliners', 'All Partyliners', 'list_users', 'users.php?partyline_has_phone=1');
     }
 
     /**
@@ -204,6 +218,95 @@ class Partyline_Core
     public function adminHowToCallback()
     {
         Partyline_View::load( 'admin/howto', array() );
+    }
+
+    /**
+     * The callback for the "Partyliners" management page. Handles the add/delete
+     *  actions (nonce-checked) and then renders a management table of everyone
+     *  who has a Partyliner account or a stored SMS phone number.
+     */
+    public function adminPartylinersCallback()
+    {
+        if ( ! current_user_can( 'list_users' ) ) {
+            wp_die( esc_html__( 'You do not have permission to manage Partyliners.', 'partyline' ) );
+        }
+
+        $notice = null;
+
+        // --- Add a Partyliner -------------------------------------------------
+        if ( isset( $_POST['partyline_add_partyliner'] ) ) {
+            check_admin_referer( 'partyline_add_partyliner' );
+
+            $res = Partyline_Utility::findOrCreatePartyliner( array(
+                'name'    => isset( $_POST['pl_name'] )    ? wp_unslash( $_POST['pl_name'] )    : '',
+                'email'   => isset( $_POST['pl_email'] )   ? wp_unslash( $_POST['pl_email'] )   : '',
+                'phone'   => isset( $_POST['pl_phone'] )   ? wp_unslash( $_POST['pl_phone'] )   : '',
+                'address' => isset( $_POST['pl_address'] ) ? wp_unslash( $_POST['pl_address'] ) : '',
+            ) );
+
+            if ( is_wp_error( $res ) ) {
+                $notice = array( 'error', $res->get_error_message() );
+            } else {
+                $notice = array( 'success', 'Partyliner saved.' );
+            }
+        }
+
+        // --- Delete a Partyliner ---------------------------------------------
+        if ( isset( $_GET['action'], $_GET['user'] ) && 'delete' === $_GET['action'] ) {
+            $uid = (int) $_GET['user'];
+            check_admin_referer( 'partyline_delete_' . $uid );
+
+            if ( ! current_user_can( 'delete_users' ) ) {
+                $notice = array( 'error', 'You do not have permission to remove users.' );
+            } elseif ( $uid === get_current_user_id() ) {
+                $notice = array( 'error', 'You cannot remove your own account here.' );
+            } else {
+                require_once ABSPATH . 'wp-admin/includes/user.php';
+                // Reassign any posts to the current admin so nothing is orphaned.
+                wp_delete_user( $uid, get_current_user_id() );
+                $notice = array( 'success', 'Partyliner removed.' );
+            }
+        }
+
+        // --- Gather Partyliners ----------------------------------------------
+        $ids = array();
+
+        // Anyone holding the dedicated role.
+        foreach ( get_users( array( 'role' => 'partyliner', 'fields' => 'ID', 'number' => 2000 ) ) as $id ) {
+            $ids[ (int) $id ] = true;
+        }
+        // Plus anyone with a stored (non-empty) SMS phone number, regardless of role.
+        $with_phone = get_users( array(
+            'fields'     => 'ID',
+            'number'     => 2000,
+            'meta_query' => array(
+                array( 'key' => 'partyline_phone', 'value' => '', 'compare' => '!=' ),
+            ),
+        ) );
+        foreach ( $with_phone as $id ) {
+            $ids[ (int) $id ] = true;
+        }
+
+        $users = array();
+        foreach ( array_keys( $ids ) as $id ) {
+            $u = get_userdata( $id );
+            if ( $u ) {
+                $users[] = $u;
+            }
+        }
+
+        // Newest first by registration date.
+        usort( $users, function ( $a, $b ) {
+            return strcmp( $b->user_registered, $a->user_registered );
+        } );
+
+        $settings = Partyline_Utility::getSettings();
+
+        Partyline_View::load( 'admin/partyliners', array(
+            'users'    => $users,
+            'notice'   => $notice,
+            'category' => isset( $settings->partyline_category ) ? (int) $settings->partyline_category : 0,
+        ) );
     }
 
     /**
@@ -378,15 +481,32 @@ class Partyline_Core
      * @return WP_User|false
      */
     public static function getUserByPhoneNumber($phone_number) {
+        $normalized = Partyline_Utility::normalizePhone($phone_number);
+
+        // Exact match on the normalized number.
         $users = get_users(array(
-            'meta_key' => 'partyline_phone',
-            'meta_value' => $phone_number,
-            'number' => 1,
+            'meta_key'    => 'partyline_phone',
+            'meta_value'  => $normalized,
+            'number'      => 1,
             'count_total' => false
         ));
-
         if (!empty($users)) {
             return $users[0];
+        }
+
+        // Fallback: match on the last 10 digits (handles legacy / unnormalized stored values).
+        $last10 = Partyline_Utility::phoneLast10($normalized);
+        if (strlen($last10) === 10) {
+            $candidates = get_users(array(
+                'meta_query'  => array(array('key' => 'partyline_phone', 'value' => $last10, 'compare' => 'LIKE')),
+                'number'      => 10,
+                'count_total' => false
+            ));
+            foreach ($candidates as $u) {
+                if (Partyline_Utility::phoneLast10(get_user_meta($u->ID, 'partyline_phone', true)) === $last10) {
+                    return $u;
+                }
+            }
         }
 
         return false;
@@ -440,7 +560,8 @@ class Partyline_Core
         if(isset($_POST['partyline_phone']))
         {
             // phpcs:ignore WordPress.Security.NonceVerification.Missing
-            update_user_meta($user_id, 'partyline_phone', sanitize_text_field(wp_unslash($_POST['partyline_phone'])));
+            $raw = sanitize_text_field(wp_unslash($_POST['partyline_phone']));
+            update_user_meta($user_id, 'partyline_phone', $raw === '' ? '' : Partyline_Utility::normalizePhone($raw));
         }
     }
 }

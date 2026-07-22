@@ -133,6 +133,30 @@
                         </div>
                     </div>
                     <div class="clearfix"></div>
+                    <div class="break"></div>
+                    <div class="option">
+                        <div class="control-label">
+                            <div class="name nomargin">Public Partyliner signup</div>
+                            <div class="desc nomargin">
+                                Let people sign up to become Partyliners on a public page (name, phone, email, and an
+                                optional address). They confirm by email, and their phone is matched to future
+                                text-message submissions. Manage everyone under <strong>Partyline &rarr; Partyliners</strong>.
+                            </div>
+                        </div>
+                        <div class="control-container">
+                            <label><input type="checkbox" x-model="settings.partyliner_signup_enabled"> Enable public signup</label>
+                        </div>
+                    </div>
+                    <div class="clearfix"></div>
+                    <div class="break"></div>
+                    <div class="webhook-notice" x-show="settings.partyliner_signup_enabled">
+                        <strong>Your signup link:</strong>
+                        <span id="signup-url"><?php echo esc_html( Partyline_Pwa::signupUrl() ); ?></span>
+                        <span class="copy-icon" @click="window.partylineCopyToClipboard('#signup-url')">
+                            <span class="dashicons dashicons-admin-page"></span>
+                        </span>
+                    </div>
+                    <div class="clearfix"></div>
                 </div>
             </div>
 

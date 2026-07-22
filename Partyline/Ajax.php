@@ -37,6 +37,7 @@ class Partyline_Ajax
             // Contributor app (PWA) — the primary channel. Enabled by default.
             'pwa_enabled'          => array_key_exists( 'pwa_enabled', $incoming ) ? ! empty( $incoming['pwa_enabled'] ) : true,
             'pwa_allow_anonymous'  => ! empty( $incoming['pwa_allow_anonymous'] ),
+            'partyliner_signup_enabled' => ! empty( $incoming['partyliner_signup_enabled'] ),
             'turnstile_site_key'   => isset( $incoming['turnstile_site_key'] )   ? sanitize_text_field( $incoming['turnstile_site_key'] )   : '',
             'turnstile_secret_key' => isset( $incoming['turnstile_secret_key'] ) ? sanitize_text_field( $incoming['turnstile_secret_key'] ) : '',
 
