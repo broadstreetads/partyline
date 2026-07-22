@@ -494,6 +494,8 @@
 			fd.append('title', $('#pl-title').value);
 			fd.append('body', $('#pl-body').value);
 			if (blob) { fd.append('image', blob, 'partyline.jpg'); }
+			// The raw dictation, so the notification email can show the original.
+			if (state.transcript) { fd.append('original', state.transcript); }
 			var imm = $('#pl-immediate'); // only present for editors/admins
 			if (imm && imm.checked) { fd.append('immediate', '1'); }
 			if (IS_ANON) {

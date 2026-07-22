@@ -396,18 +396,124 @@ class Partyline_Utility
      * @param string $post_content The post content
      * @param string $title The post title
      */
-    public static function sendNotificationEmail($post_id, $from, $post_content, $title, $author_name)
+    public static function sendNotificationEmail($args)
     {
-        $emails = self::getNotificationEmails();
+        // Back-compat with the old positional signature
+        //  ($post_id, $from, $post_content, $title, $author_name).
+        if (! is_array($args)) {
+            $a = func_get_args();
+            $args = array(
+                'post_id'     => isset($a[0]) ? $a[0] : 0,
+                'from'        => isset($a[1]) ? $a[1] : '',
+                'description' => isset($a[2]) ? $a[2] : '',
+                'title'       => isset($a[3]) ? $a[3] : '',
+                'author_name' => isset($a[4]) ? $a[4] : '',
+            );
+        }
 
+        $emails = self::getNotificationEmails();
         if (empty($emails)) {
             return;
         }
 
-        $edit_link = get_admin_url() . "post.php?post=$post_id&action=edit";
-        $notification = "A Partyline post has been sent in from $author_name ($from): {$edit_link}\n\n\n{$post_content}\n\n{$title}";
-        
-        wp_mail($emails, 'New Partyline submission', $notification, array('Content-Type: text/html; charset=UTF-8'));
+        $title   = (isset($args['title']) && $args['title'] !== '') ? $args['title'] : 'New Partyline';
+        $subject = 'New Partyline: ' . wp_strip_all_tags($title);
+
+        wp_mail($emails, $subject, self::renderNotificationEmail($args), array('Content-Type: text/html; charset=UTF-8'));
+    }
+
+    /**
+     * Build the HTML for the "new Partyline" notification email.
+     *
+     * @param array $args post_id, from, author_name, title, description,
+     *                    original, attachment_id
+     * @return string HTML
+     */
+    public static function renderNotificationEmail($args)
+    {
+        $post_id     = isset($args['post_id']) ? (int) $args['post_id'] : 0;
+        $from        = isset($args['from']) ? trim((string) $args['from']) : '';
+        $author      = (isset($args['author_name']) && $args['author_name'] !== '') ? $args['author_name'] : 'Anonymous Partyliner';
+        $title       = (isset($args['title']) && $args['title'] !== '') ? $args['title'] : 'New Partyline';
+        $description = isset($args['description']) ? (string) $args['description'] : '';
+        $original    = isset($args['original']) ? trim((string) $args['original']) : '';
+        $attach_id   = isset($args['attachment_id']) ? (int) $args['attachment_id'] : 0;
+
+        $logo      = set_url_scheme(self::getImageBaseURL() . 'partyline-black.png', 'https');
+        $edit_link = get_admin_url() . 'post.php?post=' . $post_id . '&action=edit';
+
+        // Correctly-sized image (never the full-res original).
+        $img_url = '';
+        if ($attach_id) {
+            $img_url = wp_get_attachment_image_url($attach_id, 'large');
+        }
+        if (! $img_url && $post_id && has_post_thumbnail($post_id)) {
+            $img_url = get_the_post_thumbnail_url($post_id, 'large');
+        }
+        if ($img_url) {
+            $img_url = set_url_scheme($img_url, 'https');
+        }
+
+        // Show the original only when it adds something beyond the description.
+        $norm = function ($s) { return strtolower(trim(preg_replace('/\s+/', ' ', wp_strip_all_tags((string) $s)))); };
+        $show_original = ($original !== '' && $norm($original) !== $norm($description));
+
+        $ts = $post_id ? get_post_timestamp($post_id) : 0;
+        if (! $ts) {
+            $ts = time();
+        }
+        $when = wp_date('M j, Y \a\t g:i a', $ts);
+
+        $meta = 'Submitted by <strong style="color:#52525b;">' . esc_html($author) . '</strong>';
+        if ($from !== '') {
+            $meta .= ' &middot; ' . esc_html($from);
+        }
+
+        ob_start();
+        ?>
+<div style="background:#f4f4f5;margin:0;padding:24px 12px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+    <tr><td align="center">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="border-collapse:collapse;max-width:600px;width:100%;background:#ffffff;border:1px solid #e4e4e7;border-radius:16px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+        <tr><td style="padding:28px 24px 20px;text-align:center;border-bottom:1px solid #f0f0f1;">
+          <img src="<?php echo esc_url($logo); ?>" width="170" alt="Partyline" style="display:inline-block;width:170px;max-width:60%;height:auto;">
+        </td></tr>
+        <tr><td style="padding:22px 28px 0;">
+          <span style="display:inline-block;background:#18181b;color:#ffffff;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:5px 11px;border-radius:999px;">New Partyline</span>
+        </td></tr>
+        <?php if ($img_url): ?>
+        <tr><td style="padding:18px 28px 0;">
+          <img src="<?php echo esc_url($img_url); ?>" alt="" style="display:block;width:100%;max-width:544px;height:auto;border-radius:12px;border:1px solid #eeeeee;">
+        </td></tr>
+        <?php endif; ?>
+        <tr><td style="padding:20px 28px 0;">
+          <h1 style="margin:0;font-size:22px;line-height:1.28;color:#18181b;font-weight:800;"><?php echo esc_html($title); ?></h1>
+        </td></tr>
+        <?php if (trim(wp_strip_all_tags($description)) !== ''): ?>
+        <tr><td style="padding:6px 28px 0;color:#3f3f46;font-size:15px;line-height:1.6;">
+          <?php echo wpautop(wp_kses_post($description)); ?>
+        </td></tr>
+        <?php endif; ?>
+        <?php if ($show_original): ?>
+        <tr><td style="padding:22px 28px 0;">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#a1a1aa;margin-bottom:8px;">Original message</div>
+          <div style="background:#f4f4f5;border-left:3px solid #d4d4d8;border-radius:8px;padding:12px 14px;color:#52525b;font-size:14px;line-height:1.55;white-space:pre-wrap;"><?php echo esc_html($original); ?></div>
+        </td></tr>
+        <?php endif; ?>
+        <tr><td style="padding:26px 28px 6px;">
+          <a href="<?php echo esc_url($edit_link); ?>" style="display:inline-block;background:#18181b;color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:13px 22px;border-radius:12px;">Review &amp; edit in WordPress &rarr;</a>
+        </td></tr>
+        <tr><td style="padding:20px 28px 26px;margin-top:6px;border-top:1px solid #f0f0f1;color:#a1a1aa;font-size:13px;line-height:1.6;">
+          <?php echo wp_kses_post($meta); ?><br>
+          <?php echo esc_html($when); ?>
+        </td></tr>
+      </table>
+      <div style="max-width:600px;margin:14px auto 0;color:#a1a1aa;font-size:12px;text-align:center;">redbankgreen &middot; Partyline</div>
+    </td></tr>
+  </table>
+</div>
+        <?php
+        return (string) ob_get_clean();
     }
 
     /**

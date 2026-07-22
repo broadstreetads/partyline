@@ -32,7 +32,7 @@ class Partyline_Pwa {
 	const APP_PATH = 'partyline';
 
 	/** Bump to invalidate the service-worker precache. */
-	const PWA_ASSET_VERSION = '14';
+	const PWA_ASSET_VERSION = '15';
 
 	/**
 	 * Register hooks. The contributor app is ON by default (see isEnabled), so
@@ -667,6 +667,9 @@ JS;
 			}
 		}
 
+		// Raw dictation/typed text as originally sent (shown in the notification email).
+		$original = sanitize_textarea_field( (string) $request->get_param( 'original' ) );
+
 		$post_id = self::createPost( array(
 			'title'         => '' !== $title ? $title : Partyline_Core::DEFAULT_TITLE,
 			'body'          => $body,
@@ -676,6 +679,7 @@ JS;
 			'from'          => $from,
 			'status'        => $publish ? 'publish' : 'draft',
 			'submitter'     => $submitter,
+			'original'      => $original,
 		) );
 
 		if ( is_wp_error( $post_id ) ) {
@@ -779,7 +783,15 @@ JS;
 			update_post_meta( $post_id, '_partyline_submitter_email', sanitize_email( $args['submitter']['email'] ) );
 		}
 
-		Partyline_Utility::sendNotificationEmail( $post_id, $from, $post_content, $title, $author_name );
+		Partyline_Utility::sendNotificationEmail( array(
+			'post_id'       => $post_id,
+			'from'          => $from,
+			'author_name'   => $author_name,
+			'title'         => $title,
+			'description'   => $body,
+			'original'      => isset( $args['original'] ) ? $args['original'] : '',
+			'attachment_id' => $attachment_id,
+		) );
 
 		return $post_id;
 	}

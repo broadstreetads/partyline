@@ -296,7 +296,23 @@ class Partyline_Core
                     set_post_thumbnail($post_id, $attachment_ids[0]);
                 }
 
-                Partyline_Utility::sendNotificationEmail($post_id, $twilio->from, $post_content, $components['title'], $author_name);
+                // The cleaned body carries an "--Original before GPT--" suffix; split
+                // it so the email shows the clean description and the raw text apart.
+                $description = $components['body'];
+                $marker      = '--Original before GPT--';
+                if (($mp = strpos($description, $marker)) !== false) {
+                    $description = rtrim(substr($description, 0, $mp));
+                }
+
+                Partyline_Utility::sendNotificationEmail(array(
+                    'post_id'       => $post_id,
+                    'from'          => $twilio->from,
+                    'author_name'   => $author_name,
+                    'title'         => $components['title'],
+                    'description'   => $description,
+                    'original'      => $twilio->body,
+                    'attachment_id' => !empty($attachment_ids) ? $attachment_ids[0] : 0,
+                ));
             }
 
             $twilio->sendResponse("Thank You! Not every post will always make it but if it's quality and authentic we'll sure as heck try!");
