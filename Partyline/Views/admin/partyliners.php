@@ -30,140 +30,134 @@ if ( ! function_exists( 'partyline_count_user_partylines' ) ) {
     }
 }
 
-$page_url = admin_url( 'admin.php?page=Partyline-Partyliners' );
+$page_url        = admin_url( 'admin.php?page=Partyline-Partyliners' );
+$main_url        = admin_url( 'admin.php?page=Partyline' );
+$settings_url    = admin_url( 'admin.php?page=Partyline-Settings' );
+$howto_url       = admin_url( 'admin.php?page=Partyline-HowTo' );
+$signup_enabled  = class_exists( 'Partyline_Pwa' ) && Partyline_Pwa::signupEnabled();
+$signup_url      = class_exists( 'Partyline_Pwa' ) ? Partyline_Pwa::signupUrl() : '';
 ?>
-<style>
-    #main .pl-mng-wrap { max-width: 980px; }
-    #main .pl-notice { padding: 12px 16px; border-radius: 6px; margin: 0 0 18px; font-size: 14px; }
-    #main .pl-notice.is-success { background: #edfaef; border: 1px solid #b7e4c0; color: #1a7431; }
-    #main .pl-notice.is-error   { background: #fdecec; border: 1px solid #f3bcbc; color: #b32020; }
+<?php Partyline_View::load( 'admin/global/plg-styles' ); ?>
 
-    #main .pl-add-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; margin-bottom: 14px; }
-    #main .pl-add-grid .full { grid-column: 1 / -1; }
-    #main .pl-add-grid label { display: block; font-weight: 600; font-size: 12px; color: #52525b; margin-bottom: 4px; text-transform: uppercase; letter-spacing: .02em; }
-    #main .pl-add-grid input { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid #d4d4d8; border-radius: 6px; font-size: 14px; }
-    #main .pl-btn { display: inline-block; background: #18181b; color: #fff; border: 0; border-radius: 6px; padding: 9px 18px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; }
-    #main .pl-btn:hover { background: #333; color: #fff; }
+<div class="plg">
+  <div class="plg-wrap">
 
-    #main .pl-search { margin: 0 0 14px; }
-    #main .pl-search input { width: 320px; max-width: 100%; padding: 8px 12px; border: 1px solid #d4d4d8; border-radius: 6px; font-size: 14px; }
+    <?php Partyline_View::load( 'admin/global/plg-hero', array(
+        'hero_lead' => 'The people who send in your Partylines. Add them by hand, or let them sign up themselves &mdash; their phone number is matched to incoming texts automatically.',
+        'hero_toc'  => array(
+            array( 'href' => $main_url,     'label' => 'Newsroom' ),
+            array( 'href' => $settings_url, 'label' => 'Settings' ),
+            array( 'href' => $howto_url,    'label' => 'How-To' ),
+        ),
+    ) ); ?>
 
-    #main table.pl-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-    #main table.pl-table th { text-align: left; padding: 8px 10px; border-bottom: 2px solid #e4e4e7; color: #52525b; font-size: 12px; text-transform: uppercase; letter-spacing: .02em; }
-    #main table.pl-table td { padding: 10px; border-bottom: 1px solid #f0f0f1; vertical-align: top; }
-    #main table.pl-table tr:hover td { background: #fafafa; }
-    #main .pl-name { font-weight: 600; color: #18181b; }
-    #main .pl-muted { color: #a1a1aa; }
-    #main .pl-count { display: inline-block; min-width: 22px; text-align: center; background: #f4f4f5; border-radius: 999px; padding: 2px 8px; font-weight: 600; }
-    #main .pl-actions a { text-decoration: none; margin-right: 10px; }
-    #main .pl-actions a.pl-del { color: #b32020; }
-    #main .pl-empty { padding: 28px; text-align: center; color: #a1a1aa; }
-</style>
+    <?php if ( $notice ): ?>
+      <section class="plg-section">
+        <div class="plg-flash is-<?php echo esc_attr( $notice[0] ); ?>"><?php echo esc_html( $notice[1] ); ?></div>
+      </section>
+    <?php endif; ?>
 
-<div id="main">
-    <?php Partyline_View::load( 'admin/global/header' ); ?>
-
-    <div class="left_column">
-        <div id="controls" class="pl-mng-wrap">
-
-            <?php if ( $notice ): ?>
-                <div class="pl-notice is-<?php echo esc_attr( $notice[0] ); ?>">
-                    <?php echo esc_html( $notice[1] ); ?>
-                </div>
-            <?php endif; ?>
-
-            <!-- ============ ADD A PARTYLINER ============ -->
-            <div class="box">
-                <div class="title"><span class="dashicons dashicons-plus-alt"></span> Add a Partyliner</div>
-                <div class="content">
-                    <form method="post" action="<?php echo esc_url( $page_url ); ?>">
-                        <?php wp_nonce_field( 'partyline_add_partyliner' ); ?>
-                        <div class="pl-add-grid">
-                            <div>
-                                <label for="pl_name">Name</label>
-                                <input type="text" id="pl_name" name="pl_name" required placeholder="Jane Resident" />
-                            </div>
-                            <div>
-                                <label for="pl_phone">Phone</label>
-                                <input type="text" id="pl_phone" name="pl_phone" required placeholder="(732) 555-0123" />
-                            </div>
-                            <div>
-                                <label for="pl_email">Email</label>
-                                <input type="email" id="pl_email" name="pl_email" required placeholder="jane@example.com" />
-                            </div>
-                            <div>
-                                <label for="pl_address">Address <span class="pl-muted">(optional)</span></label>
-                                <input type="text" id="pl_address" name="pl_address" placeholder="123 Broad St, Red Bank" />
-                            </div>
-                        </div>
-                        <button type="submit" name="partyline_add_partyliner" value="1" class="pl-btn">Add Partyliner</button>
-                        <span class="pl-muted" style="margin-left:12px;">The phone is normalized so incoming texts match this person.</span>
-                    </form>
-                </div>
-            </div>
-
-            <!-- ============ ALL PARTYLINERS ============ -->
-            <div class="box">
-                <div class="title">
-                    <span class="dashicons dashicons-groups"></span>
-                    Partyliners <span class="pl-muted">(<?php echo count( $users ); ?>)</span>
-                </div>
-                <div class="content">
-
-                    <div class="pl-search">
-                        <input type="text" id="pl-filter" placeholder="Search name, email, phone, address&hellip;" autocomplete="off" />
-                    </div>
-
-                    <?php if ( empty( $users ) ): ?>
-                        <div class="pl-empty">No Partyliners yet. Add one above, or share your public signup link.</div>
-                    <?php else: ?>
-                        <table class="pl-table" id="pl-table">
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Email</th>
-                                    <th>Phone</th>
-                                    <th>Address</th>
-                                    <th>Partylines</th>
-                                    <th>Joined</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ( $users as $u ):
-                                    $phone   = get_user_meta( $u->ID, 'partyline_phone', true );
-                                    $address = get_user_meta( $u->ID, 'partyline_address', true );
-                                    $count   = partyline_count_user_partylines( $u->ID, $category );
-                                    $joined  = $u->user_registered ? mysql2date( 'M j, Y', $u->user_registered ) : '';
-                                    $del_url = wp_nonce_url(
-                                        add_query_arg( array( 'action' => 'delete', 'user' => $u->ID ), $page_url ),
-                                        'partyline_delete_' . $u->ID
-                                    );
-                                    $haystack = strtolower( $u->display_name . ' ' . $u->user_email . ' ' . $phone . ' ' . $address );
-                                ?>
-                                    <tr data-search="<?php echo esc_attr( $haystack ); ?>">
-                                        <td class="pl-name"><?php echo esc_html( $u->display_name ? $u->display_name : $u->user_login ); ?></td>
-                                        <td><?php echo esc_html( $u->user_email ); ?></td>
-                                        <td><?php echo $phone ? esc_html( $phone ) : '<span class="pl-muted">&mdash;</span>'; ?></td>
-                                        <td><?php echo $address ? esc_html( $address ) : '<span class="pl-muted">&mdash;</span>'; ?></td>
-                                        <td><span class="pl-count"><?php echo (int) $count; ?></span></td>
-                                        <td class="pl-muted"><?php echo esc_html( $joined ); ?></td>
-                                        <td class="pl-actions">
-                                            <a href="<?php echo esc_url( get_edit_user_link( $u->ID ) ); ?>">Edit</a>
-                                            <a href="<?php echo esc_url( $del_url ); ?>" class="pl-del"
-                                               onclick="return confirm('Remove <?php echo esc_js( $u->display_name ); ?>? Their submissions will be reassigned to you.');">Remove</a>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    <?php endif; ?>
-
-                </div>
-            </div>
-
+    <!-- ============ ADD A PARTYLINER ============ -->
+    <section class="plg-section">
+      <div class="plg-eyebrow">Add</div>
+      <h2>Add a Partyliner</h2>
+      <p class="plg-intro">The phone number is normalized so a text from this person is matched to their account.</p>
+      <form method="post" action="<?php echo esc_url( $page_url ); ?>">
+        <?php wp_nonce_field( 'partyline_add_partyliner' ); ?>
+        <div class="plg-grid">
+          <div>
+            <label for="pl_name">Name</label>
+            <input type="text" id="pl_name" name="pl_name" required placeholder="Jane Resident" />
+          </div>
+          <div>
+            <label for="pl_phone">Phone</label>
+            <input type="text" id="pl_phone" name="pl_phone" required placeholder="(732) 555-0123" />
+          </div>
+          <div>
+            <label for="pl_email">Email</label>
+            <input type="email" id="pl_email" name="pl_email" required placeholder="jane@example.com" />
+          </div>
+          <div>
+            <label for="pl_address">Address <span class="plg-muted" style="text-transform:none;letter-spacing:0;">(optional)</span></label>
+            <input type="text" id="pl_address" name="pl_address" placeholder="123 Broad St, Red Bank" />
+          </div>
         </div>
-    </div>
+        <button type="submit" name="partyline_add_partyliner" value="1" class="plg-btn">Add Partyliner</button>
+      </form>
+    </section>
+
+    <!-- ============ ALL PARTYLINERS ============ -->
+    <section class="plg-section">
+      <div class="plg-eyebrow">Directory</div>
+      <h2>Partyliners <span class="plg-muted" style="font-weight:800;">(<?php echo count( $users ); ?>)</span></h2>
+
+      <?php if ( $signup_enabled && $signup_url ): ?>
+        <div class="plg-linkbox">
+          <span class="lbl">Public signup</span>
+          <span class="url" id="pl-signup-url"><?php echo esc_html( $signup_url ); ?></span>
+          <button type="button" class="plg-copy" onclick="plgPlCopy(this,'pl-signup-url')">Copy</button>
+        </div>
+      <?php endif; ?>
+
+      <div class="plg-search" style="margin-top:16px;">
+        <input type="text" id="pl-filter" placeholder="Search name, email, phone, address&hellip;" autocomplete="off" />
+      </div>
+
+      <?php if ( empty( $users ) ): ?>
+        <div class="plg-empty">
+          <div class="big">👥</div>
+          <p style="margin:0;">No Partyliners yet. Add one above, or share your public signup link.</p>
+        </div>
+      <?php else: ?>
+        <div style="overflow-x:auto;">
+          <table class="plg-table" id="pl-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Address</th>
+                <th>Partylines</th>
+                <th>Joined</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php foreach ( $users as $u ):
+                  $phone   = get_user_meta( $u->ID, 'partyline_phone', true );
+                  $address = get_user_meta( $u->ID, 'partyline_address', true );
+                  $pcount  = partyline_count_user_partylines( $u->ID, $category );
+                  $joined  = $u->user_registered ? mysql2date( 'M j, Y', $u->user_registered ) : '';
+                  $del_url = wp_nonce_url(
+                      add_query_arg( array( 'action' => 'delete', 'user' => $u->ID ), $page_url ),
+                      'partyline_delete_' . $u->ID
+                  );
+                  $haystack = strtolower( $u->display_name . ' ' . $u->user_email . ' ' . $phone . ' ' . $address );
+              ?>
+                <tr data-search="<?php echo esc_attr( $haystack ); ?>">
+                  <td class="name"><?php echo esc_html( $u->display_name ? $u->display_name : $u->user_login ); ?></td>
+                  <td><?php echo esc_html( $u->user_email ); ?></td>
+                  <td><?php echo $phone ? esc_html( $phone ) : '<span class="plg-muted">&mdash;</span>'; ?></td>
+                  <td><?php echo $address ? esc_html( $address ) : '<span class="plg-muted">&mdash;</span>'; ?></td>
+                  <td><span class="plg-count"><?php echo (int) $pcount; ?></span></td>
+                  <td class="plg-muted"><?php echo esc_html( $joined ); ?></td>
+                  <td class="plg-actions">
+                    <a href="<?php echo esc_url( get_edit_user_link( $u->ID ) ); ?>">Edit</a>
+                    <a href="<?php echo esc_url( $del_url ); ?>" class="del"
+                       onclick="return confirm('Remove <?php echo esc_js( $u->display_name ); ?>? Their submissions will be reassigned to you.');">Remove</a>
+                  </td>
+                </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
+        </div>
+      <?php endif; ?>
+    </section>
+
+    <div class="plg-tag">LONG LIVE LOCAL NEWS</div>
+    <div class="plg-footer">Questions or a bug to report? Email <a href="mailto:frontdesk@broadstreetads.com">frontdesk@broadstreetads.com</a>.</div>
+
+  </div>
 </div>
 
 <script>
@@ -180,4 +174,12 @@ $page_url = admin_url( 'admin.php?page=Partyline-Partyliners' );
         }
     });
 })();
+function plgPlCopy(btn, id){
+  var el = document.getElementById(id);
+  if (!el) return;
+  var text = (el.textContent || '').trim();
+  var done = function(){ var o = btn.textContent; btn.textContent = 'Copied!'; setTimeout(function(){ btn.textContent = o; }, 1500); };
+  if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done); }
+  else { var t=document.createElement('input'); document.body.appendChild(t); t.value=text; t.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(t); done(); }
+}
 </script>
