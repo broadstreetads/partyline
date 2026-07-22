@@ -3,7 +3,7 @@
 Plugin Name: Partyline
 Plugin URI:  https://github.com/broadstreetads/partyline
 Description: Listens for a webhook callback from Twilio, reformats the body via ChatGPT, and saves it as a WordPress draft.
-Version:     1.2.3
+Version:     1.2.4
 Author:      Kenny Katzgrau
 Author URI:  https://broadstreetads.com/
 License:     GPL v2
@@ -13,7 +13,7 @@ Text Domain: partyline
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define('PARTYLINE_VERSION', '1.2.3');
+define('PARTYLINE_VERSION', '1.2.4');
 
 require dirname(__FILE__) . '/Partyline/Core.php';
 

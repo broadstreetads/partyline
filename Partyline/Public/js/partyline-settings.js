@@ -23,6 +23,12 @@
             settings.twilio_enabled = !!(settings.twilio_account_sid && String(settings.twilio_account_sid).length);
         }
 
+        // Pre-fill the AI writing prompt with the built-in default so it can be
+        // edited directly (blank in the box still falls back to the default).
+        if (!settings.ai_prompt || String(settings.ai_prompt).trim() === '') {
+            settings.ai_prompt = bootstrap.aiPromptDefault || '';
+        }
+
         return {
             loadingMessage: null,
             settings: settings,

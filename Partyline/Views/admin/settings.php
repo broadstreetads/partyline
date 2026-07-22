@@ -232,7 +232,7 @@
                             </div>
                         </div>
                         <div class="full-control-container partyline-settings-full-control">
-                            <textarea placeholder="You are an editor for redbankgreen, a community news site covering Red Bank, New Jersey. Write in a clear, neutral, professional community-news style." x-model="settings.ai_prompt" class="partyline-settings-textarea"></textarea>
+                            <textarea placeholder="Leave blank to use the built-in default." x-model="settings.ai_prompt" class="partyline-settings-textarea"></textarea>
                         </div>
                         <div class="partyline-clearboth"></div>
                     </div>

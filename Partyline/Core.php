@@ -150,7 +150,8 @@ class Partyline_Core
 					'nonce'       => wp_create_nonce( 'partyline_save_settings' ),
 					'webhookBase' => esc_url( home_url( '/' ) ) . '?partyline_twilio_webhook=',
 					'categories'  => get_categories( array( 'hide_empty' => false ) ),
-					'settings'    => Partyline_Utility::getSettings(),
+					'settings'        => Partyline_Utility::getSettings(),
+					'aiPromptDefault' => Partyline_Utility::defaultAiPrompt(),
 				)
 			);
             wp_enqueue_script(

@@ -304,10 +304,16 @@ class Partyline_Utility
     {
         $settings = self::getSettings();
         $prompt = isset($settings->ai_prompt) ? trim($settings->ai_prompt) : '';
-        if ($prompt === '') {
-            $prompt = 'You are an editor for redbankgreen, a community news site covering Red Bank, New Jersey. Write in a clear, neutral, professional community-news style.';
-        }
-        return $prompt;
+        return $prompt !== '' ? $prompt : self::defaultAiPrompt();
+    }
+
+    /**
+     * The built-in default AI writing prompt. Single source of truth — also
+     * passed to the settings page so it can pre-fill the (editable) field.
+     */
+    public static function defaultAiPrompt()
+    {
+        return 'You are an editor for a community news publication. A reader has sent in a short news item. Clean it up into publishable copy: correct spelling, grammar, and punctuation, and format it clearly. Stay as close as possible to the reader\'s original wording — change only what is needed for grammatical correctness and readability. Do not add, embellish, or invent any facts, names, quotes, or details beyond what was provided. Keep it concise, neutral, and factual.';
     }
 
     /**
