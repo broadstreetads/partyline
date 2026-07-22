@@ -260,6 +260,7 @@ class Partyline_Pwa {
 		echo '<p id="pl-submit-hint" class="pl-hint">Add a photo and a story to submit.</p>';
 		if ( $can_publish ) {
 			echo '<label class="pl-check"><input type="checkbox" id="pl-immediate"> Post immediately <span class="pl-check-note">(publish now, skip the draft)</span></label>';
+			echo '<p class="pl-hint" style="margin-top:-8px;">Only editors and administrators see this option.</p>';
 		}
 		if ( $turnstile_key ) {
 			echo '<div id="pl-turnstile" class="cf-turnstile pl-turnstile" data-sitekey="' . esc_attr( $turnstile_key ) . '" data-callback="plTurnstileCb" data-expired-callback="plTurnstileCb" data-error-callback="plTurnstileCb"></div>';
