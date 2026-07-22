@@ -136,58 +136,6 @@
                 </div>
             </div>
 
-            <!-- ============ AI FORMATTING (optional) ============ -->
-            <div class="box">
-                <div class="title"><span class="dashicons dashicons-superhero"></span> AI Formatting <span style="font-weight:normal;opacity:.6;">(optional)</span></div>
-                <div class="content">
-                    <div class="option">
-                        <div class="control-label">
-                            <div class="name nomargin">OpenAI / ChatGPT API Key</div>
-                            <div class="desc nomargin">
-                                Optional. If you add an OpenAI API key, Partyline will <strong>auto-format</strong>
-                                submissions into a clean blurb and enable <strong>voice dictation</strong>
-                                (transcribed with Whisper) in the app. Without a key, contributors just type
-                                their story and it's saved as-is.
-                            </div>
-                        </div>
-                        <div class="control-container">
-                            <input x-model="settings.chatgpt_api_key" type="password" placeholder="sk-..." />
-                        </div>
-                    </div>
-                    <div class="clearfix"></div>
-                    <div class="break"></div>
-                    <div class="option">
-                        <div class="control-label">
-                            <div class="name nomargin">AI writing prompt</div>
-                            <div class="desc nomargin">
-                                The editorial voice used when formatting Partylines. Leave blank for the
-                                built-in redbankgreen default.
-                            </div>
-                        </div>
-                        <div class="full-control-container partyline-settings-full-control">
-                            <textarea placeholder="You are an editor for redbankgreen, a community news site covering Red Bank, New Jersey. Write in a clear, neutral, professional community-news style." x-model="settings.ai_prompt" class="partyline-settings-textarea"></textarea>
-                        </div>
-                        <div class="partyline-clearboth"></div>
-                    </div>
-                    <div class="clearfix"></div>
-                    <div class="break"></div>
-                    <div class="option">
-                        <div class="control-label">
-                            <div class="name nomargin">Transcription dictionary</div>
-                            <div class="desc nomargin">
-                                Optional. Local names and terms (streets, people, places) to improve voice
-                                transcription accuracy &mdash; comma or line separated.
-                            </div>
-                        </div>
-                        <div class="full-control-container partyline-settings-full-control">
-                            <textarea placeholder="Broad Street, Monmouth Street, Count Basie Center, Navesink" x-model="settings.transcription_dictionary" class="partyline-settings-textarea-short"></textarea>
-                        </div>
-                        <div class="partyline-clearboth"></div>
-                    </div>
-                    <div class="clearfix"></div>
-                </div>
-            </div>
-
             <!-- ============ TEXT MESSAGES (Twilio, optional) ============ -->
             <div class="box">
                 <div class="title"><span class="dashicons dashicons-smartphone"></span> Text Messages <span style="font-weight:normal;opacity:.6;">(optional)</span></div>
@@ -244,6 +192,58 @@
                         <div class="control-container">
                             <input x-model="settings.twilio_auth_token" type="password" placeholder="" />
                         </div>
+                    </div>
+                    <div class="clearfix"></div>
+                </div>
+            </div>
+
+            <!-- ============ AI FORMATTING (optional) ============ -->
+            <div class="box">
+                <div class="title"><span class="dashicons dashicons-superhero"></span> AI Formatting <span style="font-weight:normal;opacity:.6;">(optional)</span></div>
+                <div class="content">
+                    <div class="option">
+                        <div class="control-label">
+                            <div class="name nomargin">OpenAI / ChatGPT API Key</div>
+                            <div class="desc nomargin">
+                                Optional. If you add an OpenAI API key, Partyline will <strong>auto-format</strong>
+                                submissions into a clean blurb and enable <strong>voice dictation</strong>
+                                (transcribed with Whisper) in the app. Without a key, contributors just type
+                                their story and it's saved as-is.
+                            </div>
+                        </div>
+                        <div class="control-container">
+                            <input x-model="settings.chatgpt_api_key" type="password" placeholder="sk-..." />
+                        </div>
+                    </div>
+                    <div class="clearfix"></div>
+                    <div class="break"></div>
+                    <div class="option">
+                        <div class="control-label">
+                            <div class="name nomargin">AI writing prompt</div>
+                            <div class="desc nomargin">
+                                The editorial voice used when formatting Partylines. Leave blank for the
+                                built-in redbankgreen default.
+                            </div>
+                        </div>
+                        <div class="full-control-container partyline-settings-full-control">
+                            <textarea placeholder="You are an editor for redbankgreen, a community news site covering Red Bank, New Jersey. Write in a clear, neutral, professional community-news style." x-model="settings.ai_prompt" class="partyline-settings-textarea"></textarea>
+                        </div>
+                        <div class="partyline-clearboth"></div>
+                    </div>
+                    <div class="clearfix"></div>
+                    <div class="break"></div>
+                    <div class="option">
+                        <div class="control-label">
+                            <div class="name nomargin">Transcription dictionary</div>
+                            <div class="desc nomargin">
+                                Optional. Local names and terms (streets, people, places) to improve voice
+                                transcription accuracy &mdash; comma or line separated.
+                            </div>
+                        </div>
+                        <div class="full-control-container partyline-settings-full-control">
+                            <textarea placeholder="Broad Street, Monmouth Street, Count Basie Center, Navesink" x-model="settings.transcription_dictionary" class="partyline-settings-textarea-short"></textarea>
+                        </div>
+                        <div class="partyline-clearboth"></div>
                     </div>
                     <div class="clearfix"></div>
                 </div>
