@@ -32,7 +32,7 @@ class Partyline_Pwa {
 	const APP_PATH = 'partyline';
 
 	/** Bump to invalidate the service-worker precache. */
-	const PWA_ASSET_VERSION = '17';
+	const PWA_ASSET_VERSION = '18';
 
 	/**
 	 * Register hooks. The contributor app is ON by default (see isEnabled), so
@@ -401,6 +401,48 @@ JS;
 		return $html;
 	}
 
+	/* --- Simple "are you human" math check (stateless, HMAC-signed) ------- */
+
+	/** Secret used to sign the math challenge. */
+	private static function challengeSecret() {
+		return wp_salt( 'auth' ) . '|partyline-signup-challenge';
+	}
+
+	/**
+	 * Build a small addition challenge. Returns array( question, token ) where
+	 *  the token is an HMAC of the answer + expiry, so it can be verified
+	 *  statelessly (no session or transient) when the form is posted back.
+	 */
+	private static function makeChallenge() {
+		$a       = wp_rand( 1, 9 );
+		$b       = wp_rand( 1, 9 );
+		$answer  = $a + $b;
+		$expires = time() + 30 * MINUTE_IN_SECONDS;
+		$sig     = hash_hmac( 'sha256', $answer . '|' . $expires, self::challengeSecret() );
+		return array(
+			'question' => sprintf( 'What is %d + %d?', $a, $b ),
+			'token'    => $expires . '.' . $sig,
+		);
+	}
+
+	/** Verify a submitted answer against its signed, unexpired token. */
+	private static function verifyChallenge( $answer, $token ) {
+		$answer = trim( (string) $answer );
+		if ( ! preg_match( '/^\d{1,3}$/', $answer ) ) {
+			return false;
+		}
+		$parts = explode( '.', (string) $token, 2 );
+		if ( count( $parts ) !== 2 ) {
+			return false;
+		}
+		list( $expires, $sig ) = $parts;
+		if ( ! ctype_digit( $expires ) || (int) $expires < time() ) {
+			return false;
+		}
+		$expected = hash_hmac( 'sha256', (int) $answer . '|' . $expires, self::challengeSecret() );
+		return hash_equals( $expected, (string) $sig );
+	}
+
 	/** GET /partyline/signup — the public signup form. */
 	public static function serveSignup() {
 		status_header( 200 );
@@ -421,6 +463,17 @@ JS;
 		$b .= '<label class="pl-label" for="s-email">Email</label><input id="s-email" class="pl-input" type="email" autocomplete="email" placeholder="you@example.com">';
 		$b .= '<label class="pl-label" for="s-phone">Phone</label><input id="s-phone" class="pl-input" type="tel" autocomplete="tel" placeholder="(732) 555-0123">';
 		$b .= '<label class="pl-label" for="s-address">Address <span style="color:#a1a1aa;font-weight:400;">(optional)</span></label><input id="s-address" class="pl-input" type="text" autocomplete="street-address" placeholder="123 Broad St, Red Bank">';
+
+		// Simple anti-robot math check (always on, no third party required).
+		$challenge = self::makeChallenge();
+		$b .= '<label class="pl-label" for="s-math">' . esc_html( $challenge['question'] ) . ' <span style="color:#a1a1aa;font-weight:400;">(quick spam check)</span></label>';
+		$b .= '<input id="s-math" class="pl-input" type="text" inputmode="numeric" autocomplete="off" placeholder="Type the number">';
+
+		// Honeypot — hidden from people, but bots that fill every field trip it.
+		$b .= '<div aria-hidden="true" style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;">';
+		$b .= '<label>Leave this field empty<input id="s-website" name="website" type="text" tabindex="-1" autocomplete="off"></label>';
+		$b .= '</div>';
+
 		if ( $turnstile_key ) {
 			$b .= '<div id="s-turnstile" class="cf-turnstile pl-turnstile" data-sitekey="' . esc_attr( $turnstile_key ) . '" data-callback="sTurnstileCb"></div>';
 		}
@@ -432,6 +485,7 @@ JS;
 			'restBase'     => esc_url_raw( rest_url( self::REST_NAMESPACE . '/' ) ),
 			'nonce'        => wp_create_nonce( 'wp_rest' ),
 			'turnstileKey' => $turnstile_key,
+			'mathToken'    => $challenge['token'],
 		) );
 
 		$b .= '<script>window.PL_SIGNUP=' . $cfg . ';</script>';
@@ -479,6 +533,19 @@ JS;
 
 		if ( '' === $name || ! is_email( $email ) || strlen( preg_replace( '/\D/', '', $phone ) ) < 7 ) {
 			return new WP_Error( 'partyline_signup_fields', 'Please provide your name, a valid email, and a phone number.', array( 'status' => 400 ) );
+		}
+
+		// Honeypot: real people never fill this. Silently accept so bots that
+		//  trip it think they succeeded (and stop retrying).
+		if ( '' !== trim( (string) $request->get_param( 'website' ) ) ) {
+			return rest_ensure_response( array(
+				'message' => 'Thanks! Check your email to confirm your Partyliner account.',
+			) );
+		}
+
+		// Simple math anti-robot check — always required.
+		if ( ! self::verifyChallenge( $request->get_param( 'math_answer' ), (string) $request->get_param( 'math_token' ) ) ) {
+			return new WP_Error( 'partyline_signup_math', 'That answer to the math question was not quite right. Please try again.', array( 'status' => 400 ) );
 		}
 
 		// Verify Turnstile only when it's configured.

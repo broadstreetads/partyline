@@ -13,10 +13,12 @@
 		var name = $('s-name').value.trim();
 		var email = $('s-email').value.trim();
 		var phone = $('s-phone').value.trim();
+		var math = $('s-math').value.trim();
 		var emailOk = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
 		var phoneOk = phone.replace(/\D/g, '').length >= 7;
+		var mathOk = /^\d{1,3}$/.test(math);
 		var turnstileOk = !CFG.turnstileKey || !!token();
-		return !!name && emailOk && phoneOk && turnstileOk;
+		return !!name && emailOk && phoneOk && mathOk && turnstileOk;
 	}
 
 	function refresh() { $('s-submit').disabled = !valid(); }
@@ -42,6 +44,9 @@
 		fd.append('email', $('s-email').value);
 		fd.append('phone', $('s-phone').value);
 		fd.append('address', $('s-address').value);
+		fd.append('math_answer', $('s-math').value);
+		fd.append('math_token', CFG.mathToken || '');
+		fd.append('website', $('s-website') ? $('s-website').value : '');
 		if (CFG.turnstileKey) { fd.append('turnstile', token()); }
 
 		fetch(CFG.restBase + 'signup', {
@@ -70,7 +75,7 @@
 	}
 
 	function boot() {
-		['s-name', 's-email', 's-phone'].forEach(function (id) {
+		['s-name', 's-email', 's-phone', 's-math'].forEach(function (id) {
 			$(id).addEventListener('input', refresh);
 		});
 		$('s-submit').addEventListener('click', submit);
