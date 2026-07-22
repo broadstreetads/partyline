@@ -25,7 +25,44 @@
          <?php endif; ?>
           <div id="controls">
 
-            <!-- ============ 1. CONTRIBUTOR APP (PWA) ============ -->
+            <!-- ============ GENERAL SETTINGS ============ -->
+            <div class="box">
+                <div class="title"><span class="dashicons dashicons-admin-generic"></span> General Settings</div>
+                <div class="content">
+                    <div class="option">
+                        <div class="control-label">
+                            <div class="name nomargin">Partyline Category</div>
+                            <div class="desc nomargin">
+                                Submitted Partylines are filed under this category, so you can build
+                                dedicated Partyline archives and widgets.
+                            </div>
+                        </div>
+                        <div class="control-container">
+                            <select x-model="settings.partyline_category">
+                                <option value="">&mdash; Select a category &mdash;</option>
+                                <?php foreach ( (array) $categories as $cat ): ?>
+                                    <option value="<?php echo esc_attr( $cat->term_id ); ?>"><?php echo esc_html( $cat->name ); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="clearfix"></div>
+                    <div class="break"></div>
+                    <div class="option">
+                        <div class="control-label">
+                            <div class="name nomargin">Email Notifications</div>
+                            <div class="desc nomargin">Email addresses (one per line) to notify when a Partyline comes in.</div>
+                        </div>
+                        <div class="full-control-container partyline-settings-full-control">
+                            <textarea placeholder="admin@example.com&#10;editor@example.com" x-model="settings.email_notifications" class="partyline-settings-textarea-short"></textarea>
+                        </div>
+                        <div class="partyline-clearboth"></div>
+                    </div>
+                    <div class="clearfix"></div>
+                </div>
+            </div>
+
+            <!-- ============ CONTRIBUTOR APP (PWA) ============ -->
             <div class="box">
                 <div class="title"><span class="dashicons dashicons-smartphone"></span> Contributor App</div>
                 <div class="content">
@@ -99,7 +136,7 @@
                 </div>
             </div>
 
-            <!-- ============ 2. AI FORMATTING (optional) ============ -->
+            <!-- ============ AI FORMATTING (optional) ============ -->
             <div class="box">
                 <div class="title"><span class="dashicons dashicons-superhero"></span> AI Formatting <span style="font-weight:normal;opacity:.6;">(optional)</span></div>
                 <div class="content">
@@ -151,7 +188,7 @@
                 </div>
             </div>
 
-            <!-- ============ 3. TEXT MESSAGES (Twilio, optional) ============ -->
+            <!-- ============ TEXT MESSAGES (Twilio, optional) ============ -->
             <div class="box">
                 <div class="title"><span class="dashicons dashicons-smartphone"></span> Text Messages <span style="font-weight:normal;opacity:.6;">(optional)</span></div>
                 <div class="content">
@@ -212,40 +249,9 @@
                 </div>
             </div>
 
-            <!-- ============ 4. GENERAL ============ -->
+            <!-- ============ SAVE ============ -->
             <div class="box">
-                <div class="title"><span class="dashicons dashicons-admin-generic"></span> General</div>
                 <div class="content">
-                    <div class="option">
-                        <div class="control-label">
-                            <div class="name nomargin">Partyline Category</div>
-                            <div class="desc nomargin">
-                                Submitted Partylines are filed under this category, so you can build
-                                dedicated Partyline archives and widgets.
-                            </div>
-                        </div>
-                        <div class="control-container">
-                            <select x-model="settings.partyline_category">
-                                <option value="">&mdash; Select a category &mdash;</option>
-                                <?php foreach ( (array) $categories as $cat ): ?>
-                                    <option value="<?php echo esc_attr( $cat->term_id ); ?>"><?php echo esc_html( $cat->name ); ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="clearfix"></div>
-                    <div class="break"></div>
-                    <div class="option">
-                        <div class="control-label">
-                            <div class="name nomargin">Email Notifications</div>
-                            <div class="desc nomargin">Email addresses (one per line) to notify when a Partyline comes in.</div>
-                        </div>
-                        <div class="full-control-container partyline-settings-full-control">
-                            <textarea placeholder="admin@example.com&#10;editor@example.com" x-model="settings.email_notifications" class="partyline-settings-textarea-short"></textarea>
-                        </div>
-                        <div class="partyline-clearboth"></div>
-                    </div>
-                    <div class="break"></div>
                     <div class="option">
                         <div class="control-label">
                             <div class="name nomargin">
