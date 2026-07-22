@@ -103,6 +103,7 @@ class Partyline_Core
         );
 
         add_submenu_page('Partyline', 'Settings', 'Settings', 'edit_pages', 'Partyline-Settings', array($this, 'adminSettingsMenuCallback'));
+        add_submenu_page('Partyline', 'How-To', 'How-To', 'edit_pages', 'Partyline-HowTo', array($this, 'adminHowToCallback'));
         add_submenu_page('Partyline', 'All Partyliners', 'All Partyliners', 'list_users', 'users.php?partyline_has_phone=1');
     }
 
@@ -195,6 +196,14 @@ class Partyline_Core
         );
 
         Partyline_View::load( 'admin/settings', $data );
+    }
+
+    /**
+     * The callback for the How-To / guide page
+     */
+    public function adminHowToCallback()
+    {
+        Partyline_View::load( 'admin/howto', array() );
     }
 
     /**
