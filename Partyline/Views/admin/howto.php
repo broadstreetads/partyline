@@ -2,6 +2,10 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 $logo    = esc_url( set_url_scheme( Partyline_Utility::getImageBaseURL() . 'partyline-black.png', 'https' ) );
 $app_url = class_exists( 'Partyline_Pwa' ) ? Partyline_Pwa::appUrl() : home_url( '/partyline/' );
+$signup_enabled = class_exists( 'Partyline_Pwa' ) && Partyline_Pwa::signupEnabled();
+$signup_url     = class_exists( 'Partyline_Pwa' ) ? Partyline_Pwa::signupUrl() : '';
+$partyliners_admin = admin_url( 'admin.php?page=Partyline-Partyliners' );
+$settings_admin    = admin_url( 'admin.php?page=Partyline-Settings' );
 ?>
 <style>
 .plg { --ink:#18181b; --muted:#6b7280; --line:#e7e7ea; --surface:#f6f6f8; --accent:#7c3aed; }
@@ -153,15 +157,28 @@ $app_url = class_exists( 'Partyline_Pwa' ) ? Partyline_Pwa::appUrl() : home_url(
         <li><span class="s">2</span><div><strong>Contributor App.</strong> It&rsquo;s on by default. Share your app link with the community; people submit there, and can install it to their home screen like an app:
           <div class="plg-linkbox">
             <code id="plg-applink" data-link="<?php echo esc_attr( $app_url ); ?>"><?php echo esc_html( $app_url ); ?></code>
-            <button type="button" class="plg-copy" onclick="plgCopy(this)">Copy link</button>
+            <button type="button" class="plg-copy" onclick="plgCopy(this,'plg-applink')">Copy link</button>
           </div>
           Optionally turn on <em>anonymous submissions</em> to let anyone contribute without an account (they provide a name, email, and phone, and pass a Cloudflare Turnstile check).</div></li>
         <li><span class="s">3</span><div><strong>Text Messages (optional).</strong> To also accept Partylines by text, enable Twilio, get a Twilio phone number, and point its messaging webhook at the URL shown in that section.</div></li>
         <li><span class="s">4</span><div><strong>AI Formatting (optional).</strong> Add an OpenAI API key to auto-format submissions and enable voice dictation. You can fine-tune the editorial voice with the <em>AI writing prompt</em>.</div></li>
       </ol>
       <p style="margin-top:16px;">Click <strong>Save</strong>, then open your app link on your phone and try it: take a photo, add a story, and
-        submit. It&rsquo;ll show up in your drafts. To credit texters by name, register them as
-        &ldquo;Partyliners&rdquo; on the <a href="<?php echo esc_url( admin_url( 'users.php?partyline_has_phone=1' ) ); ?>">Users page</a>.</p>
+        submit. It&rsquo;ll show up in your drafts.</p>
+      <h3>Recruiting Partyliners</h3>
+      <p>To credit texters by name, add them on the <a href="<?php echo esc_url( $partyliners_admin ); ?>">Partyliners</a> page.
+        Even better, turn on <strong>Public Partyliner signup</strong> in
+        <a href="<?php echo esc_url( $settings_admin ); ?>">Settings</a> and share this link so readers can register
+        themselves (name, phone, email, and an optional address). Their phone number is then matched to any Partyline
+        they text in.</p>
+      <?php if ( $signup_enabled && $signup_url ): ?>
+        <div class="plg-linkbox">
+          <code id="plg-signuplink" data-link="<?php echo esc_attr( $signup_url ); ?>"><?php echo esc_html( $signup_url ); ?></code>
+          <button type="button" class="plg-copy" onclick="plgCopy(this,'plg-signuplink')">Copy link</button>
+        </div>
+      <?php else: ?>
+        <p class="plg-note">Public signup is currently off. Flip on <em>Public Partyliner signup</em> in Settings to activate your signup link.</p>
+      <?php endif; ?>
     </section>
 
     <!-- Success -->
@@ -193,8 +210,8 @@ $app_url = class_exists( 'Partyline_Pwa' ) ? Partyline_Pwa::appUrl() : home_url(
 </div>
 
 <script>
-function plgCopy(btn){
-  var el = document.getElementById('plg-applink');
+function plgCopy(btn, id){
+  var el = document.getElementById(id || 'plg-applink');
   if (!el) return;
   var text = el.getAttribute('data-link') || el.textContent;
   var done = function(){ var o = btn.textContent; btn.textContent = 'Copied!'; setTimeout(function(){ btn.textContent = o; }, 1500); };

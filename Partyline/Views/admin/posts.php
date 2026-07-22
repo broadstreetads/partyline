@@ -10,6 +10,8 @@ $settings_url    = admin_url( 'admin.php?page=Partyline-Settings' );
 $partyliners_url = admin_url( 'admin.php?page=Partyline-Partyliners' );
 $howto_url       = admin_url( 'admin.php?page=Partyline-HowTo' );
 $app_url         = class_exists( 'Partyline_Pwa' ) ? Partyline_Pwa::appUrl() : home_url( '/partyline/' );
+$signup_enabled  = class_exists( 'Partyline_Pwa' ) && Partyline_Pwa::signupEnabled();
+$signup_url      = class_exists( 'Partyline_Pwa' ) ? Partyline_Pwa::signupUrl() : '';
 $count           = is_array( $posts ) ? count( $posts ) : 0;
 ?>
 <?php Partyline_View::load( 'admin/global/plg-styles' ); ?>
@@ -70,10 +72,27 @@ $count           = is_array( $posts ) ? count( $posts ) : 0;
       <h2>Share your Partyline</h2>
       <p class="plg-intro">The single best thing you can do is keep a persistent call to action. Put this link everywhere.</p>
       <div class="plg-linkbox">
+        <span class="lbl">Submit link</span>
         <span class="url" id="plg-main-applink"><?php echo esc_html( $app_url ); ?></span>
-        <button type="button" class="plg-copy" onclick="plgMainCopy(this)">Copy link</button>
+        <button type="button" class="plg-copy" onclick="plgMainCopy(this,'plg-main-applink')">Copy link</button>
       </div>
       <p style="margin-top:14px;font-size:13.5px;color:#6b7280;">New here? The <a href="<?php echo esc_url( $howto_url ); ?>">How-To guide</a> walks through setup and how to make Partyline thrive in your town.</p>
+    </section>
+
+    <section class="plg-section">
+      <div class="plg-eyebrow">Get more Partyliners</div>
+      <h2>Recruit Partyliners</h2>
+      <p class="plg-intro">Let readers sign up to become Partyliners on a public page. They confirm by email, and their phone number is matched to future text submissions automatically.</p>
+      <?php if ( $signup_enabled && $signup_url ): ?>
+        <div class="plg-linkbox">
+          <span class="lbl">Signup link</span>
+          <span class="url" id="plg-main-signup"><?php echo esc_html( $signup_url ); ?></span>
+          <button type="button" class="plg-copy" onclick="plgMainCopy(this,'plg-main-signup')">Copy link</button>
+        </div>
+        <p style="margin-top:14px;font-size:13.5px;color:#6b7280;">Everyone who signs up shows up on your <a href="<?php echo esc_url( $partyliners_url ); ?>">Partyliners</a> page.</p>
+      <?php else: ?>
+        <div class="plg-note">Public signup is currently <strong>off</strong>. Turn on <strong>Public Partyliner signup</strong> in <a href="<?php echo esc_url( $settings_url ); ?>">Settings</a> to get a shareable link where anyone can register as a Partyliner.</div>
+      <?php endif; ?>
     </section>
 
     <div class="plg-tag">LONG LIVE LOCAL NEWS</div>
@@ -83,8 +102,8 @@ $count           = is_array( $posts ) ? count( $posts ) : 0;
 </div>
 
 <script>
-function plgMainCopy(btn){
-  var el = document.getElementById('plg-main-applink');
+function plgMainCopy(btn, id){
+  var el = document.getElementById(id);
   if (!el) return;
   var text = (el.textContent || '').trim();
   var done = function(){ var o = btn.textContent; btn.textContent = 'Copied!'; setTimeout(function(){ btn.textContent = o; }, 1500); };
