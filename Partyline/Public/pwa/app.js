@@ -486,9 +486,12 @@
 			var phone = phoneEl ? phoneEl.value.trim() : '';
 			var emailOk = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
 			var phoneOk = phone.replace(/\D/g, '').length >= 7;
+			var mathEl = $('#pl-math');
+			var mathOk = mathEl && /^\d{1,3}$/.test(mathEl.value.trim());
 			if (!name) { need.push('your name'); }
 			if (!emailOk) { need.push('your email'); }
 			if (!phoneOk) { need.push('your phone'); }
+			if (!mathOk) { need.push('the spam check'); }
 			if (CFG.turnstileKey && !turnstileToken()) { need.push('the verification'); }
 		}
 
@@ -526,6 +529,9 @@
 				if ($('#pl-name')) { fd.append('name', $('#pl-name').value); }
 				if ($('#pl-email')) { fd.append('email', $('#pl-email').value); }
 				if ($('#pl-phone')) { fd.append('phone', $('#pl-phone').value); }
+				if ($('#pl-math')) { fd.append('math_answer', $('#pl-math').value); }
+				fd.append('math_token', CFG.mathToken || '');
+				fd.append('website', $('#pl-website') ? $('#pl-website').value : '');
 				fd.append('turnstile', turnstileToken());
 			}
 			return api('submit', { method: 'POST', body: fd });
@@ -641,6 +647,7 @@
 		if ($('#pl-name')) { $('#pl-name').addEventListener('input', onContactInput); }
 		if ($('#pl-email')) { $('#pl-email').addEventListener('input', onContactInput); }
 		if ($('#pl-phone')) { $('#pl-phone').addEventListener('input', onContactInput); }
+		if ($('#pl-math')) { $('#pl-math').addEventListener('input', function () { updateSubmit(); }); }
 		applyContact(); // pre-fill saved contact info (anonymous)
 
 		var chips = document.querySelectorAll('.pl-chip');

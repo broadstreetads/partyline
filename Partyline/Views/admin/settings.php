@@ -82,16 +82,16 @@ $loader          = esc_url( Partyline_Utility::getImageBaseURL() . 'ajax-loader-
 
       <div class="plg-field">
         <div class="plg-field-label">Allow anonymous submissions</div>
-        <div class="plg-field-desc">By default only logged-in users can submit. Turn this on to let anyone submit without an account. Anonymous submitters type their story (no voice dictation), provide a name, email &amp; phone, and pass a Cloudflare Turnstile check.</div>
+        <div class="plg-field-desc">By default only logged-in users can submit. Turn this on to let anyone submit without an account. Anonymous submitters type their story (no voice dictation) and provide a name, email &amp; phone.</div>
         <label class="plg-check"><input type="checkbox" x-model="settings.pwa_allow_anonymous"> Allow anonymous submissions</label>
         <div class="plg-callout warn" x-show="settings.pwa_allow_anonymous">
-          <strong>&#9888;&#65039; Heads up:</strong> this opens submission to the public internet. Anonymous posts always come in as drafts for review, and Cloudflare Turnstile (below) is required to reduce spam.
+          <strong>&#9888;&#65039; Heads up:</strong> this opens submission to the public internet. Anonymous posts always come in as drafts for review. We use a quick <strong>math challenge</strong> to filter out spam bots automatically &mdash; for the most reliable protection, add a <strong>Cloudflare Turnstile</strong> key below.
         </div>
       </div>
 
       <div class="plg-field" x-show="settings.pwa_allow_anonymous">
-        <div class="plg-field-label">Cloudflare Turnstile Site Key</div>
-        <div class="plg-field-desc">From your Cloudflare dashboard &rarr; Turnstile. Shown in the app to verify anonymous submitters.</div>
+        <div class="plg-field-label">Cloudflare Turnstile Site Key <span class="plg-muted" style="font-weight:800;">(optional)</span></div>
+        <div class="plg-field-desc">Optional but recommended. From your Cloudflare dashboard &rarr; Turnstile. When set, it&rsquo;s shown in the app on top of the math check for stronger spam protection. Leave blank to rely on the math check alone.</div>
         <input x-model="settings.turnstile_site_key" type="text" placeholder="0x4AAA..." />
       </div>
 

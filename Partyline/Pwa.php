@@ -32,7 +32,7 @@ class Partyline_Pwa {
 	const APP_PATH = 'partyline';
 
 	/** Bump to invalidate the service-worker precache. */
-	const PWA_ASSET_VERSION = '18';
+	const PWA_ASSET_VERSION = '19';
 
 	/**
 	 * Register hooks. The contributor app is ON by default (see isEnabled), so
@@ -158,6 +158,9 @@ class Partyline_Pwa {
 		$name          = $logged_in ? ( $user->display_name ? $user->display_name : $user->user_login ) : '';
 		$can_publish   = current_user_can( 'edit_others_posts' ); // editors/admins: publish now
 		$turnstile_key = ( $anon && isset( $settings->turnstile_site_key ) ) ? trim( $settings->turnstile_site_key ) : '';
+		// Anonymous submitters get the same lightweight math check the signup page
+		// uses, so spam is filtered even when Turnstile isn't configured.
+		$challenge     = $anon ? self::makeChallenge() : array( 'question' => '', 'token' => '' );
 
 		$config = array(
 			'restBase'     => esc_url_raw( rest_url( self::REST_NAMESPACE . '/' ) ),
@@ -168,6 +171,7 @@ class Partyline_Pwa {
 			'loggedIn'     => $logged_in,
 			'anon'         => $anon,
 			'turnstileKey' => $turnstile_key,
+			'mathToken'    => $challenge['token'],
 		);
 
 		$css      = esc_url( self::assetUrl( 'app.css' ) ) . '?v=' . self::PWA_ASSET_VERSION;
@@ -273,6 +277,15 @@ class Partyline_Pwa {
 		if ( $can_publish ) {
 			echo '<label class="pl-check"><input type="checkbox" id="pl-immediate"> Post immediately <span class="pl-check-note">(publish now, skip the draft)</span></label>';
 			echo '<p class="pl-hint" style="margin-top:-8px;">Only editors and administrators see this option.</p>';
+		}
+		if ( $anon ) {
+			// Simple anti-robot math check (always on for anonymous submitters).
+			echo '<label class="pl-label" for="pl-math">' . esc_html( $challenge['question'] ) . ' <span style="color:#a1a1aa;font-weight:400;">(quick spam check)</span></label>';
+			echo '<input id="pl-math" class="pl-input" type="text" inputmode="numeric" autocomplete="off" placeholder="Type the number">';
+			// Honeypot — hidden from people, tripped by bots that fill every field.
+			echo '<div aria-hidden="true" style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;">';
+			echo '<label>Leave this field empty<input id="pl-website" name="website" type="text" tabindex="-1" autocomplete="off"></label>';
+			echo '</div>';
 		}
 		if ( $turnstile_key ) {
 			echo '<div id="pl-turnstile" class="cf-turnstile pl-turnstile" data-sitekey="' . esc_attr( $turnstile_key ) . '" data-callback="plTurnstileCb" data-expired-callback="plTurnstileCb" data-error-callback="plTurnstileCb"></div>';
@@ -897,9 +910,32 @@ JS;
 			if ( '' === $body || ! $has_image ) {
 				return new WP_Error( 'partyline_incomplete', 'A photo and a story are both required.', array( 'status' => 400 ) );
 			}
-			$verify = self::verifyTurnstile( (string) $request->get_param( 'turnstile' ) );
-			if ( is_wp_error( $verify ) ) {
-				return $verify;
+
+			// Honeypot: real people never fill this. Silently accept so bots that
+			//  trip it think they succeeded (and stop retrying) — no post created.
+			if ( '' !== trim( (string) $request->get_param( 'website' ) ) ) {
+				return rest_ensure_response( array(
+					'post_id'   => 0,
+					'published' => false,
+					'edit_link' => '',
+					'view_link' => '',
+					'message'   => 'Thanks! Your Partyline was submitted for review.',
+				) );
+			}
+
+			// Simple math anti-robot check — always required for anonymous submits.
+			if ( ! self::verifyChallenge( $request->get_param( 'math_answer' ), (string) $request->get_param( 'math_token' ) ) ) {
+				return new WP_Error( 'partyline_math', 'That answer to the math question was not quite right. Please try again.', array( 'status' => 400 ) );
+			}
+
+			// Cloudflare Turnstile is the most reliable filter — verify it too,
+			//  but only when a site key is configured (it's optional).
+			$settings = Partyline_Utility::getSettings();
+			if ( ! empty( $settings->turnstile_site_key ) ) {
+				$verify = self::verifyTurnstile( (string) $request->get_param( 'turnstile' ) );
+				if ( is_wp_error( $verify ) ) {
+					return $verify;
+				}
 			}
 			$submitter = array( 'name' => $sub_name, 'email' => $sub_email, 'phone' => $sub_phone );
 		}
