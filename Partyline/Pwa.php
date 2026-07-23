@@ -98,6 +98,21 @@ class Partyline_Pwa {
 		return '' !== $t ? $t : 'Snap a photo and tell us what\'s happening around town. We\'ll take it from there.';
 	}
 
+	/**
+	 * App icon URL at a given size: the WordPress Site Icon if one is set,
+	 *  otherwise the bundled Partyline icon.
+	 *
+	 * @param int    $size         Desired icon size in px.
+	 * @param string $fallback_rel Bundled icon path under Public/pwa/ to fall back to.
+	 */
+	private static function iconUrl( $size, $fallback_rel ) {
+		$site_icon = get_site_icon_url( $size );
+		if ( $site_icon ) {
+			return self::secureUrl( $site_icon );
+		}
+		return self::assetUrl( $fallback_rel ) . '?v=' . self::PWA_ASSET_VERSION;
+	}
+
 	/* --------------------------------------------------------------------- */
 	/* PWA shell routing:  /partyline/  ·  /sw.js  ·  /manifest.webmanifest */
 	/* --------------------------------------------------------------------- */
@@ -201,8 +216,8 @@ class Partyline_Pwa {
 
 		$css      = esc_url( self::assetUrl( 'app.css' ) ) . '?v=' . self::PWA_ASSET_VERSION;
 		$js       = esc_url( self::assetUrl( 'app.js' ) ) . '?v=' . self::PWA_ASSET_VERSION;
-		$icon     = esc_url( self::assetUrl( 'icons/icon-192.png' ) ) . '?v=' . self::PWA_ASSET_VERSION;
-		$apple    = esc_url( self::assetUrl( 'icons/icon-180.png' ) ) . '?v=' . self::PWA_ASSET_VERSION;
+		$icon     = esc_url( self::iconUrl( 192, 'icons/icon-192.png' ) );
+		$apple    = esc_url( self::iconUrl( 180, 'icons/icon-180.png' ) );
 		$manifest = esc_url( self::appUrl( 'manifest.webmanifest' ) );
 
 		echo '<!doctype html><html lang="en"><head>';
@@ -258,9 +273,6 @@ class Partyline_Pwa {
 
 		// --- CAPTURE (all steps on one screen) ---
 		echo '<section id="screen-capture" class="pl-screen pl-hidden">';
-
-		// Save-and-close escape hatch, kept above the form and away from Submit.
-		echo '<div class="pl-actions" style="margin-bottom:6px;"><button id="pl-cancel" class="pl-btn pl-btn--ghost" type="button">Save draft and close</button></div>';
 
 		// Step 1 — photo
 		echo '<h2 class="pl-step"><span class="pl-stepnum">1</span> Take or upload a photo</h2>';
@@ -324,6 +336,7 @@ class Partyline_Pwa {
 		}
 		echo '<div class="pl-actions">';
 		echo '<button id="pl-submit" class="pl-btn pl-btn--primary" type="button" disabled>Submit Partyline</button>';
+		echo '<button id="pl-cancel" class="pl-btn pl-btn--ghost" type="button">Save draft and close</button>';
 		echo '</div>';
 		echo '</section>';
 
@@ -349,7 +362,7 @@ class Partyline_Pwa {
 		nocache_headers();
 		header( 'Content-Type: application/manifest+json; charset=utf-8' );
 		echo wp_json_encode( array(
-			'name'             => self::appTitle(),
+			'name'             => 'Partyline',
 			'short_name'       => 'Partyline',
 			'description'      => 'Send a photo and a story to the ' . ( '' !== self::siteName() ? self::siteName() : 'local' ) . ' newsroom.',
 			'start_url'        => self::appUrl(),
@@ -360,13 +373,13 @@ class Partyline_Pwa {
 			'theme_color'      => '#18181b',
 			'icons'            => array(
 				array(
-					'src'     => self::assetUrl( 'icons/icon-192.png' ) . '?v=' . self::PWA_ASSET_VERSION,
+					'src'     => self::iconUrl( 192, 'icons/icon-192.png' ),
 					'sizes'   => '192x192',
 					'type'    => 'image/png',
 					'purpose' => 'any',
 				),
 				array(
-					'src'     => self::assetUrl( 'icons/icon-512.png' ) . '?v=' . self::PWA_ASSET_VERSION,
+					'src'     => self::iconUrl( 512, 'icons/icon-512.png' ),
 					'sizes'   => '512x512',
 					'type'    => 'image/png',
 					'purpose' => 'any',
@@ -426,7 +439,7 @@ JS;
 	/** Wrap body HTML in a minimal, app-styled standalone page. */
 	private static function renderPage( $body ) {
 		$css  = esc_url( self::assetUrl( 'app.css' ) ) . '?v=' . self::PWA_ASSET_VERSION;
-		$icon = esc_url( self::assetUrl( 'icons/icon-192.png' ) ) . '?v=' . self::PWA_ASSET_VERSION;
+		$icon = esc_url( self::iconUrl( 192, 'icons/icon-192.png' ) );
 		$settings      = Partyline_Utility::getSettings();
 		$turnstile_key = isset( $settings->turnstile_site_key ) ? trim( $settings->turnstile_site_key ) : '';
 
