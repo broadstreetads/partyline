@@ -241,7 +241,7 @@ $settings_admin    = admin_url( 'admin.php?page=Partyline-Settings' );
           <summary>How do texters (SMS) fit in?</summary>
           <div class="a">
             <p>If you enable <strong>Text Messages</strong>, people can send a photo and a note by text. Partyline matches the sender&rsquo;s phone number to a registered Partyliner (see the <a href="<?php echo esc_url( $partyliners_admin ); ?>">Partyliners</a> page). If it&rsquo;s a number you don&rsquo;t recognize, the post simply comes in credited as &ldquo;Anonymous Partyliner.&rdquo;</p>
-            <p><strong>Texting runs on Twilio</strong>, so it does take a little setup: you&rsquo;ll need a <a href="https://twilio.com" target="_blank" rel="noopener">Twilio</a> account and a Twilio phone number for people to text. Then, in <a href="<?php echo esc_url( $settings_admin ); ?>">Settings &rarr; Text Messages</a>, turn on Twilio and paste in your <strong>Account SID</strong> and <strong>Auth Token</strong> (both from your Twilio Console). Finally, copy the <strong>webhook URL</strong> Partyline shows you and set it as the messaging webhook on your Twilio number, so incoming texts are handed off to Partyline. The app and public signup need none of this &mdash; Twilio is only for the text-message channel.</p>
+            <p><strong>Texting runs on Twilio</strong>, so it does take a little setup: you&rsquo;ll need a <a href="https://twilio.com" target="_blank" rel="noopener">Twilio</a> account and a Twilio phone number for people to text. Then, in <a href="<?php echo esc_url( $settings_admin ); ?>">Settings &rarr; Text Messages</a>, turn on Twilio and paste in your <strong>Account SID</strong> and <strong>Auth Token</strong> (both from your Twilio Console). Finally, copy the <strong>webhook URL</strong> Partyline shows you and set it as the messaging webhook on your Twilio number, so incoming texts are handed off to Partyline. The app and public signup need none of this; Twilio is only for the text-message channel.</p>
           </div>
         </details>
         <details>
@@ -254,15 +254,15 @@ $settings_admin    = admin_url( 'admin.php?page=Partyline-Settings' );
       <div class="plg-faq">
         <details>
           <summary>Does anything get published automatically?</summary>
-          <div class="a"><p><strong>No.</strong> Every submission &mdash; app, text, or anonymous &mdash; arrives as a <strong>draft</strong> for you to review. Nothing goes live until you publish it. The only exception: an editor or administrator can tick &ldquo;Post immediately&rdquo; on their <em>own</em> submission.</p></div>
+          <div class="a"><p><strong>No.</strong> Every submission (app, text, or anonymous) arrives as a <strong>draft</strong> for you to review. Nothing goes live until you publish it. The only exception: an editor or administrator can tick &ldquo;Post immediately&rdquo; on their <em>own</em> submission.</p></div>
         </details>
         <details>
           <summary>Who can &ldquo;Post immediately&rdquo;?</summary>
-          <div class="a"><p>Only editors and administrators even see that checkbox. Regular contributors and anonymous submitters can&rsquo;t publish anything &mdash; their Partylines are always drafts.</p></div>
+          <div class="a"><p>Only editors and administrators even see that checkbox. Regular contributors and anonymous submitters can&rsquo;t publish anything; their Partylines are always drafts.</p></div>
         </details>
         <details>
           <summary>Where do submissions show up, and how will I know?</summary>
-          <div class="a"><p>They appear on the <strong>Partyline</strong> screen (your newsroom inbox), newest first. They also show up right in your normal WordPress <strong>Posts</strong> list as drafts &mdash; so you can review, edit, and publish them wherever you already work. And you&rsquo;ll get an email notification at whatever addresses you set under <strong>General Settings &rarr; Email Notifications</strong>.</p></div>
+          <div class="a"><p>They appear on the <strong>Partyline</strong> screen (your newsroom inbox), newest first. They also show up right in your normal WordPress <strong>Posts</strong> list as drafts, so you can review, edit, and publish them wherever you already work. And you&rsquo;ll get an email notification at whatever addresses you set under <strong>General Settings &rarr; Email Notifications</strong>.</p></div>
         </details>
         <details>
           <summary>What happens to the author when I publish?</summary>
@@ -270,7 +270,7 @@ $settings_admin    = admin_url( 'admin.php?page=Partyline-Settings' );
         </details>
         <details>
           <summary>Is the submitter&rsquo;s contact info public?</summary>
-          <div class="a"><p>No. Their <em>name</em> appears in a small &ldquo;Submitted by&rdquo; credit line on the post, but their email and phone are stored privately on the post for your reference &mdash; they&rsquo;re never shown on the site.</p></div>
+          <div class="a"><p>No. Their <em>name</em> appears in a small &ldquo;Submitted by&rdquo; credit line on the post, but their email and phone are stored privately on the post for your reference, and they&rsquo;re never shown on the site.</p></div>
         </details>
       </div>
 
@@ -278,19 +278,19 @@ $settings_admin    = admin_url( 'admin.php?page=Partyline-Settings' );
       <div class="plg-faq">
         <details>
           <summary>Will spam or junk end up on my site?</summary>
-          <div class="a"><p>It can&rsquo;t publish itself &mdash; everything is a draft you approve. On top of that, the public forms are guarded by a quick <strong>math challenge</strong> and a hidden honeypot to stop bots, with optional <strong>Cloudflare Turnstile</strong> for extra strength.</p></div>
+          <div class="a"><p>It can&rsquo;t publish itself; everything is a draft you approve. On top of that, the public forms are guarded by a quick <strong>math challenge</strong> and a hidden honeypot to stop bots, with optional <strong>Cloudflare Turnstile</strong> for extra strength.</p></div>
         </details>
         <details>
           <summary>What if I get flooded with submissions?</summary>
-          <div class="a"><p>Honestly? You probably won&rsquo;t &mdash; and if anything, the opposite is the real work. A healthy flow of Partylines is something you have to actively <em>grow</em> (that&rsquo;s what <a href="#plg-success">Making it successful</a> is all about), so a day with &ldquo;too many submissions&rdquo; would be a genuinely good problem to have. And because everything arrives as a draft, even a busy day just means more good stuff to pick from.</p></div>
+          <div class="a"><p>Honestly? You probably won&rsquo;t, and if anything, the opposite is the real work. A healthy flow of Partylines is something you have to actively <em>grow</em> (that&rsquo;s what <a href="#plg-success">Making it successful</a> is all about), so a day with &ldquo;too many submissions&rdquo; would be a genuinely good problem to have. And because everything arrives as a draft, even a busy day just means more good stuff to pick from.</p></div>
         </details>
         <details>
           <summary>Can I edit a submission before it runs?</summary>
-          <div class="a"><p>Absolutely. It&rsquo;s an ordinary WordPress draft &mdash; fix the title, rewrite the text, swap or crop the photo, whatever you need &mdash; before you publish.</p></div>
+          <div class="a"><p>Absolutely. It&rsquo;s an ordinary WordPress draft, so you can fix the title, rewrite the text, swap or crop the photo, whatever you need, before you publish.</p></div>
         </details>
         <details>
           <summary>If I <em>don&rsquo;t</em> publish something, does the submitter find out?</summary>
-          <div class="a"><p>No. Contributors are only emailed <em>if and when</em> you publish their Partyline. Leaving it as a draft or trashing it sends nothing &mdash; there&rsquo;s no awkward &ldquo;your post was rejected&rdquo; message.</p></div>
+          <div class="a"><p>No. Contributors are only emailed <em>if and when</em> you publish their Partyline. Leaving it as a draft or trashing it sends nothing, so there&rsquo;s no awkward &ldquo;your post was rejected&rdquo; message.</p></div>
         </details>
         <details>
           <summary>I don&rsquo;t want one of these channels. Can I turn it off?</summary>
@@ -298,7 +298,7 @@ $settings_admin    = admin_url( 'admin.php?page=Partyline-Settings' );
         </details>
         <details>
           <summary>Do I need the AI or a Cloudflare account to use Partyline?</summary>
-          <div class="a"><p>No &mdash; both are optional. Without an OpenAI key, contributors just type their story and it&rsquo;s saved as-is. Without Cloudflare Turnstile, the built-in math check still guards your public forms.</p></div>
+          <div class="a"><p>No, both are optional. Without an OpenAI key, contributors just type their story and it&rsquo;s saved as-is. Without Cloudflare Turnstile, the built-in math check still guards your public forms.</p></div>
         </details>
       </div>
     </section>

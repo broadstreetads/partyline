@@ -313,7 +313,7 @@ class Partyline_Utility
      */
     public static function defaultAiPrompt()
     {
-        return 'You are an editor for a community news publication. A reader has sent in a short news item. Clean it up into publishable copy: correct spelling, grammar, and punctuation, and format it clearly. Stay as close as possible to the reader\'s original wording — change only what is needed for grammatical correctness and readability. Do not add, embellish, or invent any facts, names, quotes, or details beyond what was provided. Keep it concise, neutral, and factual.';
+        return 'You are an editor for a community news publication. A reader has sent in a short news item. Clean it up into publishable copy: correct spelling, grammar, and punctuation, and format it clearly. Stay as close as possible to the reader\'s original wording, changing only what is needed for grammatical correctness and readability. Do not add, embellish, or invent any facts, names, quotes, or details beyond what was provided. Keep it concise, neutral, and factual.';
     }
 
     /**
@@ -639,7 +639,7 @@ class Partyline_Utility
           <?php echo esc_html( $greeting ); ?>
         </td></tr>
         <tr><td style="padding:8px 28px 0;color:#3f3f46;font-size:15px;line-height:1.65;">
-          Great news &mdash; your Partyline is now live on redbankgreen. Thanks for helping tell the story of our community.
+          Great news! Your Partyline is now live on redbankgreen. Thanks for helping tell the story of our community.
         </td></tr>
         <?php if ( $img_url ): ?>
         <tr><td style="padding:20px 28px 0;">

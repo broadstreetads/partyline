@@ -19,7 +19,7 @@ $loader          = esc_url( Partyline_Utility::getImageBaseURL() . 'ajax-loader-
   <div class="plg-wrap">
 
     <?php Partyline_View::load( 'admin/global/plg-hero', array(
-        'hero_lead' => 'Set up how your community sends in Partylines &mdash; the app, text messages, and optional AI formatting. Work top to bottom, then Save.',
+        'hero_lead' => 'Set up how your community sends in Partylines: the app, text messages, and optional AI formatting. Work top to bottom, then Save.',
         'hero_toc'  => array(
             array( 'href' => $main_url,        'label' => 'Newsroom' ),
             array( 'href' => $partyliners_url, 'label' => 'Partyliners' ),
@@ -49,7 +49,7 @@ $loader          = esc_url( Partyline_Utility::getImageBaseURL() . 'ajax-loader-
         <div class="plg-field-label">Partyline Category</div>
         <div class="plg-field-desc">Submitted Partylines are filed under this category, so you can build dedicated Partyline archives and widgets.</div>
         <select x-model="settings.partyline_category">
-          <option value="">&mdash; Select a category &mdash;</option>
+          <option value="">Select a category&hellip;</option>
           <?php foreach ( (array) $categories as $cat ): ?>
             <option value="<?php echo esc_attr( $cat->term_id ); ?>"><?php echo esc_html( $cat->name ); ?></option>
           <?php endforeach; ?>
@@ -85,7 +85,7 @@ $loader          = esc_url( Partyline_Utility::getImageBaseURL() . 'ajax-loader-
         <div class="plg-field-desc">By default only logged-in users can submit. Turn this on to let anyone submit without an account. Anonymous submitters type their story (no voice dictation) and provide a name, email &amp; phone.</div>
         <label class="plg-check"><input type="checkbox" x-model="settings.pwa_allow_anonymous"> Allow anonymous submissions</label>
         <div class="plg-callout warn" x-show="settings.pwa_allow_anonymous">
-          <strong>&#9888;&#65039; Heads up:</strong> this opens submission to the public internet. Anonymous posts always come in as drafts for review. We use a quick <strong>math challenge</strong> to filter out spam bots automatically &mdash; for the most reliable protection, add a <strong>Cloudflare Turnstile</strong> key below.
+          <strong>&#9888;&#65039; Heads up:</strong> this opens submission to the public internet. Anonymous posts always come in as drafts for review. We use a quick <strong>math challenge</strong> to filter out spam bots automatically. For the most reliable protection, add a <strong>Cloudflare Turnstile</strong> key below.
         </div>
       </div>
 
@@ -173,7 +173,7 @@ $loader          = esc_url( Partyline_Utility::getImageBaseURL() . 'ajax-loader-
 
       <div class="plg-field">
         <div class="plg-field-label">Transcription dictionary</div>
-        <div class="plg-field-desc">Optional. Local names and terms (streets, people, places) to improve voice transcription accuracy &mdash; comma or line separated.</div>
+        <div class="plg-field-desc">Optional. Local names and terms (streets, people, places) to improve voice transcription accuracy, comma or line separated.</div>
         <textarea placeholder="Broad Street, Monmouth Street, Count Basie Center, Navesink" x-model="settings.transcription_dictionary"></textarea>
       </div>
     </section>

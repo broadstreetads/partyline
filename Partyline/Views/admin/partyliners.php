@@ -43,7 +43,7 @@ $signup_url      = class_exists( 'Partyline_Pwa' ) ? Partyline_Pwa::signupUrl() 
   <div class="plg-wrap">
 
     <?php Partyline_View::load( 'admin/global/plg-hero', array(
-        'hero_lead' => 'The people who send in your Partylines. Add them by hand, or let them sign up themselves &mdash; their phone number is matched to incoming texts automatically.',
+        'hero_lead' => 'The people who send in your Partylines. Add them by hand, or let them sign up themselves, and their phone number is matched to incoming texts automatically.',
         'hero_toc'  => array(
             array( 'href' => $main_url,     'label' => 'Newsroom' ),
             array( 'href' => $settings_url, 'label' => 'Settings' ),
@@ -137,8 +137,8 @@ $signup_url      = class_exists( 'Partyline_Pwa' ) ? Partyline_Pwa::signupUrl() 
                 <tr data-search="<?php echo esc_attr( $haystack ); ?>">
                   <td class="name"><?php echo esc_html( $u->display_name ? $u->display_name : $u->user_login ); ?></td>
                   <td><?php echo esc_html( $u->user_email ); ?></td>
-                  <td><?php echo $phone ? esc_html( $phone ) : '<span class="plg-muted">&mdash;</span>'; ?></td>
-                  <td><?php echo $address ? esc_html( $address ) : '<span class="plg-muted">&mdash;</span>'; ?></td>
+                  <td><?php echo $phone ? esc_html( $phone ) : '<span class="plg-muted">&ndash;</span>'; ?></td>
+                  <td><?php echo $address ? esc_html( $address ) : '<span class="plg-muted">&ndash;</span>'; ?></td>
                   <td><span class="plg-count"><?php echo (int) $pcount; ?></span></td>
                   <td class="plg-muted"><?php echo esc_html( $joined ); ?></td>
                   <td class="plg-actions">

@@ -32,7 +32,7 @@ class Partyline_Pwa {
 	const APP_PATH = 'partyline';
 
 	/** Bump to invalidate the service-worker precache. */
-	const PWA_ASSET_VERSION = '19';
+	const PWA_ASSET_VERSION = '20';
 
 	/**
 	 * Register hooks. The contributor app is ON by default (see isEnabled), so
@@ -209,7 +209,7 @@ class Partyline_Pwa {
 		// --- HOME ---
 		echo '<section id="screen-home" class="pl-screen">';
 		$hero = $logged_in
-			? 'Snap a photo and talk it through — we\'ll write it up for the newsroom.'
+			? 'Snap a photo and talk it through, and we\'ll write it up for the newsroom.'
 			: 'Snap a photo and tell us what\'s happening in Red Bank. We\'ll take it from there.';
 		echo '<div class="pl-hero"><h1>Send in a Partyline</h1><p>' . esc_html( $hero ) . '</p></div>';
 		echo '<div id="pl-install" class="pl-install">';
@@ -255,7 +255,7 @@ class Partyline_Pwa {
 			// Voice dictation + AI write-up are logged-in only.
 			echo '<div class="pl-record">';
 			echo '<button id="pl-rec-btn" class="pl-recbtn" type="button" aria-label="Record"><span class="pl-recdot"></span></button>';
-			echo '<div id="pl-rec-status" class="pl-status">Tap to dictate — or type it below.</div>';
+			echo '<div id="pl-rec-status" class="pl-status">Tap to dictate, or type it below.</div>';
 			echo '</div>';
 		}
 		if ( $anon ) {

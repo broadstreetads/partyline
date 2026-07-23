@@ -395,7 +395,7 @@
 	function toggleRecord() {
 		if (recording) { stopRecording(); return; }
 		if (!navigator.mediaDevices || !window.MediaRecorder) {
-			setStatus('Recording is not supported on this browser — tap "Write it myself" to type your story.', 'error');
+			setStatus('Recording is not supported on this browser. Tap "Write it myself" to type your story.', 'error');
 			return;
 		}
 		ensureStream().then(function (s) {
@@ -448,7 +448,7 @@
 		}).then(function (gen) {
 			if (gen.title) { $('#pl-title').value = gen.title; }
 			$('#pl-body').value = gen.body || state.transcript || '';
-			setStatus('✓ Written up below — edit if needed, or tap record to redo.', null);
+			setStatus('✓ Written up below. Edit if needed, or tap record to redo.', null);
 			updateSubmit();
 			scheduleSave();
 		}).catch(function (err) {
@@ -564,7 +564,7 @@
 		$('#pl-body').value = '';
 		// Keep the contact fields (name/email/phone) — they persist for next time.
 		if (window.turnstile && CFG.turnstileKey) { try { window.turnstile.reset(); } catch (e) {} }
-		setStatus('Tap to dictate — or type it below.', null);
+		setStatus('Tap to dictate, or type it below.', null);
 		applyFilter('none');
 		updateSubmit();
 	}
