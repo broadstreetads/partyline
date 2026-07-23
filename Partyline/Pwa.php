@@ -579,6 +579,24 @@ JS;
 			return;
 		}
 
+		// If submissions require a login (anonymous is off), the new Partyliner
+		//  needs a password. Offer a one-tap "set your password" link right here
+		//  (safe: they just proved control of this email by clicking the link).
+		$user_obj = get_userdata( (int) $uid );
+		if ( ! self::allowAnonymous() && $user_obj ) {
+			$key     = get_password_reset_key( $user_obj );
+			$set_url = ! is_wp_error( $key )
+				? network_site_url( 'wp-login.php?action=rp&key=' . rawurlencode( $key ) . '&login=' . rawurlencode( $user_obj->user_login ), 'login' )
+				: wp_lostpassword_url();
+			echo self::renderPage(
+				'<section class="pl-screen"><div class="pl-hero"><h1>🎉 You&rsquo;re in!</h1>'
+				. '<p>Your Partyliner account is confirmed. Set a password so you can log in and send in your Partylines.</p></div>'
+				. '<div class="pl-actions"><a class="pl-btn pl-btn--primary" href="' . esc_url( $set_url ) . '">Set your password</a></div></section>'
+			);
+			return;
+		}
+
+		// Anonymous submissions are on, so no login is needed: straight to the app.
 		echo self::renderPage( '<section class="pl-screen"><div class="pl-hero"><h1>🎉 You&rsquo;re in!</h1><p>Your Partyliner account is confirmed. Tap below to send your first Partyline.</p></div><div class="pl-actions"><a class="pl-btn pl-btn--primary" href="' . esc_url( self::appUrl() ) . '">Open Partyline</a></div></section>' );
 	}
 
