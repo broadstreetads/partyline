@@ -73,6 +73,31 @@ class Partyline_Pwa {
 		return ! empty( $s->partyliner_signup_enabled );
 	}
 
+	/** WordPress site title, sanitized for display. */
+	private static function siteName() {
+		return trim( wp_strip_all_tags( (string) get_bloginfo( 'name' ) ) );
+	}
+
+	/** The installable app's title, e.g. "Partyline: Red Bank Green". */
+	private static function appTitle() {
+		$site = self::siteName();
+		return '' !== $site ? 'Partyline: ' . $site : 'Partyline';
+	}
+
+	/** Home-screen headline (customizable in Settings; falls back to a default). */
+	private static function homeTitle() {
+		$s = Partyline_Utility::getSettings();
+		$t = isset( $s->app_home_title ) ? trim( (string) $s->app_home_title ) : '';
+		return '' !== $t ? $t : 'Send in a Partyline';
+	}
+
+	/** Home-screen subtext (customizable; generic, non-town-specific default). */
+	private static function homeSubtitle() {
+		$s = Partyline_Utility::getSettings();
+		$t = isset( $s->app_home_subtitle ) ? trim( (string) $s->app_home_subtitle ) : '';
+		return '' !== $t ? $t : 'Snap a photo and tell us what\'s happening around town. We\'ll take it from there.';
+	}
+
 	/* --------------------------------------------------------------------- */
 	/* PWA shell routing:  /partyline/  ·  /sw.js  ·  /manifest.webmanifest */
 	/* --------------------------------------------------------------------- */
@@ -183,7 +208,7 @@ class Partyline_Pwa {
 		echo '<!doctype html><html lang="en"><head>';
 		echo '<meta charset="utf-8">';
 		echo '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">';
-		echo '<title>Partyline</title>';
+		echo '<title>' . esc_html( self::appTitle() ) . '</title>';
 		echo '<link rel="manifest" href="' . $manifest . '">';
 		echo '<meta name="theme-color" content="#18181b">';
 		echo '<meta name="mobile-web-app-capable" content="yes">';
@@ -199,8 +224,13 @@ class Partyline_Pwa {
 		echo '</head><body>';
 
 		echo '<div id="app">';
+		$site = self::siteName();
 		echo '<header class="pl-header">';
-		echo '<span class="pl-brand"><img src="' . $icon . '" alt=""> Partyline</span>';
+		echo '<span class="pl-brand"><img src="' . $icon . '" alt=""><span>Partyline';
+		if ( '' !== $site ) {
+			echo ' <span style="font-weight:400;font-size:13px;color:rgba(255,255,255,0.55);letter-spacing:0;">' . esc_html( $site ) . '</span>';
+		}
+		echo '</span></span>';
 		echo '<span class="pl-user">' . esc_html( $logged_in ? $name : 'Guest' ) . '</span>';
 		echo '</header>';
 
@@ -208,10 +238,7 @@ class Partyline_Pwa {
 
 		// --- HOME ---
 		echo '<section id="screen-home" class="pl-screen">';
-		$hero = $logged_in
-			? 'Snap a photo and talk it through, and we\'ll write it up for the newsroom.'
-			: 'Snap a photo and tell us what\'s happening in Red Bank. We\'ll take it from there.';
-		echo '<div class="pl-hero"><h1>Send in a Partyline</h1><p>' . esc_html( $hero ) . '</p></div>';
+		echo '<div class="pl-hero"><h1>' . esc_html( self::homeTitle() ) . '</h1><p>' . esc_html( self::homeSubtitle() ) . '</p></div>';
 		echo '<div id="pl-install" class="pl-install">';
 		echo '<span id="pl-install-msg">Install Partyline to your home screen for one-tap access.</span>';
 		echo '<button id="pl-install-btn" class="pl-btn pl-btn--lime" type="button">Install</button>';
@@ -322,9 +349,9 @@ class Partyline_Pwa {
 		nocache_headers();
 		header( 'Content-Type: application/manifest+json; charset=utf-8' );
 		echo wp_json_encode( array(
-			'name'             => 'Partyline',
+			'name'             => self::appTitle(),
 			'short_name'       => 'Partyline',
-			'description'      => 'Send a photo and a story to the redbankgreen newsroom.',
+			'description'      => 'Send a photo and a story to the ' . ( '' !== self::siteName() ? self::siteName() : 'local' ) . ' newsroom.',
 			'start_url'        => self::appUrl(),
 			'scope'            => self::appUrl(),
 			'display'          => 'standalone',
@@ -405,13 +432,18 @@ JS;
 
 		$html  = '<!doctype html><html lang="en"><head><meta charset="utf-8">';
 		$html .= '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">';
-		$html .= '<title>Partyline</title><meta name="theme-color" content="#18181b">';
+		$html .= '<title>' . esc_html( self::appTitle() ) . '</title><meta name="theme-color" content="#18181b">';
 		$html .= '<link rel="icon" href="' . $icon . '"><link rel="stylesheet" href="' . $css . '">';
 		if ( $turnstile_key ) {
 			$html .= '<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>';
 		}
 		$html .= '</head><body><div id="app">';
-		$html .= '<header class="pl-header"><span class="pl-brand"><img src="' . $icon . '" alt=""> Partyline</span></header>';
+		$site  = self::siteName();
+		$html .= '<header class="pl-header"><span class="pl-brand"><img src="' . $icon . '" alt=""><span>Partyline';
+		if ( '' !== $site ) {
+			$html .= ' <span style="font-weight:400;font-size:13px;color:rgba(255,255,255,0.55);letter-spacing:0;">' . esc_html( $site ) . '</span>';
+		}
+		$html .= '</span></span></header>';
 		$html .= '<main class="pl-main">' . $body . '</main>';
 		$html .= '<footer class="pl-footer">redbankgreen &middot; Partyline</footer>';
 		$html .= '</div></body></html>';

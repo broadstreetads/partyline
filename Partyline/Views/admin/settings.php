@@ -81,6 +81,13 @@ $loader          = esc_url( Partyline_Utility::getImageBaseURL() . 'ajax-loader-
       </div>
 
       <div class="plg-field">
+        <div class="plg-field-label">App home screen</div>
+        <div class="plg-field-desc">The headline and subtext shown on the app&rsquo;s home screen. Leave blank to use the defaults.</div>
+        <input x-model="settings.app_home_title" type="text" placeholder="Send in a Partyline" />
+        <textarea x-model="settings.app_home_subtitle" placeholder="Snap a photo and tell us what&#39;s happening around town. We&#39;ll take it from there." style="margin-top:10px;"></textarea>
+      </div>
+
+      <div class="plg-field">
         <div class="plg-field-label">Allow anonymous submissions</div>
         <div class="plg-field-desc">By default only logged-in users can submit. Turn this on to let anyone submit without an account. Anonymous submitters type their story (no voice dictation) and provide a name, email &amp; phone.</div>
         <label class="plg-check"><input type="checkbox" x-model="settings.pwa_allow_anonymous"> Allow anonymous submissions</label>
