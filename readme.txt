@@ -53,7 +53,7 @@ Nothing. The contributor app is enabled by default, so your community can start 
 
 A Partyliner is a WordPress user with a phone number, which is how a text message is matched back to their account. To manage them, go to **Partyline > Partyliners** in your admin menu. There you can see everyone at a glance and add a Partyliner directly (name, phone, email).
 
-You can also turn on **public signup** in the settings so readers can register themselves. Either way, a Partyliner's phone number is stored in the format `+15555555555` (you can still set it on the standard WordPress user profile too).
+You can also turn on **public applications** in the settings so readers can apply. Either way, a Partyliner's phone number is stored in the format `+15555555555` (you can still set it on the standard WordPress user profile too).
 
 == External services ==
 
@@ -77,10 +77,10 @@ Optional. Used to clean up spelling/grammar of submitted messages, generate post
 
 **Cloudflare Turnstile**
 
-Optional. Used to verify that anonymous submissions and public signups come from a real person rather than a bot.
+Optional. Used to verify that anonymous submissions and public applications come from a real person rather than a bot.
 
-- What is sent: when you configure a Turnstile site key, the public submission and signup forms load Cloudflare's widget script from `https://challenges.cloudflare.com`, and the visitor's browser obtains a token. On submission, that token is sent to your server and verified against `https://challenges.cloudflare.com/turnstile/v0/siteverify` using your Turnstile secret key.
-- When it is sent: only if you have entered a Turnstile site key in the settings, and only on the public submission or signup forms. Without a key, a built-in math challenge is used instead and no third party is contacted.
+- What is sent: when you configure a Turnstile site key, the public submission and application forms load Cloudflare's widget script from `https://challenges.cloudflare.com`, and the visitor's browser obtains a token. On submission, that token is sent to your server and verified against `https://challenges.cloudflare.com/turnstile/v0/siteverify` using your Turnstile secret key.
+- When it is sent: only if you have entered a Turnstile site key in the settings, and only on the public submission or application forms. Without a key, a built-in math challenge is used instead and no third party is contacted.
 - Service: Cloudflare, Inc. Terms: https://www.cloudflare.com/website-terms/ . Privacy Policy: https://www.cloudflare.com/privacypolicy/ .
 
 == Screenshots ==
@@ -96,7 +96,7 @@ Optional. Used to verify that anonymous submissions and public signups come from
 * FEATURE: Contributor app (PWA), an installable web app where people submit a photo and a story from their phone; now the primary way to collect Partylines, with SMS/Twilio as an optional secondary channel
 * FEATURE: Optional anonymous submissions, protected by a built-in math challenge and honeypot (with optional Cloudflare Turnstile for stronger protection)
 * FEATURE: Optional voice dictation (OpenAI Whisper) and an AI write-up of the photo and story in the app
-* FEATURE: Public Partyliner signup page (confirmed by email) plus a dedicated Partyline > Partyliners management screen
+* FEATURE: Public Partyliner application page (confirmed by email) plus a dedicated Partyline > Partyliners management screen
 * FEATURE: When a Partyline is published, it is attributed to the registered Partyliner and they are emailed that it is live
 * ENHANCEMENT: Phone numbers are normalized to E.164 so text messages reliably match a Partyliner
 * ENHANCEMENT: Redesigned admin screens and an in-plugin How-To guide

@@ -2,8 +2,8 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 $logo    = esc_url( set_url_scheme( Partyline_Utility::getImageBaseURL() . 'partyline-black.png', 'https' ) );
 $app_url = class_exists( 'Partyline_Pwa' ) ? Partyline_Pwa::appUrl() : home_url( '/partyline/' );
-$signup_enabled = class_exists( 'Partyline_Pwa' ) && Partyline_Pwa::signupEnabled();
-$signup_url     = class_exists( 'Partyline_Pwa' ) ? Partyline_Pwa::signupUrl() : '';
+$apply_enabled = class_exists( 'Partyline_Pwa' ) && Partyline_Pwa::applyEnabled();
+$apply_url     = class_exists( 'Partyline_Pwa' ) ? Partyline_Pwa::applyUrl() : '';
 $partyliners_admin = admin_url( 'admin.php?page=Partyline-Partyliners' );
 $settings_admin    = admin_url( 'admin.php?page=Partyline-Settings' );
 ?>
@@ -182,17 +182,17 @@ $settings_admin    = admin_url( 'admin.php?page=Partyline-Settings' );
         submit. It&rsquo;ll show up in your drafts.</p>
       <h3>Recruiting Partyliners</h3>
       <p>To credit texters by name, add them on the <a href="<?php echo esc_url( $partyliners_admin ); ?>">Partyliners</a> page.
-        Even better, turn on <strong>Public Partyliner signup</strong> in
+        Even better, turn on <strong>Public Partyliner applications</strong> in
         <a href="<?php echo esc_url( $settings_admin ); ?>">Settings</a> and share this link so readers can register
         themselves (name, phone, email, and an optional address). Their phone number is then matched to any Partyline
         they text in.</p>
-      <?php if ( $signup_enabled && $signup_url ): ?>
+      <?php if ( $apply_enabled && $apply_url ): ?>
         <div class="plg-linkbox">
-          <code id="plg-signuplink" data-link="<?php echo esc_attr( $signup_url ); ?>"><?php echo esc_html( $signup_url ); ?></code>
-          <button type="button" class="plg-copy" onclick="plgCopy(this,'plg-signuplink')">Copy link</button>
+          <code id="plg-applylink" data-link="<?php echo esc_attr( $apply_url ); ?>"><?php echo esc_html( $apply_url ); ?></code>
+          <button type="button" class="plg-copy" onclick="plgCopy(this,'plg-applylink')">Copy link</button>
         </div>
       <?php else: ?>
-        <p class="plg-note">Public signup is currently off. Flip on <em>Public Partyliner signup</em> in Settings to activate your signup link.</p>
+        <p class="plg-note">Public applications are currently off. Flip on <em>Public Partyliner applications</em> in Settings to activate your application link.</p>
       <?php endif; ?>
     </section>
 
@@ -230,7 +230,7 @@ $settings_admin    = admin_url( 'admin.php?page=Partyline-Settings' );
           <summary>Do people need an account to submit?</summary>
           <div class="a">
             <p>It depends on your setup. The contributor app works for logged-in users out of the box. If you turn on <strong>Allow anonymous submissions</strong> in Settings, anyone can submit without an account. If anonymous submissions are off, a logged-out visitor who opens the app is simply sent to the login screen.</p>
-            <p><strong>To set someone up with a Partyliner account</strong>, you have three options: open the <a href="<?php echo esc_url( $partyliners_admin ); ?>">Partyliners</a> page and use <em>Add a Partyliner</em> (just their name, phone, and email); turn on <strong>Public Partyliner signup</strong> in <a href="<?php echo esc_url( $settings_admin ); ?>">Settings</a> so readers can register themselves; or add them the usual WordPress way under <strong>Users &rarr; Add New</strong>. However they&rsquo;re created, their phone number is what links a text message back to their account.</p>
+            <p><strong>To set someone up with a Partyliner account</strong>, you have three options: open the <a href="<?php echo esc_url( $partyliners_admin ); ?>">Partyliners</a> page and use <em>Add a Partyliner</em> (just their name, phone, and email); turn on <strong>Public Partyliner applications</strong> in <a href="<?php echo esc_url( $settings_admin ); ?>">Settings</a> so readers can apply; or add them the usual WordPress way under <strong>Users &rarr; Add New</strong>. However they&rsquo;re created, their phone number is what links a text message back to their account.</p>
           </div>
         </details>
         <details>
@@ -241,7 +241,7 @@ $settings_admin    = admin_url( 'admin.php?page=Partyline-Settings' );
           <summary>How do texters (SMS) fit in?</summary>
           <div class="a">
             <p>If you enable <strong>Text Messages</strong>, people can send a photo and a note by text. Partyline matches the sender&rsquo;s phone number to a registered Partyliner (see the <a href="<?php echo esc_url( $partyliners_admin ); ?>">Partyliners</a> page). If it&rsquo;s a number you don&rsquo;t recognize, the post simply comes in credited as &ldquo;Anonymous Partyliner.&rdquo;</p>
-            <p><strong>Texting runs on Twilio</strong>, so it does take a little setup: you&rsquo;ll need a <a href="https://twilio.com" target="_blank" rel="noopener">Twilio</a> account and a Twilio phone number for people to text. Then, in <a href="<?php echo esc_url( $settings_admin ); ?>">Settings &rarr; Text Messages</a>, turn on Twilio and paste in your <strong>Account SID</strong> and <strong>Auth Token</strong> (both from your Twilio Console). Finally, copy the <strong>webhook URL</strong> Partyline shows you and set it as the messaging webhook on your Twilio number, so incoming texts are handed off to Partyline. The app and public signup need none of this; Twilio is only for the text-message channel.</p>
+            <p><strong>Texting runs on Twilio</strong>, so it does take a little setup: you&rsquo;ll need a <a href="https://twilio.com" target="_blank" rel="noopener">Twilio</a> account and a Twilio phone number for people to text. Then, in <a href="<?php echo esc_url( $settings_admin ); ?>">Settings &rarr; Text Messages</a>, turn on Twilio and paste in your <strong>Account SID</strong> and <strong>Auth Token</strong> (both from your Twilio Console). Finally, copy the <strong>webhook URL</strong> Partyline shows you and set it as the messaging webhook on your Twilio number, so incoming texts are handed off to Partyline. The app and public applications need none of this; Twilio is only for the text-message channel.</p>
           </div>
         </details>
         <details>
@@ -294,7 +294,7 @@ $settings_admin    = admin_url( 'admin.php?page=Partyline-Settings' );
         </details>
         <details>
           <summary>I don&rsquo;t want one of these channels. Can I turn it off?</summary>
-          <div class="a"><p>Yes. The contributor app, anonymous submissions, text messages, and public signup are each independent toggles in <a href="<?php echo esc_url( $settings_admin ); ?>">Settings</a>. Turn on only what you want and leave the rest off.</p></div>
+          <div class="a"><p>Yes. The contributor app, anonymous submissions, text messages, and public applications are each independent toggles in <a href="<?php echo esc_url( $settings_admin ); ?>">Settings</a>. Turn on only what you want and leave the rest off.</p></div>
         </details>
         <details>
           <summary>Do I need the AI or a Cloudflare account to use Partyline?</summary>

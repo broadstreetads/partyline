@@ -34,8 +34,8 @@ $page_url        = admin_url( 'admin.php?page=Partyline-Partyliners' );
 $main_url        = admin_url( 'admin.php?page=Partyline' );
 $settings_url    = admin_url( 'admin.php?page=Partyline-Settings' );
 $howto_url       = admin_url( 'admin.php?page=Partyline-HowTo' );
-$signup_enabled  = class_exists( 'Partyline_Pwa' ) && Partyline_Pwa::signupEnabled();
-$signup_url      = class_exists( 'Partyline_Pwa' ) ? Partyline_Pwa::signupUrl() : '';
+$apply_enabled  = class_exists( 'Partyline_Pwa' ) && Partyline_Pwa::applyEnabled();
+$apply_url      = class_exists( 'Partyline_Pwa' ) ? Partyline_Pwa::applyUrl() : '';
 ?>
 <?php Partyline_View::load( 'admin/global/plg-styles' ); ?>
 
@@ -43,7 +43,7 @@ $signup_url      = class_exists( 'Partyline_Pwa' ) ? Partyline_Pwa::signupUrl() 
   <div class="plg-wrap">
 
     <?php Partyline_View::load( 'admin/global/plg-hero', array(
-        'hero_lead' => 'The people who send in your Partylines. Add them by hand, or let them sign up themselves, and their phone number is matched to incoming texts automatically.',
+        'hero_lead' => 'The people who send in your Partylines. Add them by hand, or let them apply, and their phone number is matched to incoming texts automatically.',
         'hero_toc'  => array(
             array( 'href' => $main_url,     'label' => 'Newsroom' ),
             array( 'href' => $settings_url, 'label' => 'Settings' ),
@@ -91,11 +91,11 @@ $signup_url      = class_exists( 'Partyline_Pwa' ) ? Partyline_Pwa::signupUrl() 
       <div class="plg-eyebrow">Directory</div>
       <h2>Partyliners <span class="plg-muted" style="font-weight:800;">(<?php echo count( $users ); ?>)</span></h2>
 
-      <?php if ( $signup_enabled && $signup_url ): ?>
+      <?php if ( $apply_enabled && $apply_url ): ?>
         <div class="plg-linkbox">
-          <span class="lbl">Public signup</span>
-          <span class="url" id="pl-signup-url"><?php echo esc_html( $signup_url ); ?></span>
-          <button type="button" class="plg-copy" onclick="plgPlCopy(this,'pl-signup-url')">Copy</button>
+          <span class="lbl">Application link</span>
+          <span class="url" id="pl-apply-url"><?php echo esc_html( $apply_url ); ?></span>
+          <button type="button" class="plg-copy" onclick="plgPlCopy(this,'pl-apply-url')">Copy</button>
         </div>
       <?php endif; ?>
 
@@ -106,7 +106,7 @@ $signup_url      = class_exists( 'Partyline_Pwa' ) ? Partyline_Pwa::signupUrl() 
       <?php if ( empty( $users ) ): ?>
         <div class="plg-empty">
           <div class="big">👥</div>
-          <p style="margin:0;">No Partyliners yet. Add one above, or share your public signup link.</p>
+          <p style="margin:0;">No Partyliners yet. Add one above, or share your public application link.</p>
         </div>
       <?php else: ?>
         <div style="overflow-x:auto;">

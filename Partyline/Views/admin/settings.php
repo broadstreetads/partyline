@@ -109,13 +109,13 @@ $loader          = esc_url( Partyline_Utility::getImageBaseURL() . 'ajax-loader-
       </div>
 
       <div class="plg-field">
-        <div class="plg-field-label">Public Partyliner signup</div>
-        <div class="plg-field-desc">Let people sign up to become Partyliners on a public page (name, phone, email, and an optional address). They confirm by email, and their phone is matched to future text-message submissions. Manage everyone under <a href="<?php echo esc_url( $partyliners_url ); ?>">Partyline &rarr; Partyliners</a>.</div>
-        <label class="plg-check"><input type="checkbox" x-model="settings.partyliner_signup_enabled"> Enable public signup</label>
-        <div class="plg-linkbox" x-show="settings.partyliner_signup_enabled">
-          <span class="lbl">Signup link</span>
-          <span class="url" id="signup-url"><?php echo esc_html( Partyline_Pwa::signupUrl() ); ?></span>
-          <button type="button" class="plg-copy" @click="window.partylineCopyToClipboard('#signup-url')">Copy</button>
+        <div class="plg-field-label">Public Partyliner applications</div>
+        <div class="plg-field-desc">Let people apply to become Partyliners on a public page (name, phone, email, and an optional address). They confirm by email, and their phone is matched to future text-message submissions. Manage everyone under <a href="<?php echo esc_url( $partyliners_url ); ?>">Partyline &rarr; Partyliners</a>.</div>
+        <label class="plg-check"><input type="checkbox" x-model="settings.partyliner_apply_enabled"> Enable public applications</label>
+        <div class="plg-linkbox" x-show="settings.partyliner_apply_enabled">
+          <span class="lbl">Application link</span>
+          <span class="url" id="apply-url"><?php echo esc_html( Partyline_Pwa::applyUrl() ); ?></span>
+          <button type="button" class="plg-copy" @click="window.partylineCopyToClipboard('#apply-url')">Copy</button>
         </div>
       </div>
     </section>

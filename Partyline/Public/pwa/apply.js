@@ -1,7 +1,7 @@
-/* Partyline — public Partyliner signup form. */
+/* Partyline — public Partyliner application form. */
 (function () {
 	'use strict';
-	var CFG = window.PL_SIGNUP || {};
+	var CFG = window.PL_APPLY || {};
 	var $ = function (id) { return document.getElementById(id); };
 
 	function token() {
@@ -36,7 +36,7 @@
 		var btn = $('s-submit');
 		btn.disabled = true;
 		var label = btn.textContent;
-		btn.textContent = 'Signing up…';
+		btn.textContent = 'Applying…';
 		status('', null);
 
 		var fd = new FormData();
@@ -49,7 +49,7 @@
 		fd.append('website', $('s-website') ? $('s-website').value : '');
 		if (CFG.turnstileKey) { fd.append('turnstile', token()); }
 
-		fetch(CFG.restBase + 'signup', {
+		fetch(CFG.restBase + 'apply', {
 			method: 'POST',
 			headers: { 'X-WP-Nonce': CFG.nonce },
 			credentials: 'same-origin',
