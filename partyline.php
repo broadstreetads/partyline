@@ -2,7 +2,7 @@
 /*
 Plugin Name: Partyline
 Plugin URI:  https://github.com/broadstreetads/partyline
-Description: Listens for a webhook callback from Twilio, reformats the body via ChatGPT, and saves it as a WordPress draft.
+Description: Let your community submit local news, a photo and a story, through an installable web app or by text message (Twilio), optionally polished with AI and saved as WordPress drafts.
 Version:     1.2.5
 Author:      Kenny Katzgrau
 Author URI:  https://broadstreetads.com/
