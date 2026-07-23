@@ -274,6 +274,7 @@ class Partyline_Pwa {
 			echo '<input id="pl-email" class="pl-input" type="email" autocomplete="email" placeholder="you@example.com">';
 			echo '<label class="pl-label" for="pl-phone">Your phone</label>';
 			echo '<input id="pl-phone" class="pl-input" type="tel" autocomplete="tel" placeholder="(732) 555-0123">';
+			echo '<p class="pl-hint" style="background:#f6f6f8;border-radius:10px;padding:11px 13px;margin-top:8px;line-height:1.5;">🔒 Your name is credited as the author of your Partyline. Your email and phone are never shown on the site or shared; the newsroom keeps them privately so we can let you know if your Partyline runs. They&rsquo;re also saved on this device so you don&rsquo;t have to enter them again next time.</p>';
 		}
 		if ( $can_publish ) {
 			echo '<label class="pl-check"><input type="checkbox" id="pl-immediate"> Post immediately <span class="pl-check-note">(publish now, skip the draft)</span></label>';
