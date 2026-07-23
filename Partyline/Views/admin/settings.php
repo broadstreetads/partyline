@@ -138,6 +138,12 @@ $loader          = esc_url( Partyline_Utility::getImageBaseURL() . 'ajax-loader-
       </div>
 
       <div class="plg-field" x-show="settings.twilio_enabled">
+        <div class="plg-field-label">Text-in phone number <span class="plg-muted" style="font-weight:800;">(optional)</span></div>
+        <div class="plg-field-desc">The Twilio number people text their Partylines to. Shown to new Partyliners in their welcome email so they know where to text.</div>
+        <input x-model="settings.twilio_phone_number" type="text" placeholder="(732) 555-0123" />
+      </div>
+
+      <div class="plg-field" x-show="settings.twilio_enabled">
         <div class="plg-field-label">Partyline Key</div>
         <div class="plg-field-desc">A shared secret that authenticates the Twilio webhook (part of the URL above).</div>
         <input x-model="settings.partyline_key" type="text" placeholder="" />

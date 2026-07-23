@@ -50,6 +50,7 @@ class Partyline_Ajax
 
             // Twilio (SMS) — optional, secondary. Back-compat: default on when creds exist.
             'twilio_enabled'       => array_key_exists( 'twilio_enabled', $incoming ) ? ! empty( $incoming['twilio_enabled'] ) : ! empty( $incoming['twilio_account_sid'] ),
+            'twilio_phone_number'  => isset( $incoming['twilio_phone_number'] ) ? sanitize_text_field( $incoming['twilio_phone_number'] ) : '',
             'partyline_key'        => isset( $incoming['partyline_key'] )      ? sanitize_text_field( $incoming['partyline_key'] )      : '',
             'twilio_account_sid'   => isset( $incoming['twilio_account_sid'] ) ? sanitize_text_field( $incoming['twilio_account_sid'] ) : '',
             'twilio_auth_token'    => isset( $incoming['twilio_auth_token'] )  ? sanitize_text_field( $incoming['twilio_auth_token'] )  : '',

@@ -987,7 +987,112 @@ class Partyline_Utility
         }
 
         self::savePartylinerMeta( $user_id, $name, $phone, $address );
+
+        // Brand-new Partyliner: welcome them (and copy the newsroom).
+        self::sendPartylinerWelcomeEmail( (int) $user_id );
+
         return (int) $user_id;
+    }
+
+    /**
+     * Welcome a brand-new Partyliner with how-to instructions, copying the
+     *  newsroom notification list. The instructions adapt to which channels are
+     *  enabled (app, whether login is required, and text messages).
+     *
+     * @param int $user_id
+     */
+    public static function sendPartylinerWelcomeEmail( $user_id )
+    {
+        $user = get_userdata( (int) $user_id );
+        if ( ! $user || ! is_email( $user->user_email ) ) {
+            return;
+        }
+
+        $settings = self::getSettings();
+        $name     = $user->display_name ? $user->display_name : $user->user_login;
+        $greeting = 'Hi ' . $name . ',';
+        $logo     = set_url_scheme( self::getImageBaseURL() . 'partyline-black.png', 'https' );
+
+        $has_pwa   = ! class_exists( 'Partyline_Pwa' ) || Partyline_Pwa::isEnabled();
+        $anon_on   = class_exists( 'Partyline_Pwa' ) && Partyline_Pwa::allowAnonymous();
+        $app_url   = class_exists( 'Partyline_Pwa' ) ? Partyline_Pwa::appUrl() : home_url( '/partyline/' );
+        $login_url = wp_login_url( $app_url );
+        $lostpw    = wp_lostpassword_url();
+
+        $twilio_on = isset( $settings->twilio_enabled )
+            ? (bool) $settings->twilio_enabled
+            : ! empty( $settings->twilio_account_sid );
+        $twilio_no = isset( $settings->twilio_phone_number ) ? trim( (string) $settings->twilio_phone_number ) : '';
+
+        // --- Build the "how to Partyline" rows based on settings. ---
+        $rows = array();
+
+        if ( $has_pwa ) {
+            $body  = 'Open <a href="' . esc_url( $app_url ) . '" style="color:#7c3aed;">' . esc_html( $app_url ) . '</a> on your phone, then tap your browser&rsquo;s Share or menu button and choose <strong>Add to Home Screen</strong> to install it like an app. Snap a photo, add your story, and send it in.';
+            if ( $anon_on ) {
+                $body .= '<br><br>You can send one right away, no login needed. Just use the same name, email, and phone you gave us, and we&rsquo;ll credit your posts to you.';
+            } else {
+                $body .= '<br><br>You have a Partyliner account, so log in with your email to submit. First time? Use the <a href="' . esc_url( $lostpw ) . '" style="color:#7c3aed;">Lost your password?</a> link to set a password, then <a href="' . esc_url( $login_url ) . '" style="color:#7c3aed;">log in here</a>.';
+            }
+            $rows[] = array( '📱', 'The app (recommended)', $body );
+        }
+
+        if ( $twilio_on ) {
+            $body = 'You can also send your Partyline (a photo and a few words) as a text message';
+            $body .= $twilio_no !== '' ? ' to <strong>' . esc_html( $twilio_no ) . '</strong>.' : '.';
+            if ( $has_pwa ) {
+                $body .= ' The app is the easiest way if you can install it.';
+            }
+            $rows[] = array( '💬', 'Text it in', $body );
+        }
+
+        $rows_html = '';
+        foreach ( $rows as $r ) {
+            $rows_html .= '<tr><td style="padding:16px 28px 0;">'
+                . '<table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:collapse;"><tr>'
+                . '<td valign="top" style="width:40px;font-size:22px;line-height:1;padding-right:12px;">' . $r[0] . '</td>'
+                . '<td valign="top" style="color:#3f3f46;font-size:15px;line-height:1.6;">'
+                . '<strong style="color:#18181b;display:block;margin-bottom:3px;">' . esc_html( $r[1] ) . '</strong>'
+                . $r[2]
+                . '</td></tr></table></td></tr>';
+        }
+
+        $subject = 'You&rsquo;re a Partyliner! Here&rsquo;s how to send in your first story';
+
+        ob_start();
+        ?>
+<div style="background:#f4f4f5;margin:0;padding:24px 12px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+    <tr><td align="center">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="border-collapse:collapse;max-width:600px;width:100%;background:#ffffff;border:1px solid #e4e4e7;border-radius:16px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+        <tr><td style="padding:28px 24px 20px;text-align:center;border-bottom:1px solid #f0f0f1;"><img src="<?php echo esc_url( $logo ); ?>" width="170" alt="Partyline" style="width:170px;max-width:60%;height:auto;"></td></tr>
+        <tr><td style="padding:22px 28px 0;"><span style="display:inline-block;background:#16a34a;color:#ffffff;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:5px 11px;border-radius:999px;">You&rsquo;re a Partyliner</span></td></tr>
+        <tr><td style="padding:16px 28px 0;color:#3f3f46;font-size:15px;line-height:1.6;"><?php echo esc_html( $greeting ); ?></td></tr>
+        <tr><td style="padding:8px 28px 0;color:#3f3f46;font-size:15px;line-height:1.65;">You&rsquo;re approved to send in Partylines. Here&rsquo;s how to get started:</td></tr>
+        <?php echo $rows_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+        <tr><td style="padding:22px 28px 26px;margin-top:6px;border-top:1px solid #f0f0f1;color:#a1a1aa;font-size:13px;line-height:1.6;">Thanks for helping tell the story of our community. We can&rsquo;t wait to see what you send.</td></tr>
+      </table>
+      <div style="max-width:600px;margin:14px auto 0;color:#a1a1aa;font-size:12px;text-align:center;">redbankgreen &middot; Partyline</div>
+    </td></tr>
+  </table>
+</div>
+        <?php
+        $html = (string) ob_get_clean();
+
+        // Copy the newsroom notification list (Bcc, so the newsroom's internal
+        //  addresses aren't exposed to the new Partyliner). Skip their own address.
+        $headers = array( 'Content-Type: text/html; charset=UTF-8' );
+        $bcc = array();
+        foreach ( self::getNotificationEmails() as $e ) {
+            if ( is_email( $e ) && strtolower( $e ) !== strtolower( $user->user_email ) ) {
+                $bcc[] = $e;
+            }
+        }
+        if ( ! empty( $bcc ) ) {
+            $headers[] = 'Bcc: ' . implode( ', ', $bcc );
+        }
+
+        wp_mail( $user->user_email, html_entity_decode( $subject, ENT_QUOTES ), $html, $headers );
     }
 
     /** Store a Partyliner's contact details in user meta. */
