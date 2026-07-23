@@ -68,6 +68,20 @@ $settings_admin    = admin_url( 'admin.php?page=Partyline-Settings' );
 .plg-callout { background:linear-gradient(135deg,#fff1e6,#ffe0ec); border:1px solid #fbd6c8; border-radius:14px;
                padding:16px 18px; font-size:15px; line-height:1.6; color:#7c2d3a; margin-top:4px; }
 
+.plg-faqgroup { font-size:13px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); margin:24px 0 10px; }
+.plg-faqgroup:first-of-type { margin-top:6px; }
+.plg-faq { display:flex; flex-direction:column; gap:9px; }
+.plg-faq details { border:1px solid var(--line); border-radius:12px; background:#fff; }
+.plg-faq details[open] { border-color:#ddd6f3; background:#fbfaff; }
+.plg-faq summary { list-style:none; cursor:pointer; padding:14px 44px 14px 17px; font-size:15px; font-weight:700; color:var(--ink); position:relative; }
+.plg-faq summary::-webkit-details-marker { display:none; }
+.plg-faq summary::after { content:"+"; position:absolute; right:17px; top:50%; transform:translateY(-50%);
+                          font-size:20px; font-weight:700; color:var(--accent); line-height:1; }
+.plg-faq details[open] summary::after { content:"\2212"; }
+.plg-faq .a { padding:0 17px 15px; }
+.plg-faq .a p { font-size:14.5px; line-height:1.65; color:#3f3f46; margin:0 0 10px; }
+.plg-faq .a p:last-child { margin-bottom:0; }
+
 .plg-tag { text-align:center; font-weight:800; letter-spacing:.22em; font-size:15px; color:#fff; padding:24px; background:var(--ink); }
 .plg-footer { text-align:center; padding:20px; font-size:13px; color:var(--muted); }
 
@@ -88,6 +102,7 @@ $settings_admin    = admin_url( 'admin.php?page=Partyline-Settings' );
       <a href="#plg-uses">Top 10 uses</a>
       <a href="#plg-start">Getting started</a>
       <a href="#plg-success">Making it successful</a>
+      <a href="#plg-faq">FAQ</a>
     </nav>
 
     <!-- What is -->
@@ -201,6 +216,85 @@ $settings_admin    = admin_url( 'admin.php?page=Partyline-Settings' );
       <div class="plg-callout">And don&rsquo;t sweat quality control. You don&rsquo;t have to publish everything, and the fear of a garbage
         flood rarely comes true. In practice you get only a little garbage and a whole lot of sunsets and rainbows.
         You know what? <strong>Just post the sunsets and rainbows.</strong></div>
+    </section>
+
+    <!-- FAQ -->
+    <section id="plg-faq" class="plg-section">
+      <div class="plg-eyebrow">Questions</div>
+      <h2>Frequently asked questions</h2>
+      <p class="plg-sub">The edge cases and the &ldquo;wait, what happens if&hellip;&rdquo; questions, especially for editors new to letting the community in.</p>
+
+      <div class="plg-faqgroup">Logged-in vs. logged-out contributors</div>
+      <div class="plg-faq">
+        <details>
+          <summary>Do people need an account to submit?</summary>
+          <div class="a"><p>It depends on your setup. The contributor app works for logged-in users out of the box. If you turn on <strong>Allow anonymous submissions</strong> in Settings, anyone can submit without an account. If anonymous submissions are off, a logged-out visitor who opens the app is simply sent to the login screen.</p></div>
+        </details>
+        <details>
+          <summary>What&rsquo;s the difference between a logged-in and an anonymous submission?</summary>
+          <div class="a"><p>Logged-in contributors get the full app: snap a photo and <em>dictate</em> the story, which is transcribed and lightly cleaned up by AI. Anonymous contributors <em>type</em> their story (no voice dictation or AI), provide a name, email, and phone, and pass a quick spam check. Either way, it lands in your newsroom as a draft.</p></div>
+        </details>
+        <details>
+          <summary>How do texters (SMS) fit in?</summary>
+          <div class="a"><p>If you enable <strong>Text Messages</strong>, people can send a photo and a note by text. Partyline matches the sender&rsquo;s phone number to a registered Partyliner (see the <a href="<?php echo esc_url( $partyliners_admin ); ?>">Partyliners</a> page). If it&rsquo;s a number you don&rsquo;t recognize, the post simply comes in credited as &ldquo;Anonymous Partyliner.&rdquo;</p></div>
+        </details>
+        <details>
+          <summary>Someone submitted anonymously but they&rsquo;re actually a registered Partyliner. What happens?</summary>
+          <div class="a"><p>When you publish it, Partyline matches them by email or phone, attributes the published post to their account, and emails them that it&rsquo;s live. Until you publish, it stays a draft credited to the name they typed, so an unverified &ldquo;I&rsquo;m really so-and-so&rdquo; never touches a real account without your say-so.</p></div>
+        </details>
+      </div>
+
+      <div class="plg-faqgroup">About submitted Partylines</div>
+      <div class="plg-faq">
+        <details>
+          <summary>Does anything get published automatically?</summary>
+          <div class="a"><p><strong>No.</strong> Every submission &mdash; app, text, or anonymous &mdash; arrives as a <strong>draft</strong> for you to review. Nothing goes live until you publish it. The only exception: an editor or administrator can tick &ldquo;Post immediately&rdquo; on their <em>own</em> submission.</p></div>
+        </details>
+        <details>
+          <summary>Who can &ldquo;Post immediately&rdquo;?</summary>
+          <div class="a"><p>Only editors and administrators even see that checkbox. Regular contributors and anonymous submitters can&rsquo;t publish anything &mdash; their Partylines are always drafts.</p></div>
+        </details>
+        <details>
+          <summary>Where do submissions show up, and how will I know?</summary>
+          <div class="a"><p>They appear on the <strong>Partyline</strong> screen (your newsroom inbox), newest first. You&rsquo;ll also get an email notification at whatever addresses you set under <strong>General Settings &rarr; Email Notifications</strong>.</p></div>
+        </details>
+        <details>
+          <summary>What happens to the author when I publish?</summary>
+          <div class="a"><p>If the submitter matches a registered Partyliner (by email or phone), the published post is attributed to <em>them</em> and they get a &ldquo;your Partyline is live&rdquo; email. If they&rsquo;re not a known user, it stays attributed to the site admin and the &ldquo;Submitted by&rdquo; credit still shows the name they gave.</p></div>
+        </details>
+        <details>
+          <summary>Is the submitter&rsquo;s contact info public?</summary>
+          <div class="a"><p>No. Their <em>name</em> appears in a small &ldquo;Submitted by&rdquo; credit line on the post, but their email and phone are stored privately on the post for your reference &mdash; they&rsquo;re never shown on the site.</p></div>
+        </details>
+      </div>
+
+      <div class="plg-faqgroup">For nervous editors</div>
+      <div class="plg-faq">
+        <details>
+          <summary>Will spam or junk end up on my site?</summary>
+          <div class="a"><p>It can&rsquo;t publish itself &mdash; everything is a draft you approve. On top of that, the public forms are guarded by a quick <strong>math challenge</strong> and a hidden honeypot to stop bots, with optional <strong>Cloudflare Turnstile</strong> for extra strength.</p></div>
+        </details>
+        <details>
+          <summary>What if I get flooded with submissions?</summary>
+          <div class="a"><p>In practice it&rsquo;s a steady, manageable stream rather than a firehose &mdash; and since you publish only what you want, volume is never really the problem. Treat what comes in as raw material and run what&rsquo;s good.</p></div>
+        </details>
+        <details>
+          <summary>Can I edit a submission before it runs?</summary>
+          <div class="a"><p>Absolutely. It&rsquo;s an ordinary WordPress draft &mdash; fix the title, rewrite the text, swap or crop the photo, whatever you need &mdash; before you publish.</p></div>
+        </details>
+        <details>
+          <summary>If I <em>don&rsquo;t</em> publish something, does the submitter find out?</summary>
+          <div class="a"><p>No. Contributors are only emailed <em>if and when</em> you publish their Partyline. Leaving it as a draft or trashing it sends nothing &mdash; there&rsquo;s no awkward &ldquo;your post was rejected&rdquo; message.</p></div>
+        </details>
+        <details>
+          <summary>I don&rsquo;t want one of these channels. Can I turn it off?</summary>
+          <div class="a"><p>Yes. The contributor app, anonymous submissions, text messages, and public signup are each independent toggles in <a href="<?php echo esc_url( $settings_admin ); ?>">Settings</a>. Turn on only what you want and leave the rest off.</p></div>
+        </details>
+        <details>
+          <summary>Do I need the AI or a Cloudflare account to use Partyline?</summary>
+          <div class="a"><p>No &mdash; both are optional. Without an OpenAI key, contributors just type their story and it&rsquo;s saved as-is. Without Cloudflare Turnstile, the built-in math check still guards your public forms.</p></div>
+        </details>
+      </div>
     </section>
 
     <div class="plg-tag">LONG LIVE LOCAL NEWS</div>
