@@ -258,14 +258,6 @@ class Partyline_Pwa {
 			echo '<div id="pl-rec-status" class="pl-status">Tap to dictate, or type it below.</div>';
 			echo '</div>';
 		}
-		if ( $anon ) {
-			echo '<label class="pl-label" for="pl-name">Your name</label>';
-			echo '<input id="pl-name" class="pl-input" type="text" autocomplete="name" placeholder="Jane Doe">';
-			echo '<label class="pl-label" for="pl-email">Your email</label>';
-			echo '<input id="pl-email" class="pl-input" type="email" autocomplete="email" placeholder="you@example.com">';
-			echo '<label class="pl-label" for="pl-phone">Your phone</label>';
-			echo '<input id="pl-phone" class="pl-input" type="tel" autocomplete="tel" placeholder="(732) 555-0123">';
-		}
 		echo '<label class="pl-label" for="pl-title">Title</label>';
 		echo '<input id="pl-title" class="pl-input" type="text" placeholder="Headline (optional)">';
 		echo '<label class="pl-label" for="pl-body">Story</label>';
@@ -274,6 +266,15 @@ class Partyline_Pwa {
 		// Step 3 — submit
 		echo '<h2 class="pl-step"><span class="pl-stepnum">3</span> Submit</h2>';
 		echo '<p id="pl-submit-hint" class="pl-hint">Add a photo and a story to submit.</p>';
+		if ( $anon ) {
+			// Contact info, so we can credit the submitter and follow up.
+			echo '<label class="pl-label" for="pl-name">Your name</label>';
+			echo '<input id="pl-name" class="pl-input" type="text" autocomplete="name" placeholder="Jane Doe">';
+			echo '<label class="pl-label" for="pl-email">Your email</label>';
+			echo '<input id="pl-email" class="pl-input" type="email" autocomplete="email" placeholder="you@example.com">';
+			echo '<label class="pl-label" for="pl-phone">Your phone</label>';
+			echo '<input id="pl-phone" class="pl-input" type="tel" autocomplete="tel" placeholder="(732) 555-0123">';
+		}
 		if ( $can_publish ) {
 			echo '<label class="pl-check"><input type="checkbox" id="pl-immediate"> Post immediately <span class="pl-check-note">(publish now, skip the draft)</span></label>';
 			echo '<p class="pl-hint" style="margin-top:-8px;">Only editors and administrators see this option.</p>';
