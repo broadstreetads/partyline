@@ -1095,6 +1095,55 @@ class Partyline_Utility
         wp_mail( $user->user_email, html_entity_decode( $subject, ENT_QUOTES ), $html, $headers );
     }
 
+    /**
+     * Email a Partyliner a one-tap link to set their password (so they can log
+     *  in). Sent only to them, never copied to the newsroom, since it carries a
+     *  reset token. Returns true on success.
+     *
+     * @param int $user_id
+     */
+    public static function sendPartylinerSetPasswordEmail( $user_id )
+    {
+        $user = get_userdata( (int) $user_id );
+        if ( ! $user || ! is_email( $user->user_email ) ) {
+            return false;
+        }
+
+        $key = get_password_reset_key( $user );
+        if ( is_wp_error( $key ) ) {
+            return false;
+        }
+        $set_url = network_site_url( 'wp-login.php?action=rp&key=' . rawurlencode( $key ) . '&login=' . rawurlencode( $user->user_login ), 'login' );
+
+        $name     = $user->display_name ? $user->display_name : $user->user_login;
+        $greeting = 'Hi ' . $name . ',';
+        $logo     = set_url_scheme( self::getImageBaseURL() . 'partyline-black.png', 'https' );
+        $app_url  = class_exists( 'Partyline_Pwa' ) ? Partyline_Pwa::appUrl() : home_url( '/partyline/' );
+
+        ob_start();
+        ?>
+<div style="background:#f4f4f5;margin:0;padding:24px 12px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+    <tr><td align="center">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="border-collapse:collapse;max-width:600px;width:100%;background:#ffffff;border:1px solid #e4e4e7;border-radius:16px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+        <tr><td style="padding:28px 24px 20px;text-align:center;border-bottom:1px solid #f0f0f1;"><img src="<?php echo esc_url( $logo ); ?>" width="170" alt="Partyline" style="width:170px;max-width:60%;height:auto;"></td></tr>
+        <tr><td style="padding:22px 28px 0;"><span style="display:inline-block;background:#18181b;color:#ffffff;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:5px 11px;border-radius:999px;">Set your password</span></td></tr>
+        <tr><td style="padding:16px 28px 0;color:#3f3f46;font-size:15px;line-height:1.6;"><?php echo esc_html( $greeting ); ?></td></tr>
+        <tr><td style="padding:8px 28px 0;color:#3f3f46;font-size:15px;line-height:1.65;">You&rsquo;re a Partyliner! Set a password below so you can log in and send in your Partylines from the app.</td></tr>
+        <tr><td style="padding:22px 28px 6px;"><a href="<?php echo esc_url( $set_url ); ?>" style="display:inline-block;background:#18181b;color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:13px 22px;border-radius:12px;">Set your password &rarr;</a></td></tr>
+        <tr><td style="padding:14px 28px 0;color:#a1a1aa;font-size:13px;line-height:1.6;">Once your password is set, log in and open <a href="<?php echo esc_url( $app_url ); ?>" style="color:#7c3aed;"><?php echo esc_html( $app_url ); ?></a> on your phone. Add it to your home screen for one-tap access.</td></tr>
+        <tr><td style="padding:18px 28px 26px;margin-top:6px;border-top:1px solid #f0f0f1;color:#a1a1aa;font-size:12px;line-height:1.6;">If you didn&rsquo;t expect this, you can ignore this email. The link expires for security, but you can always use &ldquo;Lost your password?&rdquo; on the login page.</td></tr>
+      </table>
+      <div style="max-width:600px;margin:14px auto 0;color:#a1a1aa;font-size:12px;text-align:center;">redbankgreen &middot; Partyline</div>
+    </td></tr>
+  </table>
+</div>
+        <?php
+        $html = (string) ob_get_clean();
+
+        return wp_mail( $user->user_email, 'Set your Partyliner password', $html, array( 'Content-Type: text/html; charset=UTF-8' ) );
+    }
+
     /** Store a Partyliner's contact details in user meta. */
     public static function savePartylinerMeta( $user_id, $name, $phone, $address )
     {

@@ -240,6 +240,9 @@ class Partyline_Core
         if ( isset( $_POST['partyline_add_partyliner'] ) ) {
             check_admin_referer( 'partyline_add_partyliner' );
 
+            $email_in = isset( $_POST['pl_email'] ) ? sanitize_email( wp_unslash( $_POST['pl_email'] ) ) : '';
+            $was_new  = $email_in && ! email_exists( $email_in );
+
             $res = Partyline_Utility::findOrCreatePartyliner( array(
                 'name'    => isset( $_POST['pl_name'] )    ? wp_unslash( $_POST['pl_name'] )    : '',
                 'email'   => isset( $_POST['pl_email'] )   ? wp_unslash( $_POST['pl_email'] )   : '',
@@ -249,9 +252,27 @@ class Partyline_Core
 
             if ( is_wp_error( $res ) ) {
                 $notice = array( 'error', $res->get_error_message() );
+            } elseif ( $was_new ) {
+                // Brand-new account added by hand: email them a set-password link
+                //  so they can log in (they never had a confirm page to do it).
+                $sent = Partyline_Utility::sendPartylinerSetPasswordEmail( (int) $res );
+                $notice = array( 'success', $sent
+                    ? 'Partyliner added. We emailed them a link to set their password.'
+                    : 'Partyliner added.' );
             } else {
-                $notice = array( 'success', 'Partyliner saved.' );
+                $notice = array( 'success', 'Partyliner updated.' );
             }
+        }
+
+        // --- Send a set-password / reset email -------------------------------
+        if ( isset( $_GET['action'], $_GET['user'] ) && 'resetpw' === $_GET['action'] ) {
+            $uid = (int) $_GET['user'];
+            check_admin_referer( 'partyline_resetpw_' . $uid );
+
+            $sent   = Partyline_Utility::sendPartylinerSetPasswordEmail( $uid );
+            $notice = $sent
+                ? array( 'success', 'Sent a set-password email to that Partyliner.' )
+                : array( 'error', 'Could not send the set-password email.' );
         }
 
         // --- Delete a Partyliner ---------------------------------------------

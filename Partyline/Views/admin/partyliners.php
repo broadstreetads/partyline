@@ -132,6 +132,10 @@ $apply_url      = class_exists( 'Partyline_Pwa' ) ? Partyline_Pwa::applyUrl() : 
                       add_query_arg( array( 'action' => 'delete', 'user' => $u->ID ), $page_url ),
                       'partyline_delete_' . $u->ID
                   );
+                  $reset_url = wp_nonce_url(
+                      add_query_arg( array( 'action' => 'resetpw', 'user' => $u->ID ), $page_url ),
+                      'partyline_resetpw_' . $u->ID
+                  );
                   $haystack = strtolower( $u->display_name . ' ' . $u->user_email . ' ' . $phone . ' ' . $address );
               ?>
                 <tr data-search="<?php echo esc_attr( $haystack ); ?>">
@@ -143,6 +147,8 @@ $apply_url      = class_exists( 'Partyline_Pwa' ) ? Partyline_Pwa::applyUrl() : 
                   <td class="plg-muted"><?php echo esc_html( $joined ); ?></td>
                   <td class="plg-actions">
                     <a href="<?php echo esc_url( get_edit_user_link( $u->ID ) ); ?>">Edit</a>
+                    <a href="<?php echo esc_url( $reset_url ); ?>"
+                       onclick="return confirm('Email a set-password link to <?php echo esc_js( $u->display_name ); ?> (<?php echo esc_js( $u->user_email ); ?>)?');">Reset password</a>
                     <a href="<?php echo esc_url( $del_url ); ?>" class="del"
                        onclick="return confirm('Remove <?php echo esc_js( $u->display_name ); ?>? Their submissions will be reassigned to you.');">Remove</a>
                   </td>

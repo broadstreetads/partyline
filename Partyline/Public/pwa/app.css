@@ -73,8 +73,10 @@ html, body {
 	font-size: 17px;
 	font-weight: 700;
 	cursor: pointer;
+	text-decoration: none;
 	transition: transform 0.08s ease, opacity 0.15s ease;
 }
+.pl-btn, .pl-btn:hover, .pl-btn:focus { text-decoration: none; }
 .pl-btn:active { transform: scale(0.98); }
 .pl-btn--primary { background: var(--ink); color: var(--paper); }
 .pl-btn--lime { background: var(--ink); color: var(--paper); }

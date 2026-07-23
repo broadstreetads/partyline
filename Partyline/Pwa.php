@@ -32,7 +32,7 @@ class Partyline_Pwa {
 	const APP_PATH = 'partyline';
 
 	/** Bump to invalidate the service-worker precache. */
-	const PWA_ASSET_VERSION = '21';
+	const PWA_ASSET_VERSION = '22';
 
 	/**
 	 * Register hooks. The contributor app is ON by default (see isEnabled), so
