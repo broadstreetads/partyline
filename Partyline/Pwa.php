@@ -232,6 +232,9 @@ class Partyline_Pwa {
 		// --- CAPTURE (all steps on one screen) ---
 		echo '<section id="screen-capture" class="pl-screen pl-hidden">';
 
+		// Save-and-close escape hatch, kept above the form and away from Submit.
+		echo '<div class="pl-actions" style="margin-bottom:6px;"><button id="pl-cancel" class="pl-btn pl-btn--ghost" type="button">Save draft and close</button></div>';
+
 		// Step 1 — photo
 		echo '<h2 class="pl-step"><span class="pl-stepnum">1</span> Take or upload a photo</h2>';
 		echo '<input id="pl-input-camera" type="file" accept="image/*" capture="environment" hidden>';
@@ -294,7 +297,6 @@ class Partyline_Pwa {
 		}
 		echo '<div class="pl-actions">';
 		echo '<button id="pl-submit" class="pl-btn pl-btn--primary" type="button" disabled>Submit Partyline</button>';
-		echo '<button id="pl-cancel" class="pl-btn pl-btn--ghost" type="button">Save &amp; close</button>';
 		echo '</div>';
 		echo '</section>';
 
