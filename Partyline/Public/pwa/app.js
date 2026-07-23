@@ -60,7 +60,9 @@
 	/* --------------------------------------------------------------- */
 	/* State + screen navigation                                        */
 	/* --------------------------------------------------------------- */
-	var state = { photoImg: null, filter: 'none', transcript: '', title: '', body: '' };
+	// Photos: an array of { img: Image, filter: string }. The FIRST is the cover
+	// (featured image + the one the AI looks at). `active` is the previewed photo.
+	var state = { photos: [], active: 0, transcript: '', title: '', body: '' };
 
 	var FILTERS = {
 		none:  'none',
@@ -81,53 +83,131 @@
 	/* --------------------------------------------------------------- */
 	/* Photo capture + filters                                          */
 	/* --------------------------------------------------------------- */
-	var canvas, cctx;
+	var canvas;
+	var MAX_DIM = 1600;
 
-	function handlePhotoFile(file) {
-		var url = URL.createObjectURL(file);
-		var img = new Image();
-		img.onload = function () {
-			URL.revokeObjectURL(url);
-			var max = 1600;
-			var scale = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
-			canvas.width = Math.round(img.naturalWidth * scale);
-			canvas.height = Math.round(img.naturalHeight * scale);
-			cctx = canvas.getContext('2d');
-			cctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-			state.photoImg = img;
-			canvas.classList.remove('pl-hidden');
-			$('#pl-filters').classList.remove('pl-hidden');
-			$('#pl-photo-camera').innerHTML = '<span>🔄</span> Retake';
-			$('#pl-photo-library').innerHTML = '<span>🖼️</span> Replace';
-			applyFilter(state.filter);
-			updateSubmit();
-			scheduleSave();
-		};
-		img.onerror = function () { URL.revokeObjectURL(url); setStatus('Could not load that image.', 'error'); };
-		img.src = url;
+	// Draw an image into a canvas, scaled to fit within MAX_DIM.
+	function drawScaled(cv, img) {
+		var scale = Math.min(1, MAX_DIM / Math.max(img.naturalWidth, img.naturalHeight));
+		cv.width = Math.max(1, Math.round(img.naturalWidth * scale));
+		cv.height = Math.max(1, Math.round(img.naturalHeight * scale));
+		cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
 	}
 
-	function applyFilter(name) {
-		state.filter = name;
-		// Live preview via CSS filter on the canvas element (works everywhere).
-		canvas.style.filter = FILTERS[name] === 'none' ? '' : FILTERS[name];
+	// Load one or more picked files into state.photos, then refresh the UI.
+	function addFiles(fileList) {
+		var files = Array.prototype.slice.call(fileList || []).filter(function (f) {
+			return f && f.type && f.type.indexOf('image/') === 0;
+		});
+		if (!files.length) { return; }
+		var remaining = files.length;
+		var done = function () { if (--remaining === 0) { refreshPhotos(); updateSubmit(); scheduleSave(); } };
+		files.forEach(function (file) {
+			var url = URL.createObjectURL(file);
+			var img = new Image();
+			img.onload = function () {
+				URL.revokeObjectURL(url);
+				state.photos.push({ img: img, filter: 'none' });
+				state.active = state.photos.length - 1;
+				done();
+			};
+			img.onerror = function () { URL.revokeObjectURL(url); setStatus('Could not load one of the images.', 'error'); done(); };
+			img.src = url;
+		});
+	}
+
+	// Show the active photo (with its filter) in the big preview, or hide when empty.
+	function drawActive() {
+		if (!state.photos.length) {
+			canvas.classList.add('pl-hidden'); canvas.style.filter = '';
+			$('#pl-filters').classList.add('pl-hidden');
+			$('#pl-make-cover').classList.add('pl-hidden');
+			return;
+		}
+		if (state.active >= state.photos.length) { state.active = state.photos.length - 1; }
+		var p = state.photos[state.active];
+		drawScaled(canvas, p.img);
+		canvas.style.filter = FILTERS[p.filter] === 'none' ? '' : FILTERS[p.filter];
+		canvas.classList.remove('pl-hidden');
+		$('#pl-filters').classList.remove('pl-hidden');
 		var chips = document.querySelectorAll('.pl-chip');
 		for (var i = 0; i < chips.length; i++) {
-			chips[i].classList.toggle('is-active', chips[i].getAttribute('data-filter') === name);
+			chips[i].classList.toggle('is-active', chips[i].getAttribute('data-filter') === p.filter);
 		}
+		$('#pl-make-cover').classList.toggle('pl-hidden', state.active === 0 || state.photos.length < 2);
+	}
+
+	// Render the thumbnail strip (cover badge on the first, tap to preview, ✕ to remove).
+	function renderThumbs() {
+		var strip = $('#pl-thumbs');
+		strip.innerHTML = '';
+		if (!state.photos.length) { strip.classList.add('pl-hidden'); return; }
+		strip.classList.remove('pl-hidden');
+		state.photos.forEach(function (p, i) {
+			var t = document.createElement('div');
+			t.className = 'pl-thumb' + (i === state.active ? ' is-active' : '');
+			var tc = document.createElement('canvas');
+			drawScaled(tc, p.img);
+			tc.style.filter = FILTERS[p.filter] === 'none' ? '' : FILTERS[p.filter];
+			t.appendChild(tc);
+			if (i === 0) {
+				var cov = document.createElement('div');
+				cov.className = 'pl-thumb-cover';
+				cov.textContent = 'Cover';
+				t.appendChild(cov);
+			}
+			var del = document.createElement('button');
+			del.className = 'pl-thumb-del';
+			del.type = 'button';
+			del.setAttribute('aria-label', 'Remove photo');
+			del.textContent = '✕';
+			del.addEventListener('click', function (ev) { ev.stopPropagation(); removePhoto(i); });
+			t.appendChild(del);
+			t.addEventListener('click', function () { state.active = i; refreshPhotos(); });
+			strip.appendChild(t);
+		});
+	}
+
+	function refreshPhotos() { drawActive(); renderThumbs(); }
+
+	function applyFilter(name) {
+		if (!state.photos.length) { return; }
+		state.photos[state.active].filter = name;
+		refreshPhotos();
 		scheduleSave();
 	}
 
-	// Bake the current photo + filter into a JPEG blob for upload.
-	function bakePhoto() {
+	function removePhoto(i) {
+		state.photos.splice(i, 1);
+		if (state.active >= state.photos.length) { state.active = Math.max(0, state.photos.length - 1); }
+		refreshPhotos();
+		updateSubmit();
+		scheduleSave();
+	}
+
+	// Promote the active photo to the cover (index 0).
+	function makeCover() {
+		if (state.active === 0 || !state.photos.length) { return; }
+		var p = state.photos.splice(state.active, 1)[0];
+		state.photos.unshift(p);
+		state.active = 0;
+		refreshPhotos();
+		scheduleSave();
+	}
+
+	// Bake photo i into a JPEG blob. withFilter bakes in its chosen filter (upload);
+	// without, it's the raw image (local draft storage keeps the filter separately).
+	function bakePhotoAt(i, withFilter) {
 		return new Promise(function (resolve) {
-			if (!state.photoImg) { resolve(null); return; }
+			var p = state.photos[i];
+			if (!p) { resolve(null); return; }
+			var scale = Math.min(1, MAX_DIM / Math.max(p.img.naturalWidth, p.img.naturalHeight));
 			var c = document.createElement('canvas');
-			c.width = canvas.width;
-			c.height = canvas.height;
+			c.width = Math.max(1, Math.round(p.img.naturalWidth * scale));
+			c.height = Math.max(1, Math.round(p.img.naturalHeight * scale));
 			var x = c.getContext('2d');
-			if ('filter' in x) { x.filter = FILTERS[state.filter]; } // no-op filter support on old Safari
-			x.drawImage(state.photoImg, 0, 0, c.width, c.height);
+			if (withFilter && 'filter' in x) { x.filter = FILTERS[p.filter]; }
+			x.drawImage(p.img, 0, 0, c.width, c.height);
 			c.toBlob(function (blob) { resolve(blob); }, 'image/jpeg', 0.9);
 		});
 	}
@@ -173,28 +253,24 @@
 
 	function newId() { return 'd' + Date.now() + '-' + Math.random().toString(36).slice(2, 8); }
 
-	// Unfiltered, downscaled JPEG of the current photo (or null).
-	function currentPhotoBlob() {
-		return new Promise(function (resolve) {
-			if (!state.photoImg || !canvas || canvas.classList.contains('pl-hidden')) { resolve(null); return; }
-			canvas.toBlob(function (b) { resolve(b); }, 'image/jpeg', 0.85);
-		});
-	}
-
 	function hasContent() {
-		return !!state.photoImg || $('#pl-title').value.trim() !== '' || $('#pl-body').value.trim() !== '';
+		return state.photos.length > 0 || $('#pl-title').value.trim() !== '' || $('#pl-body').value.trim() !== '';
 	}
 
-	function buildEntry(status, res) {
-		return currentPhotoBlob().then(function (photo) {
+	function buildEntry(status, res, id) {
+		// Store each photo's raw (unfiltered) blob plus its filter, so resuming a
+		// draft restores both the images and their chosen looks. `id` is captured
+		// by the caller so a later draftId reset can't corrupt the saved key.
+		return Promise.all(state.photos.map(function (p, i) {
+			return bakePhotoAt(i, false).then(function (blob) { return { blob: blob, filter: p.filter }; });
+		})).then(function (photos) {
 			return {
-				id: draftId,
+				id: id,
 				status: status,
 				wpStatus: status === 'sent' ? ((res && res.published) ? 'publish' : 'draft') : null,
 				title: $('#pl-title').value,
 				body: $('#pl-body').value,
-				filter: state.filter,
-				photo: photo,
+				photos: photos,
 				editLink: (res && res.edit_link) || '',
 				viewLink: (res && res.view_link) || '',
 				updatedAt: Date.now()
@@ -205,13 +281,13 @@
 	function saveDraft() {
 		if (!idbOK || !hasContent()) { return Promise.resolve(); }
 		if (!draftId) { draftId = newId(); }
-		return buildEntry('draft').then(dbPut).then(prune);
+		return buildEntry('draft', null, draftId).then(dbPut).then(prune);
 	}
 
 	function markSent(res) {
 		if (!idbOK) { return Promise.resolve(); }
 		if (!draftId) { draftId = newId(); }
-		return buildEntry('sent', res).then(dbPut).then(prune);
+		return buildEntry('sent', res, draftId).then(dbPut).then(prune);
 	}
 
 	function scheduleSave() {
@@ -241,24 +317,26 @@
 		$('#pl-title').value = entry.title || '';
 		$('#pl-body').value = entry.body || '';
 		state.transcript = entry.body || '';
-		if (entry.photo) {
-			var url = URL.createObjectURL(entry.photo);
-			var img = new Image();
-			img.onload = function () {
-				URL.revokeObjectURL(url);
-				canvas.width = img.naturalWidth;
-				canvas.height = img.naturalHeight;
-				cctx = canvas.getContext('2d');
-				cctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-				state.photoImg = img;
-				canvas.classList.remove('pl-hidden');
-				$('#pl-filters').classList.remove('pl-hidden');
-				$('#pl-photo-camera').innerHTML = '<span>🔄</span> Retake';
-				$('#pl-photo-library').innerHTML = '<span>🖼️</span> Replace';
-				applyFilter(entry.filter || 'none');
-				updateSubmit();
-			};
-			img.src = url;
+
+		// New drafts store a `photos` array; older ones a single `photo` + `filter`.
+		var photos = entry.photos;
+		if (!photos && entry.photo) { photos = [{ blob: entry.photo, filter: entry.filter || 'none' }]; }
+
+		if (photos && photos.length) {
+			var remaining = photos.length;
+			var done = function () { if (--remaining === 0) { state.active = 0; refreshPhotos(); updateSubmit(); } };
+			photos.forEach(function (pd) {
+				if (!pd || !pd.blob) { done(); return; }
+				var url = URL.createObjectURL(pd.blob);
+				var img = new Image();
+				img.onload = function () {
+					URL.revokeObjectURL(url);
+					state.photos.push({ img: img, filter: pd.filter || 'none' });
+					done();
+				};
+				img.onerror = function () { URL.revokeObjectURL(url); done(); };
+				img.src = url;
+			});
 		}
 		updateSubmit();
 		show('screen-capture');
@@ -286,8 +364,9 @@
 		var row = document.createElement('div');
 		row.className = 'pl-draft';
 
-		if (e.photo) {
-			var u = URL.createObjectURL(e.photo);
+		var thumbBlob = (e.photos && e.photos[0] && e.photos[0].blob) || e.photo || null;
+		if (thumbBlob) {
+			var u = URL.createObjectURL(thumbBlob);
 			thumbUrls.push(u);
 			var im = document.createElement('img');
 			im.className = 'pl-draft-thumb';
@@ -435,11 +514,11 @@
 		api('transcribe', { method: 'POST', body: fd }).then(function (res) {
 			state.transcript = res.text || '';
 			setStatus('Writing it up…', 'busy');
-			// Send the transcript + the photo (if any) so the model can use both.
+			// Send the transcript + the cover photo (first) so the model can use both.
 			var gfd = new FormData();
 			gfd.append('transcript', state.transcript);
-			if (state.photoImg) {
-				return bakePhoto().then(function (blob) {
+			if (state.photos.length) {
+				return bakePhotoAt(0, true).then(function (blob) {
 					if (blob) { gfd.append('image', blob, 'photo.jpg'); }
 					return api('generate', { method: 'POST', body: gfd });
 				});
@@ -476,7 +555,7 @@
 	// Step 3 is enabled only once the required steps are done.
 	function updateSubmit() {
 		var need = [];
-		if (!state.photoImg) { need.push('a photo'); }
+		if (!state.photos.length) { need.push('a photo'); }
 		if ($('#pl-body').value.trim().length === 0) { need.push('a story'); }
 
 		if (IS_ANON) {
@@ -515,12 +594,13 @@
 		btn.disabled = true;
 		btn.textContent = 'Submitting…';
 
-		// Bake the photo (with its chosen filter) into a JPEG for upload.
-		bakePhoto().then(function (blob) {
+		// Bake every photo (with its chosen filter) into JPEGs for upload. The
+		// first is the cover/featured image; the server sideloads them in order.
+		Promise.all(state.photos.map(function (p, i) { return bakePhotoAt(i, true); })).then(function (blobs) {
 			var fd = new FormData();
 			fd.append('title', $('#pl-title').value);
 			fd.append('body', $('#pl-body').value);
-			if (blob) { fd.append('image', blob, 'partyline.jpg'); }
+			blobs.forEach(function (blob, i) { if (blob) { fd.append('image_' + i, blob, 'partyline-' + i + '.jpg'); } });
 			// The raw dictation, so the notification email can show the original.
 			if (state.transcript) { fd.append('original', state.transcript); }
 			var imm = $('#pl-immediate'); // only present for editors/admins
@@ -553,11 +633,11 @@
 		releaseStream(); // leaving the capture flow — free the mic
 		releaseWakeLock();
 		draftId = null;
-		state = { photoImg: null, filter: 'none', transcript: '', title: '', body: '' };
+		state = { photos: [], active: 0, transcript: '', title: '', body: '' };
 		if (canvas) { canvas.classList.add('pl-hidden'); canvas.style.filter = ''; }
 		$('#pl-filters').classList.add('pl-hidden');
-		$('#pl-photo-camera').innerHTML = '<span>📷</span> Take photo';
-		$('#pl-photo-library').innerHTML = '<span>🖼️</span> Choose photo';
+		$('#pl-make-cover').classList.add('pl-hidden');
+		var strip = $('#pl-thumbs'); if (strip) { strip.innerHTML = ''; strip.classList.add('pl-hidden'); }
 		$('#pl-input-camera').value = '';
 		$('#pl-input-library').value = '';
 		$('#pl-title').value = '';
@@ -565,7 +645,6 @@
 		// Keep the contact fields (name/email/phone) — they persist for next time.
 		if (window.turnstile && CFG.turnstileKey) { try { window.turnstile.reset(); } catch (e) {} }
 		setStatus('Tap to dictate, or type it below.', null);
-		applyFilter('none');
 		updateSubmit();
 	}
 
@@ -636,9 +715,10 @@
 
 		$('#pl-photo-camera').addEventListener('click', function () { $('#pl-input-camera').click(); });
 		$('#pl-photo-library').addEventListener('click', function () { $('#pl-input-library').click(); });
-		function onPick(e) { if (e.target.files && e.target.files[0]) { handlePhotoFile(e.target.files[0]); } }
+		function onPick(e) { if (e.target.files && e.target.files.length) { addFiles(e.target.files); } e.target.value = ''; }
 		$('#pl-input-camera').addEventListener('change', onPick);
 		$('#pl-input-library').addEventListener('change', onPick);
+		$('#pl-make-cover').addEventListener('click', makeCover);
 
 		// Typing the story live-updates the submit gate.
 		$('#pl-body').addEventListener('input', function () { updateSubmit(); scheduleSave(); });

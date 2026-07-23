@@ -32,7 +32,7 @@ class Partyline_Pwa {
 	const APP_PATH = 'partyline';
 
 	/** Bump to invalidate the service-worker precache. */
-	const PWA_ASSET_VERSION = '22';
+	const PWA_ASSET_VERSION = '23';
 
 	/**
 	 * Register hooks. The contributor app is ON by default (see isEnabled), so
@@ -274,13 +274,13 @@ class Partyline_Pwa {
 		// --- CAPTURE (all steps on one screen) ---
 		echo '<section id="screen-capture" class="pl-screen pl-hidden">';
 
-		// Step 1 — photo
-		echo '<h2 class="pl-step"><span class="pl-stepnum">1</span> Take or upload a photo</h2>';
+		// Step 1 — photo(s)
+		echo '<h2 class="pl-step"><span class="pl-stepnum">1</span> Take or upload photos</h2>';
 		echo '<input id="pl-input-camera" type="file" accept="image/*" capture="environment" hidden>';
-		echo '<input id="pl-input-library" type="file" accept="image/*" hidden>';
+		echo '<input id="pl-input-library" type="file" accept="image/*" multiple hidden>';
 		echo '<div class="pl-photo-actions">';
 		echo '<button id="pl-photo-camera" class="pl-photo-btn2" type="button"><span>📷</span> Take photo</button>';
-		echo '<button id="pl-photo-library" class="pl-photo-btn2" type="button"><span>🖼️</span> Choose photo</button>';
+		echo '<button id="pl-photo-library" class="pl-photo-btn2" type="button"><span>🖼️</span> Choose photos</button>';
 		echo '</div>';
 		echo '<canvas id="pl-photo-canvas" class="pl-photo-canvas pl-hidden"></canvas>';
 		echo '<div id="pl-filters" class="pl-filters pl-hidden">';
@@ -290,6 +290,8 @@ class Partyline_Pwa {
 		echo '<button class="pl-chip" data-filter="cool" type="button">Cool</button>';
 		echo '<button class="pl-chip" data-filter="vivid" type="button">Vivid</button>';
 		echo '</div>';
+		echo '<button id="pl-make-cover" class="pl-cover-btn pl-hidden" type="button">&#9733; Make this the cover</button>';
+		echo '<div id="pl-thumbs" class="pl-thumbs pl-hidden"></div>';
 
 		// Step 2 — story
 		echo '<h2 class="pl-step"><span class="pl-stepnum">2</span> Tell the story</h2>';
@@ -961,7 +963,20 @@ JS;
 
 		$title     = sanitize_text_field( trim( (string) $request->get_param( 'title' ) ) );
 		$body      = wp_kses_post( trim( (string) $request->get_param( 'body' ) ) );
-		$has_image = ! empty( $_FILES['image'] ) && ! empty( $_FILES['image']['name'] );
+
+		// Photos arrive as image_0, image_1, ... (plus a legacy single "image").
+		// Gather the field names that actually carry an uploaded file.
+		$image_fields = array();
+		if ( ! empty( $_FILES['image'] ) && ! empty( $_FILES['image']['name'] ) ) {
+			$image_fields[] = 'image';
+		}
+		for ( $i = 0; $i < 12; $i++ ) {
+			$fk = 'image_' . $i;
+			if ( ! empty( $_FILES[ $fk ] ) && ! empty( $_FILES[ $fk ]['name'] ) ) {
+				$image_fields[] = $fk;
+			}
+		}
+		$has_image = ! empty( $image_fields );
 
 		$submitter = null;
 		if ( $anon ) {
@@ -1027,27 +1042,29 @@ JS;
 		$immediate = ! empty( $immediate ) && 'false' !== $immediate && '0' !== $immediate;
 		$publish   = $immediate && current_user_can( 'edit_others_posts' );
 
-		$attachment_id = 0;
-		if ( $has_image ) {
-			$attachment_id = self::handleImageUpload( 'image' );
-			if ( is_wp_error( $attachment_id ) ) {
-				return $attachment_id;
+		// Sideload every photo in order. The first becomes the featured image.
+		$attachment_ids = array();
+		foreach ( $image_fields as $fk ) {
+			$aid = self::handleImageUpload( $fk );
+			if ( is_wp_error( $aid ) ) {
+				return $aid;
 			}
+			$attachment_ids[] = (int) $aid;
 		}
 
 		// Raw dictation/typed text as originally sent (shown in the notification email).
 		$original = sanitize_textarea_field( (string) $request->get_param( 'original' ) );
 
 		$post_id = self::createPost( array(
-			'title'         => '' !== $title ? $title : Partyline_Core::DEFAULT_TITLE,
-			'body'          => $body,
-			'attachment_id' => $attachment_id,
-			'author_id'     => $author_id,
-			'author_name'   => $author_name,
-			'from'          => $from,
-			'status'        => $publish ? 'publish' : 'draft',
-			'submitter'     => $submitter,
-			'original'      => $original,
+			'title'          => '' !== $title ? $title : Partyline_Core::DEFAULT_TITLE,
+			'body'           => $body,
+			'attachment_ids' => $attachment_ids,
+			'author_id'      => $author_id,
+			'author_name'    => $author_name,
+			'from'           => $from,
+			'status'         => $publish ? 'publish' : 'draft',
+			'submitter'      => $submitter,
+			'original'       => $original,
 		) );
 
 		if ( is_wp_error( $post_id ) ) {
@@ -1115,15 +1132,24 @@ JS;
 
 		$title         = isset( $args['title'] ) ? $args['title'] : Partyline_Core::DEFAULT_TITLE;
 		$body          = isset( $args['body'] ) ? $args['body'] : '';
-		$attachment_id = isset( $args['attachment_id'] ) ? (int) $args['attachment_id'] : 0;
 		$author_id     = isset( $args['author_id'] ) ? (int) $args['author_id'] : 1;
 		$author_name   = isset( $args['author_name'] ) ? $args['author_name'] : 'Anonymous Partyliner';
 		$from          = isset( $args['from'] ) ? $args['from'] : $author_name;
 		$status        = ( isset( $args['status'] ) && 'publish' === $args['status'] ) ? 'publish' : 'draft';
 
+		// Accept a list of attachments (first is the featured image), with
+		//  back-compat for a single 'attachment_id'.
+		$attachment_ids = array();
+		if ( ! empty( $args['attachment_ids'] ) && is_array( $args['attachment_ids'] ) ) {
+			$attachment_ids = array_values( array_filter( array_map( 'intval', $args['attachment_ids'] ) ) );
+		} elseif ( ! empty( $args['attachment_id'] ) ) {
+			$attachment_ids = array( (int) $args['attachment_id'] );
+		}
+		$featured_id = ! empty( $attachment_ids ) ? $attachment_ids[0] : 0;
+
 		$post_content = '';
-		if ( $attachment_id ) {
-			$post_content .= wp_get_attachment_image( $attachment_id, 'full' );
+		foreach ( $attachment_ids as $aid ) {
+			$post_content .= wp_get_attachment_image( $aid, 'full' );
 		}
 		$post_content .= wpautop( $body );
 		$post_content .= '<p><em>Submitted by ' . esc_html( $author_name ) . '</em></p>';
@@ -1143,9 +1169,11 @@ JS;
 		// Mark this as a Partyline submission so the publish notifier can find it.
 		update_post_meta( $post_id, '_partyline_submission', 1 );
 
-		if ( $attachment_id ) {
-			set_post_thumbnail( $post_id, $attachment_id );
-			wp_update_post( array( 'ID' => $attachment_id, 'post_parent' => $post_id ) );
+		if ( $featured_id ) {
+			set_post_thumbnail( $post_id, $featured_id );
+		}
+		foreach ( $attachment_ids as $aid ) {
+			wp_update_post( array( 'ID' => $aid, 'post_parent' => $post_id ) );
 		}
 
 		// Hold onto anonymous submitters' contact info for follow-up.
@@ -1166,7 +1194,7 @@ JS;
 			'title'         => $title,
 			'description'   => $body,
 			'original'      => isset( $args['original'] ) ? $args['original'] : '',
-			'attachment_id' => $attachment_id,
+			'attachment_id' => $featured_id,
 			'phone'         => $submitter_phone,
 		) );
 
