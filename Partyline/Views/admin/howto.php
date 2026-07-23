@@ -228,7 +228,10 @@ $settings_admin    = admin_url( 'admin.php?page=Partyline-Settings' );
       <div class="plg-faq">
         <details>
           <summary>Do people need an account to submit?</summary>
-          <div class="a"><p>It depends on your setup. The contributor app works for logged-in users out of the box. If you turn on <strong>Allow anonymous submissions</strong> in Settings, anyone can submit without an account. If anonymous submissions are off, a logged-out visitor who opens the app is simply sent to the login screen.</p></div>
+          <div class="a">
+            <p>It depends on your setup. The contributor app works for logged-in users out of the box. If you turn on <strong>Allow anonymous submissions</strong> in Settings, anyone can submit without an account. If anonymous submissions are off, a logged-out visitor who opens the app is simply sent to the login screen.</p>
+            <p><strong>To set someone up with a Partyliner account</strong>, you have three options: open the <a href="<?php echo esc_url( $partyliners_admin ); ?>">Partyliners</a> page and use <em>Add a Partyliner</em> (just their name, phone, and email); turn on <strong>Public Partyliner signup</strong> in <a href="<?php echo esc_url( $settings_admin ); ?>">Settings</a> so readers can register themselves; or add them the usual WordPress way under <strong>Users &rarr; Add New</strong>. However they&rsquo;re created, their phone number is what links a text message back to their account.</p>
+          </div>
         </details>
         <details>
           <summary>What&rsquo;s the difference between a logged-in and an anonymous submission?</summary>
@@ -236,7 +239,10 @@ $settings_admin    = admin_url( 'admin.php?page=Partyline-Settings' );
         </details>
         <details>
           <summary>How do texters (SMS) fit in?</summary>
-          <div class="a"><p>If you enable <strong>Text Messages</strong>, people can send a photo and a note by text. Partyline matches the sender&rsquo;s phone number to a registered Partyliner (see the <a href="<?php echo esc_url( $partyliners_admin ); ?>">Partyliners</a> page). If it&rsquo;s a number you don&rsquo;t recognize, the post simply comes in credited as &ldquo;Anonymous Partyliner.&rdquo;</p></div>
+          <div class="a">
+            <p>If you enable <strong>Text Messages</strong>, people can send a photo and a note by text. Partyline matches the sender&rsquo;s phone number to a registered Partyliner (see the <a href="<?php echo esc_url( $partyliners_admin ); ?>">Partyliners</a> page). If it&rsquo;s a number you don&rsquo;t recognize, the post simply comes in credited as &ldquo;Anonymous Partyliner.&rdquo;</p>
+            <p><strong>Texting runs on Twilio</strong>, so it does take a little setup: you&rsquo;ll need a <a href="https://twilio.com" target="_blank" rel="noopener">Twilio</a> account and a Twilio phone number for people to text. Then, in <a href="<?php echo esc_url( $settings_admin ); ?>">Settings &rarr; Text Messages</a>, turn on Twilio and paste in your <strong>Account SID</strong> and <strong>Auth Token</strong> (both from your Twilio Console). Finally, copy the <strong>webhook URL</strong> Partyline shows you and set it as the messaging webhook on your Twilio number, so incoming texts are handed off to Partyline. The app and public signup need none of this &mdash; Twilio is only for the text-message channel.</p>
+          </div>
         </details>
         <details>
           <summary>Someone submitted anonymously but they&rsquo;re actually a registered Partyliner. What happens?</summary>
@@ -256,7 +262,7 @@ $settings_admin    = admin_url( 'admin.php?page=Partyline-Settings' );
         </details>
         <details>
           <summary>Where do submissions show up, and how will I know?</summary>
-          <div class="a"><p>They appear on the <strong>Partyline</strong> screen (your newsroom inbox), newest first. You&rsquo;ll also get an email notification at whatever addresses you set under <strong>General Settings &rarr; Email Notifications</strong>.</p></div>
+          <div class="a"><p>They appear on the <strong>Partyline</strong> screen (your newsroom inbox), newest first. They also show up right in your normal WordPress <strong>Posts</strong> list as drafts &mdash; so you can review, edit, and publish them wherever you already work. And you&rsquo;ll get an email notification at whatever addresses you set under <strong>General Settings &rarr; Email Notifications</strong>.</p></div>
         </details>
         <details>
           <summary>What happens to the author when I publish?</summary>
@@ -276,7 +282,7 @@ $settings_admin    = admin_url( 'admin.php?page=Partyline-Settings' );
         </details>
         <details>
           <summary>What if I get flooded with submissions?</summary>
-          <div class="a"><p>In practice it&rsquo;s a steady, manageable stream rather than a firehose &mdash; and since you publish only what you want, volume is never really the problem. Treat what comes in as raw material and run what&rsquo;s good.</p></div>
+          <div class="a"><p>Honestly? You probably won&rsquo;t &mdash; and if anything, the opposite is the real work. A healthy flow of Partylines is something you have to actively <em>grow</em> (that&rsquo;s what <a href="#plg-success">Making it successful</a> is all about), so a day with &ldquo;too many submissions&rdquo; would be a genuinely good problem to have. And because everything arrives as a draft, even a busy day just means more good stuff to pick from.</p></div>
         </details>
         <details>
           <summary>Can I edit a submission before it runs?</summary>
