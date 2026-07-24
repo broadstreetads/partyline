@@ -1,4 +1,4 @@
-=== Partyline ===
+=== Partyline: Reader-Submitted Stories for Local News and Magazines ===
 Contributors: katzgrau, broadstreetads
 Tags: community, local news, ai, sms, user generated content
 Requires at least: 5.0

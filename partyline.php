@@ -1,6 +1,6 @@
 <?php
 /*
-Plugin Name: Partyline: Reader-Submitted Stories for Local News and Magazines
+Plugin Name: Partyline
 Plugin URI:  https://github.com/broadstreetads/partyline
 Description: Let your community submit local news, a photo and a story, through an installable web app or by text message (Twilio), optionally polished with AI and saved as WordPress drafts.
 Version:     1.3.0
