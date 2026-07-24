@@ -179,10 +179,36 @@ class Partyline_Pwa {
 		exit;
 	}
 
+	/** Home screen for a logged-out visitor who can't submit anonymously: an
+	 *  "Apply for Partyline" call to action, plus a log-in link for existing
+	 *  Partyliners. */
+	private static function serveLoggedOutHome() {
+		status_header( 200 );
+		nocache_headers();
+		header( 'Content-Type: text/html; charset=utf-8' );
+
+		$b  = '<section class="pl-screen">';
+		$b .= '<div class="pl-hero"><h1>' . esc_html( self::homeTitle() ) . '</h1>';
+		$b .= '<p>Partyliners send in local stories and photos. Apply to join, or log in if you already have an account.</p></div>';
+		$b .= '<div class="pl-actions">';
+		$b .= '<a class="pl-btn pl-btn--primary" href="' . esc_url( self::applyUrl() ) . '">Apply for Partyline</a>';
+		$b .= '<a class="pl-btn pl-btn--ghost" href="' . esc_url( wp_login_url( self::appUrl() ) ) . '">Log in</a>';
+		$b .= '</div>';
+		$b .= '</section>';
+
+		echo self::renderPage( $b );
+	}
+
 	/** The app shell HTML. Logged-in gets the full app; anonymous (if allowed) a lighter one. */
 	public static function serveShell() {
 		$logged_in = is_user_logged_in();
 		if ( ! $logged_in && ! self::allowAnonymous() ) {
+			// No anonymous submissions: if applications are open, show the
+			// "Apply for Partyline" landing; otherwise send them to log in.
+			if ( self::applyEnabled() ) {
+				self::serveLoggedOutHome();
+				return;
+			}
 			wp_safe_redirect( wp_login_url( self::appUrl() ) );
 			exit;
 		}
