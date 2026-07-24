@@ -3,7 +3,7 @@ Contributors: katzgrau, broadstreetads
 Tags: community, local news, ai, sms, user generated content
 Requires at least: 5.0
 Tested up to: 7.0
-Stable tag: 1.2.5
+Stable tag: 1.3.0
 License: GPLv2
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -92,15 +92,18 @@ Optional. Used to verify that anonymous submissions and public applications come
 
 == Changelog ==
 
-= 1.2.5 =
+= 1.3.0 =
 * FEATURE: Contributor app (PWA), an installable web app where people submit a photo and a story from their phone; now the primary way to collect Partylines, with SMS/Twilio as an optional secondary channel
+* FEATURE: Multiple photos per Partyline in the app; the first is the cover (featured image), and the AI write-up looks at the cover photo
 * FEATURE: Optional anonymous submissions, protected by a built-in math challenge and honeypot (with optional Cloudflare Turnstile for stronger protection)
 * FEATURE: Optional voice dictation (OpenAI Whisper) and an AI write-up of the photo and story in the app
-* FEATURE: Public Partyliner application page (confirmed by email) plus a dedicated Partyline > Partyliners management screen
+* FEATURE: Public "apply to be a Partyliner" page (confirmed by email) plus a dedicated Partyline > Partyliners management screen
+* FEATURE: New Partyliners get a welcome email with how-to instructions; hand-added Partyliners get a link to set their password, and admins can resend one from the Partyliners screen
 * FEATURE: When a Partyline is published, it is attributed to the registered Partyliner and they are emailed that it is live
 * ENHANCEMENT: Phone numbers are normalized to E.164 so text messages reliably match a Partyliner
 * ENHANCEMENT: Redesigned admin screens and an in-plugin How-To guide
 * ENHANCEMENT: The app title, home-screen text, and icon follow your site (site title and Site Icon)
+* ENHANCEMENT: Refreshed the plugin icon and banner
 
 = 1.2.2 =
 * ENHANCEMENT: Removed the unused bundled Broadstreet API client (eliminates direct cURL usage and `Broadstreet*` class names)
