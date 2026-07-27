@@ -3,7 +3,7 @@ Contributors: katzgrau, broadstreetads
 Tags: community, local news, ai, sms, user generated content
 Requires at least: 5.0
 Tested up to: 7.0
-Stable tag: 1.3.0
+Stable tag: 1.3.1
 License: GPLv2
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -91,6 +91,10 @@ Optional. Used to verify that anonymous submissions and public applications come
 4. An example of a post created by Partyline.
 
 == Changelog ==
+
+= 1.3.1 =
+* ENHANCEMENT: When public applications are open, logged-out visitors get an "Apply to Partyline" home screen (with a log-in link for existing Partyliners) instead of an immediate login redirect
+* ENHANCEMENT: Refreshed the plugin banner
 
 = 1.3.0 =
 * FEATURE: Contributor app (PWA), an installable web app where people submit a photo and a story from their phone; now the primary way to collect Partylines, with SMS/Twilio as an optional secondary channel
