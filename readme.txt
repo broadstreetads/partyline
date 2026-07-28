@@ -3,7 +3,7 @@ Contributors: katzgrau, broadstreetads
 Tags: community, local news, ai, sms, user generated content
 Requires at least: 5.0
 Tested up to: 7.0
-Stable tag: 1.3.1
+Stable tag: 1.3.2
 License: GPLv2
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -91,6 +91,9 @@ Optional. Used to verify that anonymous submissions and public applications come
 4. An example of a post created by Partyline.
 
 == Changelog ==
+
+= 1.3.2 =
+* Refreshed the plugin banner artwork and noted in the description that Partyline is free and open source
 
 = 1.3.1 =
 * ENHANCEMENT: When public applications are open, logged-out visitors get an "Apply to Partyline" home screen (with a log-in link for existing Partyliners) instead of an immediate login redirect
