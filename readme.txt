@@ -11,11 +11,11 @@ Local news is the original social media. Let your community share and tell its s
 
 == Description ==
 
-Partyline is a WordPress plugin that lets anyone in your community send in a story, a tip, a moment, or just a cute dog photo. They can submit right from an installable app on their phone, or by text message via Twilio. Partyline optionally gives submissions a quick AI polish using OpenAI, and creates a draft post in your WordPress dashboard for you to review.
+Partyline is a free, open source WordPress plugin that lets anyone in your community send in a story, a tip, a moment, or just a cute dog photo. They can submit right from an installable app on their phone, or by text message via Twilio. Partyline optionally gives submissions a quick AI polish using OpenAI, and creates a draft post in your WordPress dashboard for you to review.
 
 It’s the fastest way to turn real, spontaneous contributions into published content. Whether it’s breaking news or just something unexpected and delightful, Partyline brings your readers into the newsroom.
 
-Made for local publishers who are short on time but big on community.
+Made for local publishers who are short on time but big on community. Partyline is free and open source, released under the GPL.
 
 **Top 10 Uses for Partyline**
 *A lovingly curated list from experience, originally shared with LINA Publishers in Australia*
