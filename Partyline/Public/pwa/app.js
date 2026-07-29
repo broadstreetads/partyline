@@ -62,7 +62,8 @@
 	/* --------------------------------------------------------------- */
 	// Photos: an array of { img: Image, filter: string }. The FIRST is the cover
 	// (featured image + the one the AI looks at). `active` is the previewed photo.
-	var state = { photos: [], active: 0, transcript: '', title: '', body: '' };
+	// `video` is an optional File (only when the server supports video).
+	var state = { photos: [], active: 0, video: null, transcript: '', title: '', body: '' };
 
 	var FILTERS = {
 		none:  'none',
@@ -210,6 +211,57 @@
 			x.drawImage(p.img, 0, 0, c.width, c.height);
 			c.toBlob(function (blob) { resolve(blob); }, 'image/jpeg', 0.9);
 		});
+	}
+
+	/* --------------------------------------------------------------- */
+	/* Optional video: pick, size-check against the server limit        */
+	/* --------------------------------------------------------------- */
+	function fmtMB(bytes) { return (bytes / 1048576).toFixed(1) + ' MB'; }
+
+	function renderVideoChip() {
+		var chip = $('#pl-video-chip');
+		if (!chip) { return; }
+		if (!state.video) { chip.className = 'pl-video-chip pl-hidden'; chip.innerHTML = ''; return; }
+		var big = CFG.videoWarnBytes && state.video.size > CFG.videoWarnBytes;
+		chip.className = 'pl-video-chip' + (big ? ' is-warn' : '');
+		var text = (big ? '⚠️ ' : '🎬 ') + state.video.name + ' — ' + fmtMB(state.video.size);
+		if (big) { text += '. Large clips upload slowly and may time out; a shorter one (under ' + fmtMB(CFG.videoWarnBytes) + ') is recommended.'; }
+		chip.innerHTML = '';
+		var span = document.createElement('span'); span.className = 'pl-video-name'; span.textContent = text;
+		var del = document.createElement('button'); del.type = 'button'; del.className = 'pl-video-del';
+		del.setAttribute('aria-label', 'Remove video'); del.textContent = '✕';
+		del.addEventListener('click', clearVideo);
+		chip.appendChild(span); chip.appendChild(del);
+	}
+
+	function clearVideo() {
+		state.video = null;
+		var inp = $('#pl-input-video'); if (inp) { inp.value = ''; }
+		renderVideoChip();
+		updateSubmit();
+	}
+
+	function onVideoPick(e) {
+		var f = e.target.files && e.target.files[0];
+		e.target.value = '';
+		var chip = $('#pl-video-chip');
+		if (!f) { return; }
+		if (f.type.indexOf('video/') !== 0) {
+			state.video = null;
+			if (chip) { chip.className = 'pl-video-chip is-error'; chip.textContent = 'That file isn’t a video.'; }
+			updateSubmit();
+			return;
+		}
+		// Over the hard server upload limit: this would just fail, so refuse it.
+		if (CFG.videoMaxBytes && f.size > CFG.videoMaxBytes) {
+			state.video = null;
+			if (chip) { chip.className = 'pl-video-chip is-error'; chip.textContent = 'This video is ' + fmtMB(f.size) + ', over the ' + fmtMB(CFG.videoMaxBytes) + ' upload limit. Please choose a shorter clip.'; }
+			updateSubmit();
+			return;
+		}
+		state.video = f;
+		renderVideoChip();
+		updateSubmit();
 	}
 
 	/* --------------------------------------------------------------- */
@@ -555,7 +607,7 @@
 	// Step 3 is enabled only once the required steps are done.
 	function updateSubmit() {
 		var need = [];
-		if (!state.photos.length) { need.push('a photo'); }
+		if (!state.photos.length && !state.video) { need.push('a photo or video'); }
 		if ($('#pl-body').value.trim().length === 0) { need.push('a story'); }
 
 		if (IS_ANON) {
@@ -601,6 +653,7 @@
 			fd.append('title', $('#pl-title').value);
 			fd.append('body', $('#pl-body').value);
 			blobs.forEach(function (blob, i) { if (blob) { fd.append('image_' + i, blob, 'partyline-' + i + '.jpg'); } });
+			if (state.video) { fd.append('video', state.video, state.video.name || 'video'); }
 			// The raw dictation, so the notification email can show the original.
 			if (state.transcript) { fd.append('original', state.transcript); }
 			var imm = $('#pl-immediate'); // only present for editors/admins
@@ -633,11 +686,13 @@
 		releaseStream(); // leaving the capture flow — free the mic
 		releaseWakeLock();
 		draftId = null;
-		state = { photos: [], active: 0, transcript: '', title: '', body: '' };
+		state = { photos: [], active: 0, video: null, transcript: '', title: '', body: '' };
 		if (canvas) { canvas.classList.add('pl-hidden'); canvas.style.filter = ''; }
 		$('#pl-filters').classList.add('pl-hidden');
 		$('#pl-make-cover').classList.add('pl-hidden');
 		var strip = $('#pl-thumbs'); if (strip) { strip.innerHTML = ''; strip.classList.add('pl-hidden'); }
+		var vin = $('#pl-input-video'); if (vin) { vin.value = ''; }
+		renderVideoChip();
 		$('#pl-input-camera').value = '';
 		$('#pl-input-library').value = '';
 		$('#pl-title').value = '';
@@ -719,6 +774,12 @@
 		$('#pl-input-camera').addEventListener('change', onPick);
 		$('#pl-input-library').addEventListener('change', onPick);
 		$('#pl-make-cover').addEventListener('click', makeCover);
+		// Optional video picker (only present when the server supports video).
+		var vbtn = $('#pl-video-btn'), vinput = $('#pl-input-video');
+		if (vbtn && vinput) {
+			vbtn.addEventListener('click', function () { vinput.click(); });
+			vinput.addEventListener('change', onVideoPick);
+		}
 
 		// Typing the story live-updates the submit gate.
 		$('#pl-body').addEventListener('input', function () { updateSubmit(); scheduleSave(); });

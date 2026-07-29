@@ -16,6 +16,7 @@ require_once dirname(__FILE__) . '/Benchmark.php';
 require_once dirname(__FILE__) . '/Log.php';
 require_once dirname(__FILE__) . '/Twilio.php';
 require_once dirname(__FILE__) . '/Utility.php';
+require_once dirname(__FILE__) . '/Video.php';
 require_once dirname(__FILE__) . '/View.php';
 require_once dirname(__FILE__) . '/Exception.php';
 require_once dirname(__FILE__) . '/Pwa.php';

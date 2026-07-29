@@ -203,6 +203,17 @@ html, body {
 .pl-cover-btn { display: inline-block; margin-top: 10px; padding: 7px 12px; border: 1px solid #e5e7eb;
 	border-radius: 999px; background: #fff; color: var(--ink); font-size: 13px; font-weight: 700; cursor: pointer; }
 
+/* Optional video */
+.pl-video-btn { width: 100%; margin-top: 12px; aspect-ratio: auto; flex-direction: row; padding: 16px; }
+.pl-video-note { margin-top: 8px; }
+.pl-video-chip { margin-top: 10px; padding: 12px 14px; border-radius: 12px; border: 1px solid #e5e7eb;
+	background: #fafafa; font-size: 14px; color: var(--ink); display: flex; align-items: center; gap: 10px; }
+.pl-video-chip.is-warn  { background: #fff7ed; border-color: #fdba74; color: #9a3412; }
+.pl-video-chip.is-error { background: #fdecec; border-color: #f3bcbc; color: #b32020; }
+.pl-video-chip .pl-video-name { flex: 1 1 auto; line-height: 1.4; word-break: break-word; }
+.pl-video-chip .pl-video-del { flex: 0 0 auto; border: none; background: rgba(0,0,0,0.55); color: #fff;
+	width: 22px; height: 22px; border-radius: 50%; font-size: 13px; line-height: 22px; text-align: center; cursor: pointer; padding: 0; }
+
 /* Record */
 .pl-record { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 8px 0; }
 .pl-recbtn {
