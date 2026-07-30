@@ -479,14 +479,25 @@ JS;
 
 	/** Wrap body HTML in a minimal, app-styled standalone page. */
 	private static function renderPage( $body ) {
-		$css  = esc_url( self::assetUrl( 'app.css' ) ) . '?v=' . self::PWA_ASSET_VERSION;
-		$icon = esc_url( self::iconUrl( 192, 'icons/icon-192.png' ) );
+		$css      = esc_url( self::assetUrl( 'app.css' ) ) . '?v=' . self::PWA_ASSET_VERSION;
+		$icon     = esc_url( self::iconUrl( 192, 'icons/icon-192.png' ) );
+		$apple    = esc_url( self::iconUrl( 180, 'icons/icon-180.png' ) );
+		$manifest = esc_url( self::appUrl( 'manifest.webmanifest' ) );
 		$settings      = Partyline_Utility::getSettings();
 		$turnstile_key = isset( $settings->turnstile_site_key ) ? trim( $settings->turnstile_site_key ) : '';
 
 		$html  = '<!doctype html><html lang="en"><head><meta charset="utf-8">';
 		$html .= '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">';
 		$html .= '<title>' . esc_html( self::appTitle() ) . '</title><meta name="theme-color" content="#18181b">';
+		// Advertise the icon + manifest on every entry point (not just the full
+		//  app shell), so iOS "Add to Home Screen" always uses the site icon —
+		//  even from the logged-out landing / apply pages, where Safari's cookie
+		//  jar often isn't logged in.
+		$html .= '<link rel="manifest" href="' . $manifest . '">';
+		$html .= '<meta name="mobile-web-app-capable" content="yes">';
+		$html .= '<meta name="apple-mobile-web-app-capable" content="yes">';
+		$html .= '<meta name="apple-mobile-web-app-title" content="Partyline">';
+		$html .= '<link rel="apple-touch-icon" href="' . $apple . '">';
 		$html .= '<link rel="icon" href="' . $icon . '"><link rel="stylesheet" href="' . $css . '">';
 		if ( $turnstile_key ) {
 			$html .= '<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>';
