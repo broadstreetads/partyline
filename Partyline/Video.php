@@ -66,6 +66,22 @@ class Partyline_Video {
 		return ! empty( $s->video_enabled );
 	}
 
+	/**
+	 * Whether the CURRENT user may attach a video. Feature must be active, and
+	 * when the "editors only" setting is on, the user needs edit_others_posts
+	 * (editors/admins) — which anonymous submitters never have.
+	 */
+	public static function userCanUpload() {
+		if ( ! self::isActive() ) {
+			return false;
+		}
+		$s = Partyline_Utility::getSettings();
+		if ( ! empty( $s->video_restrict ) ) {
+			return current_user_can( 'edit_others_posts' );
+		}
+		return true;
+	}
+
 	/** Is PHP allowed to run external processes? */
 	public static function canExec() {
 		if ( ! function_exists( 'proc_open' ) || ! function_exists( 'exec' ) ) {

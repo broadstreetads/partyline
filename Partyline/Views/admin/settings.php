@@ -103,6 +103,10 @@ $loader          = esc_url( Partyline_Utility::getImageBaseURL() . 'ajax-loader-
           <input type="checkbox" x-model="settings.video_enabled" <?php echo Partyline_Video::isSupported() ? '' : 'disabled'; ?>>
           Allow video uploads
         </label>
+        <label class="plg-check" style="margin-top:10px;" x-show="settings.video_enabled">
+          <input type="checkbox" x-model="settings.video_restrict">
+          Only editors and administrators can attach video
+        </label>
       </div>
 
       <div class="plg-field">

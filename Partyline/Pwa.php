@@ -238,7 +238,7 @@ class Partyline_Pwa {
 			'anon'         => $anon,
 			'turnstileKey' => $turnstile_key,
 			'mathToken'    => $challenge['token'],
-			'videoSupported' => Partyline_Video::isActive(),
+			'videoSupported' => Partyline_Video::userCanUpload(),
 			'videoMaxBytes'  => Partyline_Video::uploadLimitBytes(),      // hard limit; over this the upload fails
 			'videoWarnBytes' => Partyline_Video::recommendedMaxBytes(),   // conservative; over this we warn
 			'videoMaxSeconds' => Partyline_Video::recommendedMaxSeconds(), // friendly duration guidance
@@ -323,8 +323,8 @@ class Partyline_Pwa {
 		echo '<button id="pl-make-cover" class="pl-cover-btn pl-hidden" type="button">&#9733; Make this the cover</button>';
 		echo '<div id="pl-thumbs" class="pl-thumbs pl-hidden"></div>';
 
-		// Optional video — only when the server supports it AND it's switched on.
-		if ( Partyline_Video::isActive() ) {
+		// Optional video — only when active AND this user is allowed to attach one.
+		if ( Partyline_Video::userCanUpload() ) {
 			$max_secs = Partyline_Video::recommendedMaxSeconds();
 			echo '<input id="pl-input-video" type="file" accept="video/*" hidden>';
 			echo '<button id="pl-video-btn" class="pl-photo-btn2 pl-video-btn" type="button"><span>🎬</span> Add a video</button>';
@@ -1095,7 +1095,7 @@ JS;
 		//  the feature is switched on and the server can process it. A staging
 		//  failure is non-fatal — the rest of the submission still goes through.
 		$video = null;
-		if ( Partyline_Video::isActive() && ! empty( $_FILES['video'] ) && ! empty( $_FILES['video']['name'] ) ) {
+		if ( Partyline_Video::userCanUpload() && ! empty( $_FILES['video'] ) && ! empty( $_FILES['video']['name'] ) ) {
 			$staged = Partyline_Video::stageUpload( 'video' );
 			if ( is_wp_error( $staged ) ) {
 				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
