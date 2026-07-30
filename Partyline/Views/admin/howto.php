@@ -82,6 +82,11 @@ $settings_admin    = admin_url( 'admin.php?page=Partyline-Settings' );
 .plg-faq .a p { font-size:14.5px; line-height:1.65; color:#3f3f46; margin:0 0 10px; }
 .plg-faq .a p:last-child { margin-bottom:0; }
 
+.plg-video { padding:0; background:var(--ink); }
+.plg-video .frame { position:relative; width:100%; padding-top:56.25%; background:#000; }
+.plg-video .frame iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
+.plg-video .cap { padding:15px 22px; text-align:center; font-size:13.5px; line-height:1.55; color:#cbd5e1; }
+
 .plg-tag { text-align:center; font-weight:800; letter-spacing:.22em; font-size:15px; color:#fff; padding:24px; background:var(--ink); }
 .plg-footer { text-align:center; padding:20px; font-size:13px; color:var(--muted); }
 
@@ -96,7 +101,15 @@ $settings_admin    = admin_url( 'admin.php?page=Partyline-Settings' );
       <p class="plg-lead">The community-powered newsroom. Here&rsquo;s what it is, where it came from, and how to make it thrive in your town.</p>
     </header>
 
+    <section id="plg-watch" class="plg-video">
+      <div class="frame">
+        <iframe src="https://www.youtube-nocookie.com/embed/f4vUM_DGjPM" title="Partyline: an explainer and how-to from Kenny Katzgrau" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+      </div>
+      <div class="cap">A quick explainer and how-to from Kenny Katzgrau, publisher of redbankgreen and creator of Partyline.</div>
+    </section>
+
     <nav class="plg-toc">
+      <a href="#plg-watch">Watch first</a>
       <a href="#plg-what">What it is</a>
       <a href="#plg-history">History</a>
       <a href="#plg-uses">Top 10 uses</a>

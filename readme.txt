@@ -11,6 +11,10 @@ Local news is the original social media. Let your community share and tell its s
 
 == Description ==
 
+**New here? Watch the explainer and how-to:** https://youtu.be/f4vUM_DGjPM — a quick walkthrough from Kenny Katzgrau, publisher of redbankgreen and creator of Partyline.
+
+[youtube https://youtu.be/f4vUM_DGjPM]
+
 Partyline is a free, open source WordPress plugin that lets anyone in your community send in a story, a tip, a moment, or just a cute dog photo. They can submit right from an installable app on their phone, or by text message via Twilio. Partyline optionally gives submissions a quick AI polish using OpenAI, and creates a draft post in your WordPress dashboard for you to review.
 
 It’s the fastest way to turn real, spontaneous contributions into published content. Whether it’s breaking news or just something unexpected and delightful, Partyline brings your readers into the newsroom.
