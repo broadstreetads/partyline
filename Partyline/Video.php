@@ -332,24 +332,21 @@ class Partyline_Video {
 		return true;
 	}
 
-	/** Grab a single poster frame (~1s in, falling back to the first frame). */
+	/** Grab the very first frame of the video as the poster / preview image. */
 	private static function poster( $mp4, $jpg ) {
 		$ffmpeg = self::binPath( 'ffmpeg' );
 		if ( '' === $ffmpeg ) {
 			return false;
 		}
-		foreach ( array( '1', '0' ) as $ss ) {
-			$cmd = escapeshellarg( $ffmpeg )
-				. ' -y -loglevel error -ss ' . $ss . ' -i ' . escapeshellarg( $mp4 )
-				. ' -frames:v 1 -q:v 3 ' . escapeshellarg( $jpg ) . ' 2>&1';
-			$o  = array();
-			$rc = 1;
-			@exec( $cmd, $o, $rc );
-			if ( 0 === $rc && file_exists( $jpg ) && filesize( $jpg ) > 0 ) {
-				return true;
-			}
-		}
-		return false;
+		// No -ss: decode from the start and take frame 0, so the preview image
+		// is exactly what the contributor pointed at when they hit record.
+		$cmd = escapeshellarg( $ffmpeg )
+			. ' -y -loglevel error -i ' . escapeshellarg( $mp4 )
+			. ' -frames:v 1 -q:v 3 ' . escapeshellarg( $jpg ) . ' 2>&1';
+		$o  = array();
+		$rc = 1;
+		@exec( $cmd, $o, $rc );
+		return ( 0 === $rc && file_exists( $jpg ) && filesize( $jpg ) > 0 );
 	}
 
 	/** Copy a staged file and hand the copy to media_handle_sideload. */

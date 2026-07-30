@@ -328,7 +328,7 @@ class Partyline_Pwa {
 			$max_secs = Partyline_Video::recommendedMaxSeconds();
 			echo '<input id="pl-input-video" type="file" accept="video/*" hidden>';
 			echo '<button id="pl-video-btn" class="pl-photo-btn2 pl-video-btn" type="button"><span>🎬</span> Add a video</button>';
-			echo '<p class="pl-hint pl-video-note">Optional. Keep it to roughly ' . intval( $max_secs ) . ' seconds or less, or it may be too large to upload. It&rsquo;s optimized in the background, so posting is never held up.</p>';
+			echo '<p class="pl-hint pl-video-note">Optional. Keep it to roughly ' . intval( $max_secs ) . ' seconds or less, or it may be too large to upload. It&rsquo;s optimized in the background, so posting is never held up. Heads up: the <strong>first frame becomes the preview image</strong>, so start on a good shot.</p>';
 			echo '<div id="pl-video-chip" class="pl-video-chip pl-hidden"></div>';
 		}
 

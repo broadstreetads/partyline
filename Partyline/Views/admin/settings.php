@@ -91,6 +91,7 @@ $loader          = esc_url( Partyline_Utility::getImageBaseURL() . 'ajax-loader-
         <div class="plg-field-label">Video uploads <span class="plg-muted" style="font-weight:800;">(optional)</span></div>
         <div class="plg-field-desc">
           Let contributors attach a short video. It&rsquo;s optimized on your server after posting, so submitting is never held up.
+          The <strong>first frame of the video becomes the preview image</strong>, so it pays to point and shoot wisely.
           <strong>Requires FFmpeg</strong> installed on the server &mdash; a Linux media utility that&rsquo;s uncommon on hosted or
           managed WordPress, but usually available (or installable) on self-hosted servers.
           <?php if ( Partyline_Video::isSupported() ): ?>
