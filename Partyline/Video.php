@@ -269,8 +269,8 @@ class Partyline_Video {
 			return;
 		}
 
-		// Poster frame is best-effort; a missing one is not fatal.
-		self::poster( $mp4, $jpg );
+		// Poster frame (the video's first frame) — best-effort; not fatal if absent.
+		$have_poster = self::poster( $mp4, $jpg );
 
 		require_once ABSPATH . 'wp-admin/includes/file.php';
 		require_once ABSPATH . 'wp-admin/includes/media.php';
@@ -286,13 +286,37 @@ class Partyline_Video {
 		}
 
 		$poster_url = '';
-		if ( file_exists( $jpg ) && filesize( $jpg ) > 0 ) {
+		$poster_id  = 0;
+		if ( $have_poster ) {
+			// The clean first frame becomes the <video> poster — the browser draws
+			//  its own play button over it, so we leave this one un-badged.
 			$pid = self::sideloadFile( $jpg, $post_id, self::niceName( $name, 'jpg' ), 'image/jpeg' );
 			if ( ! is_wp_error( $pid ) ) {
-				$poster_url = (string) wp_get_attachment_url( (int) $pid );
-				// Use the poster as the featured image only if there isn't one.
-				if ( ! get_post_thumbnail_id( $post_id ) ) {
-					set_post_thumbnail( $post_id, (int) $pid );
+				$poster_id  = (int) $pid;
+				$poster_url = (string) wp_get_attachment_url( $poster_id );
+			}
+
+			// Featured image: a copy of that frame with a play badge baked in, so
+			//  the post reads as video everywhere the thumbnail appears (archives,
+			//  social cards, feeds). Only when the post has no thumbnail yet, so a
+			//  contributor's chosen cover photo still wins.
+			if ( ! get_post_thumbnail_id( $post_id ) ) {
+				$featured_id = 0;
+				$badge = trailingslashit( $dir ) . $base . '-preview.jpg';
+				if ( self::overlayPlayIcon( $jpg, $badge ) ) {
+					$fname = preg_replace( '/\.jpg$/', '-preview.jpg', self::niceName( $name, 'jpg' ) );
+					$bid   = self::sideloadFile( $badge, $post_id, $fname, 'image/jpeg' );
+					if ( ! is_wp_error( $bid ) ) {
+						$featured_id = (int) $bid;
+					}
+					@unlink( $badge );
+				}
+				// Fall back to the clean frame if GD is unavailable or the badge failed.
+				if ( ! $featured_id && $poster_id ) {
+					$featured_id = $poster_id;
+				}
+				if ( $featured_id ) {
+					set_post_thumbnail( $post_id, $featured_id );
 				}
 			}
 		}
@@ -347,6 +371,63 @@ class Partyline_Video {
 		$rc = 1;
 		@exec( $cmd, $o, $rc );
 		return ( 0 === $rc && file_exists( $jpg ) && filesize( $jpg ) > 0 );
+	}
+
+	/**
+	 * Composite a centered play badge onto a JPEG, writing the result to $dest.
+	 * Best-effort: returns false (and writes nothing) if GD is unavailable, so
+	 * callers can fall back to the plain frame. The badge is drawn on a
+	 * supersampled canvas and resampled down for smooth, anti-aliased edges.
+	 */
+	private static function overlayPlayIcon( $src, $dest ) {
+		if ( ! function_exists( 'imagecreatefromjpeg' ) || ! function_exists( 'imagefilledpolygon' ) ) {
+			return false;
+		}
+		$base = @imagecreatefromjpeg( $src );
+		if ( ! $base ) {
+			return false;
+		}
+		$w = imagesx( $base );
+		$h = imagesy( $base );
+
+		// Badge box ~28% of the shorter side, with a sensible minimum.
+		$r = (int) round( min( $w, $h ) * 0.14 );
+		if ( $r < 18 ) {
+			$r = 18;
+		}
+		$d     = $r * 2;      // final badge size on the base image
+		$scale = 3;           // supersample factor for anti-aliasing
+		$s     = $d * $scale; // supersampled canvas size
+
+		$icon = imagecreatetruecolor( $s, $s );
+		imagealphablending( $icon, false );
+		imagesavealpha( $icon, true );
+		imagefill( $icon, 0, 0, imagecolorallocatealpha( $icon, 0, 0, 0, 127 ) );
+		imagealphablending( $icon, true );
+
+		$c = intdiv( $s, 2 );
+		// Soft dark disc.
+		imagefilledellipse( $icon, $c, $c, (int) round( $s * 0.98 ), (int) round( $s * 0.98 ), imagecolorallocatealpha( $icon, 0, 0, 0, 62 ) );
+		// White play triangle, nudged right a touch for optical centering.
+		$tw    = (int) round( $s * 0.42 );
+		$th    = (int) round( $s * 0.46 );
+		$ox    = (int) round( $s * 0.05 );
+		$white = imagecolorallocatealpha( $icon, 255, 255, 255, 0 );
+		$pts   = array(
+			(int) ( $c - $tw / 2 + $ox ), (int) ( $c - $th / 2 ),
+			(int) ( $c - $tw / 2 + $ox ), (int) ( $c + $th / 2 ),
+			(int) ( $c + $tw / 2 + $ox ), $c,
+		);
+		imagefilledpolygon( $icon, $pts, $white );
+
+		// Downsample the badge onto the base, centered.
+		imagealphablending( $base, true );
+		imagecopyresampled( $base, $icon, intdiv( $w, 2 ) - $r, intdiv( $h, 2 ) - $r, 0, 0, $d, $d, $s, $s );
+
+		$ok = imagejpeg( $base, $dest, 90 );
+		imagedestroy( $icon );
+		imagedestroy( $base );
+		return $ok && file_exists( $dest ) && filesize( $dest ) > 0;
 	}
 
 	/** Copy a staged file and hand the copy to media_handle_sideload. */
