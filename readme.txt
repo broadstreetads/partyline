@@ -3,7 +3,7 @@ Contributors: katzgrau, broadstreetads
 Tags: community, local news, ai, sms, user generated content
 Requires at least: 5.0
 Tested up to: 7.0
-Stable tag: 1.3.2
+Stable tag: 1.4.0
 License: GPLv2
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -95,6 +95,12 @@ Optional. Used to verify that anonymous submissions and public applications come
 4. An example of a post created by Partyline.
 
 == Changelog ==
+
+= 1.4.0 =
+* NEW: Optional video uploads. Contributors can attach a short video that is optimized on your server in the background, so submitting is never held up. Requires FFmpeg on the server; off by default (enable it in the Contributor App settings). Includes an option to limit video to editors and administrators.
+* NEW: The video's first frame becomes the post's preview image, with a play badge baked in so the post reads as video in listings and social shares.
+* NEW: An explainer and how-to video at the top of the How-To page and on the plugin listing.
+* FIX: "Add to Home Screen" now points at your Site Icon from every entry point, including the logged-out landing page, so iOS uses the correct app icon.
 
 = 1.3.2 =
 * Refreshed the plugin banner artwork and noted in the description that Partyline is free and open source
