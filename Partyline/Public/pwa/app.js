@@ -225,7 +225,7 @@
 		var big = CFG.videoWarnBytes && state.video.size > CFG.videoWarnBytes;
 		chip.className = 'pl-video-chip' + (big ? ' is-warn' : '');
 		var text = (big ? '⚠️ ' : '🎬 ') + state.video.name + ' — ' + fmtMB(state.video.size);
-		if (big) { text += '. Large clips upload slowly and may time out; a shorter one (under ' + fmtMB(CFG.videoWarnBytes) + ') is recommended.'; }
+		if (big && CFG.videoMaxSeconds) { text += '. That’s a big clip and may upload slowly or fail — around ' + CFG.videoMaxSeconds + ' seconds or less is safest.'; }
 		chip.innerHTML = '';
 		var span = document.createElement('span'); span.className = 'pl-video-name'; span.textContent = text;
 		var del = document.createElement('button'); del.type = 'button'; del.className = 'pl-video-del';
@@ -255,7 +255,10 @@
 		// Over the hard server upload limit: this would just fail, so refuse it.
 		if (CFG.videoMaxBytes && f.size > CFG.videoMaxBytes) {
 			state.video = null;
-			if (chip) { chip.className = 'pl-video-chip is-error'; chip.textContent = 'This video is ' + fmtMB(f.size) + ', over the ' + fmtMB(CFG.videoMaxBytes) + ' upload limit. Please choose a shorter clip.'; }
+			if (chip) {
+				chip.className = 'pl-video-chip is-error';
+				chip.textContent = 'This clip is too large to upload (' + fmtMB(f.size) + '). Try one roughly ' + (CFG.videoMaxSeconds || 60) + ' seconds or shorter.';
+			}
 			updateSubmit();
 			return;
 		}

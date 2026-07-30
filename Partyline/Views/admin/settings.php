@@ -88,6 +88,24 @@ $loader          = esc_url( Partyline_Utility::getImageBaseURL() . 'ajax-loader-
       </div>
 
       <div class="plg-field">
+        <div class="plg-field-label">Video uploads <span class="plg-muted" style="font-weight:800;">(optional)</span></div>
+        <div class="plg-field-desc">
+          Let contributors attach a short video. It&rsquo;s optimized on your server after posting, so submitting is never held up.
+          <strong>Requires FFmpeg</strong> installed on the server &mdash; a Linux media utility that&rsquo;s uncommon on hosted or
+          managed WordPress, but usually available (or installable) on self-hosted servers.
+          <?php if ( Partyline_Video::isSupported() ): ?>
+            <br><span style="color:#16a34a;font-weight:700;">&#10003; FFmpeg detected on this server.</span>
+          <?php else: ?>
+            <br><span style="color:#b32020;font-weight:700;">FFmpeg not detected &mdash; install it on the server to enable this option.</span>
+          <?php endif; ?>
+        </div>
+        <label class="plg-check" <?php echo Partyline_Video::isSupported() ? '' : 'style="opacity:.55;cursor:not-allowed;"'; ?>>
+          <input type="checkbox" x-model="settings.video_enabled" <?php echo Partyline_Video::isSupported() ? '' : 'disabled'; ?>>
+          Allow video uploads
+        </label>
+      </div>
+
+      <div class="plg-field">
         <div class="plg-field-label">Allow anonymous submissions</div>
         <div class="plg-field-desc">By default only logged-in users can submit. Turn this on to let anyone submit without an account. Anonymous submitters type their story (no voice dictation) and provide a name, email &amp; phone.</div>
         <label class="plg-check"><input type="checkbox" x-model="settings.pwa_allow_anonymous"> Allow anonymous submissions</label>

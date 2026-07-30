@@ -32,7 +32,7 @@ class Partyline_Pwa {
 	const APP_PATH = 'partyline';
 
 	/** Bump to invalidate the service-worker precache. */
-	const PWA_ASSET_VERSION = '24';
+	const PWA_ASSET_VERSION = '25';
 
 	/**
 	 * Register hooks. The contributor app is ON by default (see isEnabled), so
@@ -238,9 +238,10 @@ class Partyline_Pwa {
 			'anon'         => $anon,
 			'turnstileKey' => $turnstile_key,
 			'mathToken'    => $challenge['token'],
-			'videoSupported' => Partyline_Video::isSupported(),
-			'videoMaxBytes'  => Partyline_Video::uploadLimitBytes(),   // hard limit; over this the upload fails
-			'videoWarnBytes' => Partyline_Video::recommendedMaxBytes(), // conservative; over this we warn
+			'videoSupported' => Partyline_Video::isActive(),
+			'videoMaxBytes'  => Partyline_Video::uploadLimitBytes(),      // hard limit; over this the upload fails
+			'videoWarnBytes' => Partyline_Video::recommendedMaxBytes(),   // conservative; over this we warn
+			'videoMaxSeconds' => Partyline_Video::recommendedMaxSeconds(), // friendly duration guidance
 		);
 
 		$css      = esc_url( self::assetUrl( 'app.css' ) ) . '?v=' . self::PWA_ASSET_VERSION;
@@ -322,11 +323,12 @@ class Partyline_Pwa {
 		echo '<button id="pl-make-cover" class="pl-cover-btn pl-hidden" type="button">&#9733; Make this the cover</button>';
 		echo '<div id="pl-thumbs" class="pl-thumbs pl-hidden"></div>';
 
-		// Optional video — only when the server can process it (FFmpeg present).
-		if ( Partyline_Video::isSupported() ) {
+		// Optional video — only when the server supports it AND it's switched on.
+		if ( Partyline_Video::isActive() ) {
+			$max_secs = Partyline_Video::recommendedMaxSeconds();
 			echo '<input id="pl-input-video" type="file" accept="video/*" hidden>';
 			echo '<button id="pl-video-btn" class="pl-photo-btn2 pl-video-btn" type="button"><span>🎬</span> Add a video</button>';
-			echo '<p class="pl-hint pl-video-note">Optional. Keep videos short &mdash; they&rsquo;re trimmed and optimized after you post. It processes in the background, so submitting is never held up.</p>';
+			echo '<p class="pl-hint pl-video-note">Optional. Keep it to roughly ' . intval( $max_secs ) . ' seconds or less, or it may be too large to upload. It&rsquo;s optimized in the background, so posting is never held up.</p>';
 			echo '<div id="pl-video-chip" class="pl-video-chip pl-hidden"></div>';
 		}
 

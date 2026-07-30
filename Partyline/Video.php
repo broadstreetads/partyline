@@ -22,14 +22,27 @@ class Partyline_Video {
 	 *  leaving headroom for the photos and form fields in the same request. */
 	const BUDGET_FRACTION = 0.75;
 
+	/** Rough bytes-per-second for a typical 1080p phone clip (~12 Mbps H.264),
+	 *  used only to translate the byte budget into a friendly "seconds" estimate. */
+	const ASSUMED_BYTES_PER_SEC = 1572864;
+
 	private static $bins = array();
 
-	/** Can this server accept and transcode video? */
+	/** Server can process video (FFmpeg present + shell access). */
 	public static function isSupported() {
 		if ( ! self::canExec() ) {
 			return false;
 		}
 		return '' !== self::binPath( 'ffmpeg' ) && '' !== self::binPath( 'ffprobe' );
+	}
+
+	/** Video is actually available to contributors: supported AND switched on. */
+	public static function isActive() {
+		if ( ! self::isSupported() ) {
+			return false;
+		}
+		$s = Partyline_Utility::getSettings();
+		return ! empty( $s->video_enabled );
 	}
 
 	/** Is PHP allowed to run external processes? */
@@ -77,6 +90,25 @@ class Partyline_Video {
 	public static function recommendedMaxBytes() {
 		$limit = self::uploadLimitBytes();
 		return $limit > 0 ? (int) floor( $limit * self::BUDGET_FRACTION ) : 0;
+	}
+
+	/** A friendly "keep it under N seconds" estimate derived from the byte budget
+	 *  and a typical bitrate, rounded down to a clean number. Guidance only —
+	 *  the actual enforcement is on file size. */
+	public static function recommendedMaxSeconds() {
+		$bytes = self::recommendedMaxBytes();
+		if ( $bytes <= 0 ) {
+			return 0;
+		}
+		$secs = (int) floor( $bytes / self::ASSUMED_BYTES_PER_SEC );
+		if ( $secs >= 60 ) {
+			$secs = (int) ( floor( $secs / 15 ) * 15 );  // nearest 15s
+		} elseif ( $secs >= 20 ) {
+			$secs = (int) ( floor( $secs / 10 ) * 10 );  // nearest 10s
+		} elseif ( $secs >= 5 ) {
+			$secs = (int) ( floor( $secs / 5 ) * 5 );    // nearest 5s
+		}
+		return max( 5, $secs );
 	}
 
 	/** Parse a PHP shorthand size string ("64M", "8G") into bytes. */
