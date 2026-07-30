@@ -88,6 +88,9 @@ class Partyline_Core
 
         # -- PWA / REST submission channel (inert unless the feature is enabled) --
         Partyline_Pwa::init();
+
+        # -- Async video transcode (cron). Inert unless a post has a pending video. --
+        Partyline_Video::init();
     }
 
     /**

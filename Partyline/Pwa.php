@@ -1091,6 +1091,20 @@ JS;
 			$attachment_ids[] = (int) $aid;
 		}
 
+		// Optional video: stage it now (fast), transcode later on cron. Only when
+		//  the feature is switched on and the server can process it. A staging
+		//  failure is non-fatal — the rest of the submission still goes through.
+		$video = null;
+		if ( Partyline_Video::isActive() && ! empty( $_FILES['video'] ) && ! empty( $_FILES['video']['name'] ) ) {
+			$staged = Partyline_Video::stageUpload( 'video' );
+			if ( is_wp_error( $staged ) ) {
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+				error_log( '[Partyline] video staging skipped: ' . $staged->get_error_message() );
+			} else {
+				$video = $staged;
+			}
+		}
+
 		// Raw dictation/typed text as originally sent (shown in the notification email).
 		$original = sanitize_textarea_field( (string) $request->get_param( 'original' ) );
 
@@ -1098,6 +1112,7 @@ JS;
 			'title'          => '' !== $title ? $title : Partyline_Core::DEFAULT_TITLE,
 			'body'           => $body,
 			'attachment_ids' => $attachment_ids,
+			'video'          => $video,
 			'author_id'      => $author_id,
 			'author_name'    => $author_name,
 			'from'           => $from,
@@ -1186,11 +1201,17 @@ JS;
 		}
 		$featured_id = ! empty( $attachment_ids ) ? $attachment_ids[0] : 0;
 
+		$has_video = ! empty( $args['video'] ) && is_array( $args['video'] );
+
 		$post_content = '';
 		foreach ( $attachment_ids as $aid ) {
 			$post_content .= wp_get_attachment_image( $aid, 'full' );
 		}
 		$post_content .= wpautop( $body );
+		if ( $has_video ) {
+			// A placeholder the cron worker swaps for the finished video embed.
+			$post_content .= Partyline_Video::placeholderHtml();
+		}
 		$post_content .= '<p><em>Submitted by ' . esc_html( $author_name ) . '</em></p>';
 
 		$post_id = wp_insert_post( array(
@@ -1207,6 +1228,11 @@ JS;
 
 		// Mark this as a Partyline submission so the publish notifier can find it.
 		update_post_meta( $post_id, '_partyline_submission', 1 );
+
+		// Queue any staged video for background transcoding.
+		if ( $has_video ) {
+			Partyline_Video::attachPending( $post_id, $args['video'] );
+		}
 
 		if ( $featured_id ) {
 			set_post_thumbnail( $post_id, $featured_id );
