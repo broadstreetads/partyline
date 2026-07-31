@@ -20,6 +20,7 @@ require_once dirname(__FILE__) . '/Video.php';
 require_once dirname(__FILE__) . '/View.php';
 require_once dirname(__FILE__) . '/Exception.php';
 require_once dirname(__FILE__) . '/Pwa.php';
+require_once dirname(__FILE__) . '/Widget.php';
 
 if (! class_exists('Partyline_Core')):
 
@@ -91,6 +92,9 @@ class Partyline_Core
 
         # -- Async video transcode (cron). Inert unless a post has a pending video. --
         Partyline_Video::init();
+
+        # -- "Partyline Posts" widget + [partyline_posts] shortcode --
+        Partyline_Widget::init();
     }
 
     /**

@@ -3,7 +3,7 @@ Contributors: katzgrau, broadstreetads
 Tags: community, local news, ai, sms, user generated content
 Requires at least: 5.0
 Tested up to: 7.0
-Stable tag: 1.4.1
+Stable tag: 1.5.0
 License: GPLv2
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -95,6 +95,9 @@ Optional. Used to verify that anonymous submissions and public applications come
 4. An example of a post created by Partyline.
 
 == Changelog ==
+
+= 1.5.0 =
+* NEW: "Partyline Posts" widget and a [partyline_posts] shortcode to display your most recent Partylines anywhere — a sidebar, footer, or inside a page. It's pre-scoped to your Partyline category, with options for the count, featured image, and date.
 
 = 1.4.1 =
 * FIX: More robust multi-photo submissions. Photos are validated by their actual contents (not just the browser-reported type), and one unreadable photo no longer blocks the whole submission.

@@ -3,7 +3,7 @@
 Plugin Name: Partyline
 Plugin URI:  https://github.com/broadstreetads/partyline
 Description: Let your community submit local news, a photo and a story, through an installable web app or by text message (Twilio), optionally polished with AI and saved as WordPress drafts.
-Version:     1.4.1
+Version:     1.5.0
 Author:      Kenny Katzgrau
 Author URI:  https://broadstreetads.com/
 License:     GPL v2
@@ -13,7 +13,7 @@ Text Domain: partyline
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define('PARTYLINE_VERSION', '1.4.1');
+define('PARTYLINE_VERSION', '1.5.0');
 
 require dirname(__FILE__) . '/Partyline/Core.php';
 

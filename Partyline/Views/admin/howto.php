@@ -212,10 +212,11 @@ $pl_cat_name = $pl_cat_id ? get_cat_name( $pl_cat_id ) : '';
         <?php else: ?>
           Pick a <em>Partyline Category</em> in <a href="<?php echo esc_url( $settings_admin ); ?>">Settings</a> first, and this becomes the page to send readers to.</p>
         <?php endif; ?>
-      <p class="plg-note">💡 A popular setup: add a <strong>Posts widget</strong> (or a Query Loop block) to your site&rsquo;s
-        home page, restricted to the Partyline category<?php echo $pl_cat_name ? ' (&ldquo;' . esc_html( $pl_cat_name ) . '&rdquo;)' : ''; ?>. That surfaces the
-        latest Partylines right on your front page, where readers will actually see them &mdash; and it&rsquo;s a big part of
-        making the whole thing feel alive.</p>
+      <p class="plg-note">💡 The easy way: drop the <strong>&ldquo;Partyline Posts&rdquo; widget</strong> into any widget area
+        (<strong>Appearance &rarr; Widgets</strong>). It&rsquo;s already pointed at your Partyline category<?php echo $pl_cat_name ? ' (&ldquo;' . esc_html( $pl_cat_name ) . '&rdquo;)' : ''; ?>,
+        with options for how many to show, the featured image, and the date. Want them inside a page or post instead? Use the
+        <code>[partyline_posts]</code> shortcode. Either way, putting recent Partylines on your home page &mdash; where readers
+        will actually see them &mdash; is a big part of making the whole thing feel alive.</p>
 
       <h3>Recruiting Partyliners</h3>
       <p>To credit texters by name, add them on the <a href="<?php echo esc_url( $partyliners_admin ); ?>">Partyliners</a> page.
