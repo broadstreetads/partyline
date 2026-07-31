@@ -215,8 +215,10 @@ $pl_cat_name = $pl_cat_id ? get_cat_name( $pl_cat_id ) : '';
       <p class="plg-note">💡 The easy way: drop the <strong>&ldquo;Partyline Posts&rdquo; widget</strong> into any widget area
         (<strong>Appearance &rarr; Widgets</strong>). It&rsquo;s already pointed at your Partyline category<?php echo $pl_cat_name ? ' (&ldquo;' . esc_html( $pl_cat_name ) . '&rdquo;)' : ''; ?>,
         with options for how many to show, the featured image, and the date. Want them inside a page or post instead? Use the
-        <code>[partyline_posts]</code> shortcode. Either way, putting recent Partylines on your home page &mdash; where readers
-        will actually see them &mdash; is a big part of making the whole thing feel alive.</p>
+        <code>[partyline_posts]</code> shortcode. Prefer WordPress&rsquo;s own tools? You can also use an ordinary Posts widget or
+        block and simply restrict it to your Partyline category &mdash; the dedicated widget just saves you that step. Either way,
+        putting recent Partylines on your home page &mdash; where readers will actually see them &mdash; is a big part of making
+        the whole thing feel alive.</p>
 
       <h3>Recruiting Partyliners</h3>
       <p>To credit texters by name, add them on the <a href="<?php echo esc_url( $partyliners_admin ); ?>">Partyliners</a> page.
