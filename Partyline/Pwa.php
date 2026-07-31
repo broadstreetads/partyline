@@ -389,7 +389,7 @@ class Partyline_Pwa {
 
 		echo '</main>';
 
-		echo '<footer class="pl-footer">redbankgreen · Partyline</footer>';
+		echo '<footer class="pl-footer">' . esc_html( self::siteName() ) . ' &middot; Partyline</footer>';
 		echo '</div>';
 
 		echo '<script>window.PARTYLINE_PWA=' . wp_json_encode( $config ) . ';</script>';
@@ -510,7 +510,7 @@ JS;
 		}
 		$html .= '</span></span></header>';
 		$html .= '<main class="pl-main">' . $body . '</main>';
-		$html .= '<footer class="pl-footer">redbankgreen &middot; Partyline</footer>';
+		$html .= '<footer class="pl-footer">' . esc_html( self::siteName() ) . ' &middot; Partyline</footer>';
 		$html .= '</div></body></html>';
 		return $html;
 	}
@@ -739,7 +739,7 @@ JS;
       <tr><td style="padding:24px 30px 8px;"><a href="<?php echo esc_url( $url ); ?>" style="display:inline-block;background:#18181b;color:#fff;text-decoration:none;font-weight:700;font-size:15px;padding:13px 24px;border-radius:12px;"><?php echo esc_html( $cta ); ?></a></td></tr>
       <tr><td style="padding:8px 30px 28px;color:#a1a1aa;font-size:12px;line-height:1.6;">If you didn&rsquo;t request this, you can ignore this email.</td></tr>
     </table>
-    <div style="max-width:600px;margin:14px auto 0;color:#a1a1aa;font-size:12px;text-align:center;">redbankgreen &middot; Partyline</div>
+    <div style="max-width:600px;margin:14px auto 0;color:#a1a1aa;font-size:12px;text-align:center;"><?php echo esc_html( self::siteName() ); ?> &middot; Partyline</div>
   </td></tr></table>
 </div>
 		<?php

@@ -6,6 +6,11 @@ $apply_enabled = class_exists( 'Partyline_Pwa' ) && Partyline_Pwa::applyEnabled(
 $apply_url     = class_exists( 'Partyline_Pwa' ) ? Partyline_Pwa::applyUrl() : '';
 $partyliners_admin = admin_url( 'admin.php?page=Partyline-Partyliners' );
 $settings_admin    = admin_url( 'admin.php?page=Partyline-Settings' );
+
+$pl_settings = Partyline_Utility::getSettings();
+$pl_cat_id   = isset( $pl_settings->partyline_category ) ? (int) $pl_settings->partyline_category : 0;
+$pl_cat_link = $pl_cat_id ? get_category_link( $pl_cat_id ) : '';
+$pl_cat_name = $pl_cat_id ? get_cat_name( $pl_cat_id ) : '';
 ?>
 <style>
 .plg { --ink:#18181b; --muted:#6b7280; --line:#e7e7ea; --surface:#f6f6f8; --accent:#7c3aed; }
@@ -193,6 +198,25 @@ $settings_admin    = admin_url( 'admin.php?page=Partyline-Settings' );
       </ol>
       <p style="margin-top:16px;">Click <strong>Save</strong>, then open your app link on your phone and try it: take a photo, add a story, and
         submit. It&rsquo;ll show up in your drafts.</p>
+
+      <h3>Where your Partylines appear</h3>
+      <p>Every submission is filed under the <em>Partyline Category</em> you chose in Settings. Once you review and
+        publish one, it lands on that category&rsquo;s archive page &mdash; the public home for all your Partylines.
+        <?php if ( $pl_cat_link ): ?>
+          Here&rsquo;s yours:</p>
+        <div class="plg-linkbox">
+          <code id="plg-catlink" data-link="<?php echo esc_attr( $pl_cat_link ); ?>"><?php echo esc_html( $pl_cat_link ); ?></code>
+          <button type="button" class="plg-copy" onclick="plgCopy(this,'plg-catlink')">Copy link</button>
+          <a class="plg-copy" style="background:var(--accent);text-decoration:none;" href="<?php echo esc_url( $pl_cat_link ); ?>" target="_blank" rel="noopener">Visit&nbsp;&rarr;</a>
+        </div>
+        <?php else: ?>
+          Pick a <em>Partyline Category</em> in <a href="<?php echo esc_url( $settings_admin ); ?>">Settings</a> first, and this becomes the page to send readers to.</p>
+        <?php endif; ?>
+      <p class="plg-note">💡 A popular setup: add a <strong>Posts widget</strong> (or a Query Loop block) to your site&rsquo;s
+        home page, restricted to the Partyline category<?php echo $pl_cat_name ? ' (&ldquo;' . esc_html( $pl_cat_name ) . '&rdquo;)' : ''; ?>. That surfaces the
+        latest Partylines right on your front page, where readers will actually see them &mdash; and it&rsquo;s a big part of
+        making the whole thing feel alive.</p>
+
       <h3>Recruiting Partyliners</h3>
       <p>To credit texters by name, add them on the <a href="<?php echo esc_url( $partyliners_admin ); ?>">Partyliners</a> page.
         Even better, turn on <strong>Public Partyliner applications</strong> in

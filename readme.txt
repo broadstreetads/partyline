@@ -98,6 +98,8 @@ Optional. Used to verify that anonymous submissions and public applications come
 
 = 1.4.1 =
 * FIX: More robust multi-photo submissions. Photos are validated by their actual contents (not just the browser-reported type), and one unreadable photo no longer blocks the whole submission.
+* FIX: Published-story emails and app chrome now use your site's own name instead of a hard-coded publisher name.
+* ENHANCEMENT: The How-To guide now links to your Partyline category archive (where published Partylines appear) and suggests adding a category-restricted Posts widget to your home page.
 
 = 1.4.0 =
 * NEW: Optional video uploads. Contributors can attach a short video that is optimized on your server in the background, so submitting is never held up. Requires FFmpeg on the server; off by default (enable it in the Contributor App settings). Includes an option to limit video to editors and administrators.

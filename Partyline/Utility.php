@@ -57,6 +57,19 @@ class Partyline_Utility
     }
 
     /**
+     * The site's own name, for branding emails and app chrome. Falls back to a
+     * generic phrase so Partyline never hard-codes any one publisher.
+     *
+     * @param string $fallback Used when the site has no name set.
+     * @return string
+     */
+    public static function siteName( $fallback = 'our newsroom' )
+    {
+        $name = trim( wp_strip_all_tags( (string) get_bloginfo( 'name' ) ) );
+        return '' !== $name ? $name : $fallback;
+    }
+
+    /**
      * Fix a malformed URL
      * @param string $url
      * @return string
@@ -518,7 +531,7 @@ class Partyline_Utility
           <?php echo esc_html($when); ?>
         </td></tr>
       </table>
-      <div style="max-width:600px;margin:14px auto 0;color:#a1a1aa;font-size:12px;text-align:center;">redbankgreen &middot; Partyline</div>
+      <div style="max-width:600px;margin:14px auto 0;color:#a1a1aa;font-size:12px;text-align:center;"><?php echo esc_html( self::siteName() ); ?> &middot; Partyline</div>
     </td></tr>
   </table>
 </div>
@@ -639,7 +652,7 @@ class Partyline_Utility
           <?php echo esc_html( $greeting ); ?>
         </td></tr>
         <tr><td style="padding:8px 28px 0;color:#3f3f46;font-size:15px;line-height:1.65;">
-          Great news! Your Partyline is now live on redbankgreen. Thanks for helping tell the story of our community.
+          Great news! Your Partyline is now live on <?php echo esc_html( self::siteName() ); ?>. Thanks for helping tell the story of our community.
         </td></tr>
         <?php if ( $img_url ): ?>
         <tr><td style="padding:20px 28px 0;">
@@ -656,7 +669,7 @@ class Partyline_Utility
           Got another story or photo? Send us a Partyline anytime.
         </td></tr>
       </table>
-      <div style="max-width:600px;margin:14px auto 0;color:#a1a1aa;font-size:12px;text-align:center;">redbankgreen &middot; Partyline</div>
+      <div style="max-width:600px;margin:14px auto 0;color:#a1a1aa;font-size:12px;text-align:center;"><?php echo esc_html( self::siteName() ); ?> &middot; Partyline</div>
     </td></tr>
   </table>
 </div>
@@ -1072,7 +1085,7 @@ class Partyline_Utility
         <?php echo $rows_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
         <tr><td style="padding:22px 28px 26px;margin-top:6px;border-top:1px solid #f0f0f1;color:#a1a1aa;font-size:13px;line-height:1.6;">Thanks for helping tell the story of our community. We can&rsquo;t wait to see what you send.</td></tr>
       </table>
-      <div style="max-width:600px;margin:14px auto 0;color:#a1a1aa;font-size:12px;text-align:center;">redbankgreen &middot; Partyline</div>
+      <div style="max-width:600px;margin:14px auto 0;color:#a1a1aa;font-size:12px;text-align:center;"><?php echo esc_html( self::siteName() ); ?> &middot; Partyline</div>
     </td></tr>
   </table>
 </div>
@@ -1134,7 +1147,7 @@ class Partyline_Utility
         <tr><td style="padding:14px 28px 0;color:#a1a1aa;font-size:13px;line-height:1.6;">Once your password is set, log in and open <a href="<?php echo esc_url( $app_url ); ?>" style="color:#7c3aed;"><?php echo esc_html( $app_url ); ?></a> on your phone. Add it to your home screen for one-tap access.</td></tr>
         <tr><td style="padding:18px 28px 26px;margin-top:6px;border-top:1px solid #f0f0f1;color:#a1a1aa;font-size:12px;line-height:1.6;">If you didn&rsquo;t expect this, you can ignore this email. The link expires for security, but you can always use &ldquo;Lost your password?&rdquo; on the login page.</td></tr>
       </table>
-      <div style="max-width:600px;margin:14px auto 0;color:#a1a1aa;font-size:12px;text-align:center;">redbankgreen &middot; Partyline</div>
+      <div style="max-width:600px;margin:14px auto 0;color:#a1a1aa;font-size:12px;text-align:center;"><?php echo esc_html( self::siteName() ); ?> &middot; Partyline</div>
     </td></tr>
   </table>
 </div>
