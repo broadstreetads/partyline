@@ -101,6 +101,7 @@ Optional. Used to verify that anonymous submissions and public applications come
 * NEW: The video's first frame becomes the post's preview image, with a play badge baked in so the post reads as video in listings and social shares.
 * NEW: An explainer and how-to video at the top of the How-To page and on the plugin listing.
 * FIX: "Add to Home Screen" now points at your Site Icon from every entry point, including the logged-out landing page, so iOS uses the correct app icon.
+* FIX: More robust multi-photo submissions. Photos are validated by their actual contents (not just the browser-reported type), and one unreadable photo no longer blocks the whole submission.
 
 = 1.3.2 =
 * Refreshed the plugin banner artwork and noted in the description that Partyline is free and open source

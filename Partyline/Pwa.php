@@ -1093,13 +1093,20 @@ JS;
 		$publish   = $immediate && current_user_can( 'edit_others_posts' );
 
 		// Sideload every photo in order. The first becomes the featured image.
+		//  If one photo can't be processed, skip it and keep the rest rather than
+		//  failing the whole submission — one bad frame shouldn't lose the story.
 		$attachment_ids = array();
 		foreach ( $image_fields as $fk ) {
 			$aid = self::handleImageUpload( $fk );
 			if ( is_wp_error( $aid ) ) {
-				return $aid;
+				continue;
 			}
 			$attachment_ids[] = (int) $aid;
+		}
+
+		// If photos were sent but none survived processing, that's a real failure.
+		if ( $has_image && empty( $attachment_ids ) ) {
+			return new WP_Error( 'partyline_upload_failed', 'Your photo could not be processed. Please try again, or remove it and add your story.', array( 'status' => 400 ) );
 		}
 
 		// Optional video: stage it now (fast), transcode later on cron. Only when
@@ -1294,8 +1301,26 @@ JS;
 		require_once ABSPATH . 'wp-admin/includes/media.php';
 		require_once ABSPATH . 'wp-admin/includes/image.php';
 
-		$type = isset( $_FILES[ $field ]['type'] ) ? $_FILES[ $field ]['type'] : '';
-		if ( 0 !== strpos( (string) $type, 'image/' ) ) {
+		$f    = isset( $_FILES[ $field ] ) ? $_FILES[ $field ] : null;
+		$type = ( $f && isset( $f['type'] ) ) ? (string) $f['type'] : '';
+		$tmp  = ( $f && isset( $f['tmp_name'] ) ) ? (string) $f['tmp_name'] : '';
+		$err  = ( $f && isset( $f['error'] ) ) ? (int) $f['error'] : UPLOAD_ERR_NO_FILE;
+
+		if ( $err && UPLOAD_ERR_OK !== $err ) {
+			return new WP_Error( 'partyline_upload_failed', 'The photo did not finish uploading (error ' . $err . ').', array( 'status' => 400 ) );
+		}
+
+		// Trust the actual file bytes over the browser-supplied MIME type: some
+		//  mobile browsers hand canvas blobs an empty or generic Content-Type,
+		//  which would otherwise be rejected as "not an image."
+		$is_image = ( 0 === strpos( $type, 'image/' ) );
+		if ( ! $is_image && $tmp && is_uploaded_file( $tmp ) ) {
+			$probe = @getimagesize( $tmp );
+			if ( $probe && ! empty( $probe['mime'] ) && 0 === strpos( $probe['mime'], 'image/' ) ) {
+				$is_image = true;
+			}
+		}
+		if ( ! $is_image ) {
 			return new WP_Error( 'partyline_bad_image', 'Uploaded file is not an image.', array( 'status' => 400 ) );
 		}
 
