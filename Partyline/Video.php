@@ -29,11 +29,21 @@ class Partyline_Video {
 	/** Cron hook that transcodes one post's pending video. */
 	const CRON_HOOK = 'partyline_process_video';
 
+	/** Recurring safety-net sweep that recovers videos whose one-shot event was
+	 *  lost, or whose transcode was claimed but never finished. */
+	const SWEEP_HOOK     = 'partyline_video_sweep';
+	const SWEEP_SCHEDULE = 'partyline_video_sweep_interval';
+	const SWEEP_INTERVAL = 120; // seconds
+
+	/** A "processing" claim older than this (seconds) is treated as crashed. */
+	const PROCESSING_TIMEOUT = 900;
+
 	/** Post meta keys for the async pipeline. */
 	const STATUS_META  = '_partyline_video_status';   // pending | processing | done | failed
 	const SRC_META     = '_partyline_video_src';      // staged original file path
 	const NAME_META    = '_partyline_video_name';     // original file name (for a nice title)
 	const ATTEMPTS_META = '_partyline_video_attempts'; // transcode attempts so far
+	const STARTED_META = '_partyline_video_started';  // unix time the current run claimed the job
 	const ATTACH_META  = '_partyline_video_attachment'; // final MP4 attachment ID
 
 	/** How many times to retry a failed transcode before giving up. */
@@ -44,9 +54,73 @@ class Partyline_Video {
 
 	private static $bins = array();
 
-	/** Wire up the cron worker. Cheap and inert unless a post has a pending video. */
+	/** Wire up the cron worker + the self-healing sweep. Cheap and inert unless
+	 *  a post has a pending video. */
 	public static function init() {
 		add_action( self::CRON_HOOK, array( __CLASS__, 'processPost' ) );
+		add_action( self::SWEEP_HOOK, array( __CLASS__, 'sweep' ) );
+		add_filter( 'cron_schedules', array( __CLASS__, 'cronSchedules' ) );
+		add_action( 'init', array( __CLASS__, 'ensureSweepScheduled' ) );
+	}
+
+	/** Register our short recurring interval for the sweep. */
+	public static function cronSchedules( $schedules ) {
+		if ( ! isset( $schedules[ self::SWEEP_SCHEDULE ] ) ) {
+			$schedules[ self::SWEEP_SCHEDULE ] = array(
+				'interval' => self::SWEEP_INTERVAL,
+				'display'  => __( 'Every 2 minutes (Partyline video)', 'partyline' ),
+			);
+		}
+		return $schedules;
+	}
+
+	/** Make sure the sweep is scheduled whenever video is enabled. Re-adds it if
+	 *  it ever goes missing, so the safety net can't itself be lost. */
+	public static function ensureSweepScheduled() {
+		$s = Partyline_Utility::getSettings();
+		if ( empty( $s->video_enabled ) ) {
+			return; // feature off — nothing to sweep for
+		}
+		if ( ! wp_next_scheduled( self::SWEEP_HOOK ) ) {
+			wp_schedule_event( time() + 60, self::SWEEP_SCHEDULE, self::SWEEP_HOOK );
+		}
+	}
+
+	/**
+	 * Safety net: pick up any videos still 'pending' (their one-shot event never
+	 * fired) and recover any 'processing' jobs that were claimed but stalled.
+	 * Bounded per run so a backlog can't make one sweep run forever.
+	 */
+	public static function sweep() {
+		$ids = get_posts( array(
+			'post_type'        => 'any',
+			'post_status'      => 'any',
+			'fields'           => 'ids',
+			'numberposts'      => 3,
+			'orderby'          => 'ID',
+			'order'            => 'ASC',
+			'suppress_filters' => true,
+			'meta_query'       => array(
+				array(
+					'key'     => self::STATUS_META,
+					'value'   => array( 'pending', 'processing' ),
+					'compare' => 'IN',
+				),
+			),
+		) );
+
+		foreach ( $ids as $pid ) {
+			$status = get_post_meta( $pid, self::STATUS_META, true );
+			if ( 'processing' === $status ) {
+				$started = (int) get_post_meta( $pid, self::STARTED_META, true );
+				if ( $started && ( time() - $started ) < self::PROCESSING_TIMEOUT ) {
+					continue; // a run is legitimately still in progress
+				}
+				// Stale claim (crashed/killed mid-transcode): reopen it.
+				update_post_meta( $pid, self::STATUS_META, 'pending' );
+			}
+			self::processPost( $pid );
+		}
 	}
 
 	/** Server can process video (FFmpeg present + shell access). */
@@ -255,6 +329,7 @@ class Partyline_Video {
 
 		// Claim the job so an overlapping cron run won't double-process it.
 		update_post_meta( $post_id, self::STATUS_META, 'processing' );
+		update_post_meta( $post_id, self::STARTED_META, time() );
 		$attempts = (int) get_post_meta( $post_id, self::ATTEMPTS_META, true ) + 1;
 		update_post_meta( $post_id, self::ATTEMPTS_META, $attempts );
 
