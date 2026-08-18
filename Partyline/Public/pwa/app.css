@@ -147,7 +147,14 @@ html, body {
 	cursor: pointer;
 }
 .pl-photo-drop span { font-size: 28px; }
-.pl-photo-canvas { width: 100%; border-radius: var(--radius); display: block; background: #000; margin-top: 12px; }
+.pl-photo-wrap { position: relative; margin-top: 12px; }
+.pl-photo-canvas { width: 100%; border-radius: var(--radius); display: block; background: #000; }
+/* Crop & zoom lives on the photo itself, so it's not stranded on its own line */
+.pl-edit-overlay { position: absolute; right: 10px; bottom: 10px; z-index: 2; border: none;
+	padding: 8px 13px; border-radius: 999px; background: rgba(9,9,11,0.72); color: #fff;
+	font-size: 13px; font-weight: 700; cursor: pointer; -webkit-backdrop-filter: blur(4px);
+	backdrop-filter: blur(4px); box-shadow: 0 1px 6px rgba(0,0,0,0.3); }
+.pl-edit-overlay:active { transform: scale(0.97); }
 
 /* Photo choice: take vs. select */
 .pl-photo-actions { display: flex; gap: 10px; }
@@ -331,3 +338,10 @@ body.pl-editing { overflow: hidden; }
 .pl-editor-actions { display: flex; gap: 10px; }
 .pl-editor-actions .pl-btn { flex: 1 1 0; }
 .pl-editor-actions .pl-btn--ghost { color: #fff; border-color: rgba(255,255,255,0.4); }
+
+/* Step 2 header row: heading + "Start over" */
+.pl-step-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.pl-step-row .pl-step { flex: 0 1 auto; }
+.pl-textlink { flex: 0 0 auto; background: none; border: none; color: var(--muted);
+	font-size: 13px; font-weight: 700; cursor: pointer; padding: 6px 2px; white-space: nowrap; }
+.pl-textlink:active { color: var(--danger); }

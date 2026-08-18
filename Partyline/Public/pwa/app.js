@@ -133,7 +133,7 @@
 	// Show the active photo (with its filter) in the big preview, or hide when empty.
 	function drawActive() {
 		if (!state.photos.length) {
-			canvas.classList.add('pl-hidden'); canvas.style.filter = '';
+			$('#pl-photo-wrap').classList.add('pl-hidden'); canvas.style.filter = '';
 			$('#pl-filters').classList.add('pl-hidden');
 			$('#pl-photo-tools').classList.add('pl-hidden');
 			$('#pl-make-cover').classList.add('pl-hidden');
@@ -143,7 +143,7 @@
 		var p = state.photos[state.active];
 		drawPhoto(canvas, p);
 		canvas.style.filter = FILTERS[p.filter] === 'none' ? '' : FILTERS[p.filter];
-		canvas.classList.remove('pl-hidden');
+		$('#pl-photo-wrap').classList.remove('pl-hidden');
 		$('#pl-filters').classList.remove('pl-hidden');
 		$('#pl-photo-tools').classList.remove('pl-hidden');
 		var chips = document.querySelectorAll('#pl-filters .pl-chip');
@@ -803,6 +803,29 @@
 		if (t) { t.setAttribute('aria-expanded', 'false'); t.innerHTML = '&#43; Paste notes'; }
 	}
 
+	// Is there any written story yet (title / body / pasted notes)?
+	function hasStory() {
+		return $('#pl-title').value.trim() !== '' || $('#pl-body').value.trim() !== '' ||
+			(!!$('#pl-notes') && $('#pl-notes').value.trim() !== '');
+	}
+
+	// Clear the written story (keeps the photos). Confirms first if there's text.
+	function clearStory() {
+		if (($('#pl-title').value.trim() || $('#pl-body').value.trim()) &&
+			!window.confirm('Start the story over? This clears the title and text. Your photos stay.')) {
+			return;
+		}
+		$('#pl-title').value = '';
+		$('#pl-body').value = '';
+		if ($('#pl-notes')) { $('#pl-notes').value = ''; }
+		collapseNotes();
+		state.transcript = '';
+		setStatus('Tap to dictate, or type it below.', null); // no-op in anonymous mode
+		updateSubmit();
+		updateRecUi();
+		scheduleSave();
+	}
+
 	// Reflect whether the mic starts a fresh write-up or adds to an existing draft.
 	function updateRecUi() {
 		var draft = hasDraft();
@@ -905,6 +928,10 @@
 
 		$('#pl-submit').disabled = need.length > 0;
 
+		// "Start over" only shows once there's a story to clear.
+		var sc = $('#pl-story-clear');
+		if (sc) { sc.classList.toggle('pl-hidden', !hasStory()); }
+
 		var hint = $('#pl-submit-hint');
 		if (!hint) { return; }
 		if (need.length === 0) {
@@ -968,7 +995,8 @@
 		if (ed) { closeEditor(); }
 		draftId = null;
 		state = { photos: [], active: 0, video: null, transcript: '', title: '', body: '' };
-		if (canvas) { canvas.classList.add('pl-hidden'); canvas.style.filter = ''; }
+		if (canvas) { canvas.style.filter = ''; }
+		$('#pl-photo-wrap').classList.add('pl-hidden');
 		$('#pl-filters').classList.add('pl-hidden');
 		$('#pl-photo-tools').classList.add('pl-hidden');
 		$('#pl-make-cover').classList.add('pl-hidden');
@@ -1093,6 +1121,9 @@
 
 		var recBtn = $('#pl-rec-btn'); // absent in anonymous mode
 		if (recBtn) { recBtn.addEventListener('click', toggleRecord); }
+
+		// "Start over" — clear the written story (photos stay).
+		if ($('#pl-story-clear')) { $('#pl-story-clear').addEventListener('click', clearStory); }
 
 		// Paste-notes: expand/collapse, apply, and persist as you type.
 		var notesToggle = $('#pl-notes-toggle');

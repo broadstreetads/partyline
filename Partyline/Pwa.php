@@ -32,7 +32,7 @@ class Partyline_Pwa {
 	const APP_PATH = 'partyline';
 
 	/** Bump to invalidate the service-worker precache. */
-	const PWA_ASSET_VERSION = '26';
+	const PWA_ASSET_VERSION = '27';
 
 	/**
 	 * Register hooks. The contributor app is ON by default (see isEnabled), so
@@ -312,7 +312,10 @@ class Partyline_Pwa {
 		echo '<button id="pl-photo-camera" class="pl-photo-btn2" type="button"><span>📷</span> Take photo</button>';
 		echo '<button id="pl-photo-library" class="pl-photo-btn2" type="button"><span>🖼️</span> Choose photos</button>';
 		echo '</div>';
-		echo '<canvas id="pl-photo-canvas" class="pl-photo-canvas pl-hidden"></canvas>';
+		echo '<div id="pl-photo-wrap" class="pl-photo-wrap pl-hidden">';
+		echo '<canvas id="pl-photo-canvas" class="pl-photo-canvas"></canvas>';
+		echo '<button id="pl-edit-btn" class="pl-edit-overlay" type="button">&#9986;&#65039; Crop &amp; zoom</button>';
+		echo '</div>';
 		echo '<div id="pl-filters" class="pl-filters pl-hidden">';
 		echo '<button class="pl-chip is-active" data-filter="none" type="button">Original</button>';
 		echo '<button class="pl-chip" data-filter="bw" type="button">B&amp;W</button>';
@@ -321,7 +324,6 @@ class Partyline_Pwa {
 		echo '<button class="pl-chip" data-filter="vivid" type="button">Vivid</button>';
 		echo '</div>';
 		echo '<div id="pl-photo-tools" class="pl-photo-tools pl-hidden">';
-		echo '<button id="pl-edit-btn" class="pl-cover-btn" type="button">&#9986;&#65039; Crop &amp; zoom</button>';
 		echo '<button id="pl-make-cover" class="pl-cover-btn pl-hidden" type="button">&#9733; Make this the cover</button>';
 		echo '</div>';
 		echo '<div id="pl-thumbs" class="pl-thumbs pl-hidden"></div>';
@@ -356,7 +358,10 @@ class Partyline_Pwa {
 		}
 
 		// Step 2 — story
+		echo '<div class="pl-step-row">';
 		echo '<h2 class="pl-step"><span class="pl-stepnum">2</span> Tell the story</h2>';
+		echo '<button id="pl-story-clear" class="pl-textlink pl-hidden" type="button">&#8635; Start over</button>';
+		echo '</div>';
 		if ( $logged_in ) {
 			// Voice dictation + AI write-up are logged-in only.
 			echo '<div class="pl-record">';
