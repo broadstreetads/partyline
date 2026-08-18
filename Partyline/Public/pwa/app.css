@@ -282,3 +282,52 @@ html, body {
 
 /* Utility */
 .pl-hidden { display: none !important; }
+
+/* Photo tools row (crop, make cover) */
+.pl-photo-tools { display: flex; flex-wrap: wrap; gap: 8px; }
+.pl-photo-tools .pl-cover-btn { margin-top: 10px; }
+
+/* Secondary button (e.g. "Add to story") */
+.pl-btn--secondary { background: var(--surface); color: var(--ink); border: 2px solid var(--line); }
+
+/* Paste-notes */
+.pl-notes-toggle { display: inline-block; margin: 2px 0 6px; padding: 6px 2px; border: none; background: none;
+	color: var(--muted); font-size: 14px; font-weight: 600; cursor: pointer; }
+.pl-notes-toggle:active { color: var(--ink); }
+.pl-notes-wrap { margin: 4px 0 10px; }
+.pl-notes-wrap .pl-textarea { margin-bottom: 8px; }
+.pl-notes-wrap .pl-btn { width: 100%; }
+
+/* Dictate button reflects "add to story" (refine) vs. a fresh write-up */
+.pl-recbtn.is-refine { border-color: #2563eb; }
+.pl-recbtn.is-refine .pl-recdot { border-radius: 50%; background: #2563eb;
+	-webkit-mask: none; position: relative; }
+.pl-recbtn.is-refine .pl-recdot::after { content: "+"; position: absolute; inset: 0;
+	color: #fff; font-size: 22px; font-weight: 700; line-height: 30px; text-align: center; }
+
+/* Crop & zoom editor */
+body.pl-editing { overflow: hidden; }
+.pl-editor { position: fixed; inset: 0; z-index: 60; background: rgba(9,9,11,0.92);
+	display: flex; align-items: center; justify-content: center; padding: 16px;
+	padding-top: calc(16px + var(--safe-top)); padding-bottom: calc(16px + var(--safe-bottom)); }
+.pl-editor-panel { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 14px; }
+.pl-editor-head { color: #fff; font-size: 17px; font-weight: 700; text-align: center; }
+.pl-crop-stage { width: 100%; display: flex; align-items: center; justify-content: center; }
+.pl-crop-frame { position: relative; overflow: hidden; background: #000; border-radius: 12px;
+	box-shadow: 0 0 0 1px rgba(255,255,255,0.25); touch-action: none; }
+/* Rule-of-thirds guides */
+.pl-crop-frame::before, .pl-crop-frame::after { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+.pl-crop-frame::before { background:
+	linear-gradient(to right, transparent calc(33.33% - 0.5px), rgba(255,255,255,0.28) calc(33.33% - 0.5px), rgba(255,255,255,0.28) calc(33.33% + 0.5px), transparent calc(33.33% + 0.5px)),
+	linear-gradient(to right, transparent calc(66.66% - 0.5px), rgba(255,255,255,0.28) calc(66.66% - 0.5px), rgba(255,255,255,0.28) calc(66.66% + 0.5px), transparent calc(66.66% + 0.5px)); }
+.pl-crop-frame::after { background:
+	linear-gradient(to bottom, transparent calc(33.33% - 0.5px), rgba(255,255,255,0.28) calc(33.33% - 0.5px), rgba(255,255,255,0.28) calc(33.33% + 0.5px), transparent calc(33.33% + 0.5px)),
+	linear-gradient(to bottom, transparent calc(66.66% - 0.5px), rgba(255,255,255,0.28) calc(66.66% - 0.5px), rgba(255,255,255,0.28) calc(66.66% + 0.5px), transparent calc(66.66% + 0.5px)); }
+.pl-crop-canvas { position: absolute; top: 0; left: 0; transform-origin: 0 0; touch-action: none;
+	will-change: transform; z-index: 1; }
+.pl-editor-aspects { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.pl-editor-aspects .pl-chip { padding: 7px 14px; }
+.pl-editor-hint { color: rgba(255,255,255,0.7); text-align: center; margin: 0; }
+.pl-editor-actions { display: flex; gap: 10px; }
+.pl-editor-actions .pl-btn { flex: 1 1 0; }
+.pl-editor-actions .pl-btn--ghost { color: #fff; border-color: rgba(255,255,255,0.4); }

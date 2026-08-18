@@ -32,7 +32,7 @@ class Partyline_Pwa {
 	const APP_PATH = 'partyline';
 
 	/** Bump to invalidate the service-worker precache. */
-	const PWA_ASSET_VERSION = '25';
+	const PWA_ASSET_VERSION = '26';
 
 	/**
 	 * Register hooks. The contributor app is ON by default (see isEnabled), so
@@ -320,8 +320,31 @@ class Partyline_Pwa {
 		echo '<button class="pl-chip" data-filter="cool" type="button">Cool</button>';
 		echo '<button class="pl-chip" data-filter="vivid" type="button">Vivid</button>';
 		echo '</div>';
+		echo '<div id="pl-photo-tools" class="pl-photo-tools pl-hidden">';
+		echo '<button id="pl-edit-btn" class="pl-cover-btn" type="button">&#9986;&#65039; Crop &amp; zoom</button>';
 		echo '<button id="pl-make-cover" class="pl-cover-btn pl-hidden" type="button">&#9733; Make this the cover</button>';
+		echo '</div>';
 		echo '<div id="pl-thumbs" class="pl-thumbs pl-hidden"></div>';
+
+		// Crop & zoom editor (built for touch: pinch to zoom, drag to reposition).
+		echo '<div id="pl-editor" class="pl-editor pl-hidden" role="dialog" aria-modal="true" aria-label="Crop and zoom photo">';
+		echo   '<div class="pl-editor-panel">';
+		echo     '<div class="pl-editor-head">Crop &amp; zoom</div>';
+		echo     '<div id="pl-crop-stage" class="pl-crop-stage"><div id="pl-crop-frame" class="pl-crop-frame"><canvas id="pl-crop-canvas" class="pl-crop-canvas"></canvas></div></div>';
+		echo     '<div class="pl-editor-aspects">';
+		echo       '<button class="pl-chip is-active" data-aspect="orig" type="button">Original</button>';
+		echo       '<button class="pl-chip" data-aspect="1:1" type="button">Square</button>';
+		echo       '<button class="pl-chip" data-aspect="4:5" type="button">4:5</button>';
+		echo       '<button class="pl-chip" data-aspect="16:9" type="button">16:9</button>';
+		echo     '</div>';
+		echo     '<p class="pl-hint pl-editor-hint">Pinch to zoom, drag to reposition.</p>';
+		echo     '<div class="pl-editor-actions">';
+		echo       '<button id="pl-crop-reset" class="pl-btn pl-btn--ghost" type="button">Reset</button>';
+		echo       '<button id="pl-crop-cancel" class="pl-btn pl-btn--ghost" type="button">Cancel</button>';
+		echo       '<button id="pl-crop-done" class="pl-btn pl-btn--primary" type="button">Done</button>';
+		echo     '</div>';
+		echo   '</div>';
+		echo '</div>';
 
 		// Optional video — only when active AND this user is allowed to attach one.
 		if ( Partyline_Video::userCanUpload() ) {
@@ -339,6 +362,12 @@ class Partyline_Pwa {
 			echo '<div class="pl-record">';
 			echo '<button id="pl-rec-btn" class="pl-recbtn" type="button" aria-label="Record"><span class="pl-recdot"></span></button>';
 			echo '<div id="pl-rec-status" class="pl-status">Tap to dictate, or type it below.</div>';
+			echo '</div>';
+			// Paste external notes/source material; the AI folds them into the story.
+			echo '<button id="pl-notes-toggle" class="pl-notes-toggle" type="button" aria-expanded="false">&#43; Paste notes</button>';
+			echo '<div id="pl-notes-wrap" class="pl-notes-wrap pl-hidden">';
+			echo '<textarea id="pl-notes" class="pl-textarea" rows="3" placeholder="Paste facts, quotes, a press release, or details from anywhere — the AI weaves them into your story."></textarea>';
+			echo '<button id="pl-notes-apply" class="pl-btn pl-btn--secondary" type="button">Add to story</button>';
 			echo '</div>';
 		}
 		echo '<label class="pl-label" for="pl-title">Title</label>';
@@ -905,6 +934,20 @@ JS;
 		$transcript = $request->get_param( 'transcript' );
 		$transcript = is_string( $transcript ) ? trim( wp_strip_all_tags( $transcript ) ) : '';
 
+		// Optional pasted source notes and the reader's current draft, so the AI
+		// can *refine and expand* what they already have instead of rewriting it.
+		$notes = $request->get_param( 'notes' );
+		$notes = is_string( $notes ) ? trim( wp_strip_all_tags( $notes ) ) : '';
+
+		$current_title = $request->get_param( 'current_title' );
+		$current_title = is_string( $current_title ) ? trim( wp_strip_all_tags( $current_title ) ) : '';
+
+		$current_body = $request->get_param( 'current_body' );
+		$current_body = is_string( $current_body ) ? trim( wp_strip_all_tags( $current_body ) ) : '';
+
+		$mode = $request->get_param( 'mode' );
+		$refine = ( 'refine' === $mode ) && ( '' !== $current_title || '' !== $current_body );
+
 		// Optional photo, base64'd into a data URL for the vision model.
 		$image_data_url = null;
 		if ( ! empty( $_FILES['image'] ) && ! empty( $_FILES['image']['tmp_name'] ) && is_uploaded_file( $_FILES['image']['tmp_name'] ) ) {
@@ -918,35 +961,72 @@ JS;
 			}
 		}
 
-		if ( '' === $transcript && null === $image_data_url ) {
+		// Need *something* new to work from (dictation, pasted notes, or a photo).
+		if ( '' === $transcript && '' === $notes && null === $image_data_url ) {
 			return new WP_Error( 'partyline_no_input', 'Nothing to write from.', array( 'status' => 400 ) );
 		}
 
-		return rest_ensure_response( self::generateStory( $transcript, $image_data_url ) );
+		return rest_ensure_response( self::generateStory( $transcript, $image_data_url, array(
+			'notes'         => $notes,
+			'current_title' => $current_title,
+			'current_body'  => $current_body,
+			'refine'        => $refine,
+		) ) );
 	}
 
 	/**
 	 * Rewrite a dictated account into a short, professional blurb + headline,
 	 * optionally using the photo for visual context. Returns array{title, body}.
 	 */
-	public static function generateStory( $transcript, $image_data_url = null ) {
+	public static function generateStory( $transcript, $image_data_url = null, $ctx = array() ) {
+		$notes         = isset( $ctx['notes'] ) ? (string) $ctx['notes'] : '';
+		$current_title = isset( $ctx['current_title'] ) ? (string) $ctx['current_title'] : '';
+		$current_body  = isset( $ctx['current_body'] ) ? (string) $ctx['current_body'] : '';
+		$refine        = ! empty( $ctx['refine'] ) && ( '' !== $current_title || '' !== $current_body );
+
 		$settings = Partyline_Utility::getSettings();
 		$key      = isset( $settings->chatgpt_api_key ) ? trim( $settings->chatgpt_api_key ) : '';
 
-		// No API key: hand back the raw transcript so the contributor can edit.
+		// The new material the reader added this round (dictation + pasted notes).
+		$added = trim( $transcript . ( '' !== $notes ? ( "\n\n" . $notes ) : '' ) );
+
+		// No API key: keep it dumb but non-destructive. When refining, append the
+		// new material to the existing draft instead of throwing it away.
 		if ( empty( $key ) ) {
-			$words = str_word_count( $transcript, 1 );
+			if ( $refine ) {
+				return array(
+					'title' => '' !== $current_title ? $current_title : Partyline_Utility::generateTitle( $current_body ),
+					'body'  => trim( $current_body . ( '' !== $added ? ( "\n\n" . $added ) : '' ) ),
+				);
+			}
+			$words = str_word_count( $added, 1 );
 			return array(
 				'title' => $words ? ucfirst( implode( ' ', array_slice( $words, 0, 6 ) ) ) : Partyline_Core::DEFAULT_TITLE,
-				'body'  => $transcript,
+				'body'  => $added,
 			);
+		}
+
+		if ( $refine ) {
+			$text = "The reader is building a story and has a working draft. Refine and expand it with the new information below.\n\n"
+				. "=== Current draft ===\n"
+				. 'Title: ' . ( '' !== $current_title ? $current_title : '(none yet)' ) . "\n"
+				. "Body:\n" . ( '' !== $current_body ? $current_body : '(empty)' ) . "\n\n"
+				. '=== New information from the reader ===' . "\n"
+				. ( '' !== $transcript ? ( "Newly dictated:\n" . $transcript . "\n\n" ) : '' )
+				. ( '' !== $notes ? ( "Pasted notes / source material:\n" . $notes . "\n\n" ) : '' )
+				. 'Return the full updated draft. Keep the existing accurate details and the reader\'s voice; weave in the new information rather than discarding what is there. Only change existing wording where the new information corrects or clarifies it.';
+		} else {
+			$text = '' !== $transcript
+				? ( "Reader's dictated account:\n" . $transcript )
+				: ( '' !== $notes ? '' : 'The reader did not dictate anything — base the blurb on the photo.' );
+			if ( '' !== $notes ) {
+				$text = trim( $text . "\n\nNotes / source material the reader pasted:\n" . $notes );
+			}
 		}
 
 		$user_content = array( array(
 			'type' => 'text',
-			'text' => '' !== $transcript
-				? ( "Reader's dictated account:\n" . $transcript )
-				: 'The reader did not dictate anything — base the blurb on the photo.',
+			'text' => $text,
 		) );
 		if ( $image_data_url ) {
 			$user_content[] = array(
@@ -963,20 +1043,27 @@ JS;
 			),
 			'body' => wp_json_encode( array(
 				'model'           => self::STORY_MODEL,
-				'max_tokens'      => 500,
+				'max_tokens'      => 700,
 				'response_format' => array( 'type' => 'json_object' ),
 				'messages'        => array(
-					array( 'role' => 'system', 'content' => self::storyPrompt() ),
+					array( 'role' => 'system', 'content' => self::storyPrompt( $refine ) ),
 					array( 'role' => 'user', 'content' => $user_content ),
 				),
 			) ),
 		) );
 
-		// On any failure, fall back to the transcript + a naive title.
-		$fallback = array(
-			'title' => Partyline_Utility::generateTitle( $transcript ),
-			'body'  => $transcript,
-		);
+		// On any failure, never clobber the reader's work. When refining, fall
+		// back to the current draft with the new material appended; otherwise to
+		// the raw new material + a naive title.
+		$fallback = $refine
+			? array(
+				'title' => '' !== $current_title ? $current_title : Partyline_Utility::generateTitle( $current_body ),
+				'body'  => trim( $current_body . ( '' !== $added ? ( "\n\n" . $added ) : '' ) ),
+			)
+			: array(
+				'title' => Partyline_Utility::generateTitle( $added ),
+				'body'  => $added,
+			);
 
 		if ( is_wp_error( $response ) || 200 !== (int) wp_remote_retrieve_response_code( $response ) ) {
 			Partyline_Log::add( 'error', 'Story generation failed: ' . ( is_wp_error( $response ) ? $response->get_error_message() : wp_remote_retrieve_body( $response ) ) );
@@ -993,12 +1080,19 @@ JS;
 
 		return array(
 			'title' => isset( $parsed['title'] ) ? sanitize_text_field( $parsed['title'] ) : $fallback['title'],
-			'body'  => isset( $parsed['body'] ) ? trim( wp_kses_post( $parsed['body'] ) ) : $transcript,
+			'body'  => isset( $parsed['body'] ) ? trim( wp_kses_post( $parsed['body'] ) ) : $fallback['body'],
 		);
 	}
 
 	/** The shared editorial voice, plus the blurb + JSON output contract. */
-	public static function storyPrompt() {
+	public static function storyPrompt( $refine = false ) {
+		if ( $refine ) {
+			return Partyline_Utility::aiPrompt() . "\n\n"
+				. 'You are refining an existing draft with new information the reader supplied. '
+				. 'Respond ONLY with a JSON object of the form {"title": "...", "body": "..."}. '
+				. 'The "body" is the full, updated story: keep the existing accurate content and the reader\'s voice, and incorporate the new dictation and pasted notes. Do not drop existing details unless the new information corrects them, and do not invent facts beyond what the reader provided and the photo. '
+				. 'The "title" is a short, factual headline for the updated story (keep the current title unless the new information warrants a change).';
+		}
 		return Partyline_Utility::aiPrompt() . "\n\n"
 			. 'Respond ONLY with a JSON object of the form {"title": "...", "body": "..."}. '
 			. 'The "body" is the reader\'s submission cleaned up per the instructions above, staying as close as possible to their original wording. '

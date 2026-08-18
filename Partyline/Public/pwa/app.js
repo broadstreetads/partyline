@@ -86,13 +86,26 @@
 	/* --------------------------------------------------------------- */
 	var canvas;
 	var MAX_DIM = 1600;
+	var MAX_ZOOM = 5; // how far into a photo the crop editor lets you zoom
 
-	// Draw an image into a canvas, scaled to fit within MAX_DIM.
-	function drawScaled(cv, img) {
-		var scale = Math.min(1, MAX_DIM / Math.max(img.naturalWidth, img.naturalHeight));
-		cv.width = Math.max(1, Math.round(img.naturalWidth * scale));
-		cv.height = Math.max(1, Math.round(img.naturalHeight * scale));
-		cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+	// The source rectangle of a photo in natural pixels — the whole image, or the
+	// contributor's crop (stored normalized 0..1 so it survives any resize).
+	function srcRect(p) {
+		var iw = p.img.naturalWidth, ih = p.img.naturalHeight;
+		var c = p.crop;
+		if (c && c.w > 0 && c.h > 0) {
+			return { sx: c.x * iw, sy: c.y * ih, sw: c.w * iw, sh: c.h * ih };
+		}
+		return { sx: 0, sy: 0, sw: iw, sh: ih };
+	}
+
+	// Draw a photo (honoring its crop) into a canvas, scaled to fit within MAX_DIM.
+	function drawPhoto(cv, p) {
+		var r = srcRect(p);
+		var scale = Math.min(1, MAX_DIM / Math.max(r.sw, r.sh));
+		cv.width = Math.max(1, Math.round(r.sw * scale));
+		cv.height = Math.max(1, Math.round(r.sh * scale));
+		cv.getContext('2d').drawImage(p.img, r.sx, r.sy, r.sw, r.sh, 0, 0, cv.width, cv.height);
 	}
 
 	// Load one or more picked files into state.photos, then refresh the UI.
@@ -108,7 +121,7 @@
 			var img = new Image();
 			img.onload = function () {
 				URL.revokeObjectURL(url);
-				state.photos.push({ img: img, filter: 'none' });
+				state.photos.push({ img: img, filter: 'none', crop: null });
 				state.active = state.photos.length - 1;
 				done();
 			};
@@ -122,16 +135,18 @@
 		if (!state.photos.length) {
 			canvas.classList.add('pl-hidden'); canvas.style.filter = '';
 			$('#pl-filters').classList.add('pl-hidden');
+			$('#pl-photo-tools').classList.add('pl-hidden');
 			$('#pl-make-cover').classList.add('pl-hidden');
 			return;
 		}
 		if (state.active >= state.photos.length) { state.active = state.photos.length - 1; }
 		var p = state.photos[state.active];
-		drawScaled(canvas, p.img);
+		drawPhoto(canvas, p);
 		canvas.style.filter = FILTERS[p.filter] === 'none' ? '' : FILTERS[p.filter];
 		canvas.classList.remove('pl-hidden');
 		$('#pl-filters').classList.remove('pl-hidden');
-		var chips = document.querySelectorAll('.pl-chip');
+		$('#pl-photo-tools').classList.remove('pl-hidden');
+		var chips = document.querySelectorAll('#pl-filters .pl-chip');
 		for (var i = 0; i < chips.length; i++) {
 			chips[i].classList.toggle('is-active', chips[i].getAttribute('data-filter') === p.filter);
 		}
@@ -148,7 +163,7 @@
 			var t = document.createElement('div');
 			t.className = 'pl-thumb' + (i === state.active ? ' is-active' : '');
 			var tc = document.createElement('canvas');
-			drawScaled(tc, p.img);
+			drawPhoto(tc, p);
 			tc.style.filter = FILTERS[p.filter] === 'none' ? '' : FILTERS[p.filter];
 			t.appendChild(tc);
 			if (i === 0) {
@@ -196,21 +211,214 @@
 		scheduleSave();
 	}
 
-	// Bake photo i into a JPEG blob. withFilter bakes in its chosen filter (upload);
-	// without, it's the raw image (local draft storage keeps the filter separately).
-	function bakePhotoAt(i, withFilter) {
+	// Bake photo i into a JPEG blob. withFilter bakes in its chosen filter and
+	// withCrop (default true) bakes in its crop — both used for upload. Draft
+	// storage passes both false to keep the full raw image, storing the filter
+	// and crop separately so a resumed draft stays fully adjustable.
+	function bakePhotoAt(i, withFilter, withCrop) {
+		if (withCrop === undefined) { withCrop = true; }
 		return new Promise(function (resolve) {
 			var p = state.photos[i];
 			if (!p) { resolve(null); return; }
-			var scale = Math.min(1, MAX_DIM / Math.max(p.img.naturalWidth, p.img.naturalHeight));
+			var r = withCrop ? srcRect(p) : { sx: 0, sy: 0, sw: p.img.naturalWidth, sh: p.img.naturalHeight };
+			var scale = Math.min(1, MAX_DIM / Math.max(r.sw, r.sh));
 			var c = document.createElement('canvas');
-			c.width = Math.max(1, Math.round(p.img.naturalWidth * scale));
-			c.height = Math.max(1, Math.round(p.img.naturalHeight * scale));
+			c.width = Math.max(1, Math.round(r.sw * scale));
+			c.height = Math.max(1, Math.round(r.sh * scale));
 			var x = c.getContext('2d');
 			if (withFilter && 'filter' in x) { x.filter = FILTERS[p.filter]; }
-			x.drawImage(p.img, 0, 0, c.width, c.height);
+			x.drawImage(p.img, r.sx, r.sy, r.sw, r.sh, 0, 0, c.width, c.height);
 			c.toBlob(function (blob) { resolve(blob); }, 'image/jpeg', 0.9);
 		});
+	}
+
+	/* --------------------------------------------------------------- */
+	/* Crop & zoom editor — pinch to zoom, drag to reposition           */
+	/* --------------------------------------------------------------- */
+	// Aspect ratio (w/h); 0 means "use the image's own aspect" (Original).
+	var ASPECTS = { 'orig': 0, '1:1': 1, '4:5': 4 / 5, '16:9': 16 / 9 };
+	// Live editor geometry, all in CSS px within the crop frame. null when closed.
+	var ed = null;
+	var edPointers = {}, edPinch = null;
+
+	function edEls() {
+		return {
+			overlay: $('#pl-editor'), frame: $('#pl-crop-frame'),
+			stage: $('#pl-crop-stage'), cv: $('#pl-crop-canvas')
+		};
+	}
+
+	// Frame size (CSS px) for an aspect, fit to the available stage/viewport.
+	function edFrameSize(ratio, natW, natH) {
+		var stage = edEls().stage;
+		var maxW = stage.clientWidth || Math.min(window.innerWidth - 32, 460);
+		var maxH = Math.min(window.innerHeight * 0.58, 540);
+		var ar = ratio || (natW / natH);
+		var w = maxW, h = w / ar;
+		if (h > maxH) { h = maxH; w = h * ar; }
+		return { w: Math.round(w), h: Math.round(h) };
+	}
+
+	// Render the photo into the crop canvas at its base (scale=1) display size.
+	function edDrawCanvas() {
+		var el = edEls(), p = state.photos[state.active];
+		var dpr = Math.min(2, window.devicePixelRatio || 1);
+		el.cv.width = Math.round(ed.baseW * dpr);
+		el.cv.height = Math.round(ed.baseH * dpr);
+		el.cv.style.width = ed.baseW + 'px';
+		el.cv.style.height = ed.baseH + 'px';
+		var x = el.cv.getContext('2d');
+		x.setTransform(dpr, 0, 0, dpr, 0, 0);
+		x.drawImage(p.img, 0, 0, ed.baseW, ed.baseH);
+		el.cv.style.filter = FILTERS[p.filter] === 'none' ? '' : FILTERS[p.filter];
+	}
+
+	function edApply() {
+		edEls().cv.style.transform = 'translate(' + ed.tx + 'px,' + ed.ty + 'px) scale(' + ed.scale + ')';
+	}
+
+	// Keep the image covering the frame — no empty gaps at the edges.
+	function edClamp() {
+		var dw = ed.baseW * ed.scale, dh = ed.baseH * ed.scale;
+		ed.tx = Math.min(0, Math.max(ed.fw - dw, ed.tx));
+		ed.ty = Math.min(0, Math.max(ed.fh - dh, ed.ty));
+	}
+
+	// Configure geometry for an aspect and center the image at cover (scale 1).
+	function edSetAspect(aspect) {
+		var el = edEls(), p = state.photos[state.active];
+		var natW = p.img.naturalWidth, natH = p.img.naturalHeight;
+		var f = edFrameSize(ASPECTS[aspect], natW, natH);
+		ed.aspect = aspect; ed.fw = f.w; ed.fh = f.h;
+		el.frame.style.width = f.w + 'px';
+		el.frame.style.height = f.h + 'px';
+		var imgAr = natW / natH, frameAr = f.w / f.h;
+		if (imgAr >= frameAr) { ed.baseH = f.h; ed.baseW = f.h * imgAr; }
+		else { ed.baseW = f.w; ed.baseH = f.w / imgAr; }
+		ed.scale = 1;
+		ed.tx = (f.w - ed.baseW) / 2;
+		ed.ty = (f.h - ed.baseH) / 2;
+		edDrawCanvas();
+		edClamp();
+		edApply();
+		var chips = document.querySelectorAll('#pl-editor .pl-chip');
+		for (var i = 0; i < chips.length; i++) {
+			chips[i].classList.toggle('is-active', chips[i].getAttribute('data-aspect') === aspect);
+		}
+	}
+
+	// If the photo already has a saved crop, frame it exactly on open.
+	function edRestoreView() {
+		var c = state.photos[state.active].crop;
+		if (!c || c.w <= 0 || c.h <= 0) { return; }
+		var s = (ed.fw / c.w) / ed.baseW;
+		if (!isFinite(s) || s < 1) { return; } // can't represent here; leave at cover
+		ed.scale = Math.min(MAX_ZOOM, s);
+		ed.tx = -c.x * ed.baseW * ed.scale;
+		ed.ty = -c.y * ed.baseH * ed.scale;
+		edClamp();
+		edApply();
+	}
+
+	function openEditor() {
+		if (!state.photos.length) { return; }
+		ed = {};
+		edEls().overlay.classList.remove('pl-hidden');
+		document.body.classList.add('pl-editing');
+		var start = (state.photos[state.active].crop && state.photos[state.active].crop.aspect) || 'orig';
+		edSetAspect(start);
+		edRestoreView();
+		edBind();
+	}
+
+	function closeEditor() {
+		edUnbind();
+		edEls().overlay.classList.add('pl-hidden');
+		document.body.classList.remove('pl-editing');
+		ed = null;
+	}
+
+	// Turn the frame's current view of the image into a normalized crop rect.
+	function commitCrop() {
+		var p = state.photos[state.active];
+		var dw = ed.baseW * ed.scale, dh = ed.baseH * ed.scale;
+		var x0 = Math.max(0, Math.min(1, (-ed.tx) / dw));
+		var y0 = Math.max(0, Math.min(1, (-ed.ty) / dh));
+		var w = Math.max(0, Math.min(1 - x0, ed.fw / dw));
+		var h = Math.max(0, Math.min(1 - y0, ed.fh / dh));
+		if (ed.aspect === 'orig' && x0 < 0.005 && y0 < 0.005 && w > 0.995 && h > 0.995) {
+			p.crop = null; // full original, no zoom — treat as uncropped
+		} else {
+			p.crop = { aspect: ed.aspect, x: x0, y: y0, w: w, h: h };
+		}
+		closeEditor();
+		refreshPhotos();
+		updateSubmit();
+		scheduleSave();
+	}
+
+	function edDist(a, b) { var dx = a.x - b.x, dy = a.y - b.y; return Math.sqrt(dx * dx + dy * dy); }
+
+	// Zoom to newScale keeping the point under the finger(s) fixed in the frame.
+	function edZoom(ns, clientX, clientY) {
+		var rect = edEls().frame.getBoundingClientRect();
+		var fx = clientX - rect.left, fy = clientY - rect.top;
+		var ix = (fx - ed.tx) / ed.scale, iy = (fy - ed.ty) / ed.scale;
+		ed.scale = ns;
+		ed.tx = fx - ix * ns;
+		ed.ty = fy - iy * ns;
+		edClamp();
+		edApply();
+	}
+
+	function edDown(e) {
+		var cv = edEls().cv;
+		if (cv.setPointerCapture) { try { cv.setPointerCapture(e.pointerId); } catch (err) {} }
+		edPointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+		var ids = Object.keys(edPointers);
+		if (ids.length === 2) {
+			var a = edPointers[ids[0]], b = edPointers[ids[1]];
+			edPinch = { d: edDist(a, b), s: ed.scale };
+		}
+		e.preventDefault();
+	}
+	function edMove(e) {
+		if (!edPointers[e.pointerId]) { return; }
+		var prev = edPointers[e.pointerId], cur = { x: e.clientX, y: e.clientY };
+		var ids = Object.keys(edPointers);
+		if (ids.length >= 2 && edPinch) {
+			edPointers[e.pointerId] = cur;
+			var a = edPointers[ids[0]], b = edPointers[ids[1]];
+			var ns = Math.max(1, Math.min(MAX_ZOOM, edPinch.s * (edDist(a, b) / edPinch.d)));
+			edZoom(ns, (a.x + b.x) / 2, (a.y + b.y) / 2);
+		} else {
+			ed.tx += cur.x - prev.x;
+			ed.ty += cur.y - prev.y;
+			edPointers[e.pointerId] = cur;
+			edClamp();
+			edApply();
+		}
+		e.preventDefault();
+	}
+	function edUp(e) {
+		delete edPointers[e.pointerId];
+		if (Object.keys(edPointers).length < 2) { edPinch = null; }
+	}
+
+	function edBind() {
+		var cv = edEls().cv;
+		cv.addEventListener('pointerdown', edDown);
+		cv.addEventListener('pointermove', edMove);
+		cv.addEventListener('pointerup', edUp);
+		cv.addEventListener('pointercancel', edUp);
+	}
+	function edUnbind() {
+		var cv = edEls().cv;
+		cv.removeEventListener('pointerdown', edDown);
+		cv.removeEventListener('pointermove', edMove);
+		cv.removeEventListener('pointerup', edUp);
+		cv.removeEventListener('pointercancel', edUp);
+		edPointers = {}; edPinch = null;
 	}
 
 	/* --------------------------------------------------------------- */
@@ -317,7 +525,7 @@
 		// draft restores both the images and their chosen looks. `id` is captured
 		// by the caller so a later draftId reset can't corrupt the saved key.
 		return Promise.all(state.photos.map(function (p, i) {
-			return bakePhotoAt(i, false).then(function (blob) { return { blob: blob, filter: p.filter }; });
+			return bakePhotoAt(i, false, false).then(function (blob) { return { blob: blob, filter: p.filter, crop: p.crop || null }; });
 		})).then(function (photos) {
 			return {
 				id: id,
@@ -325,6 +533,7 @@
 				wpStatus: status === 'sent' ? ((res && res.published) ? 'publish' : 'draft') : null,
 				title: $('#pl-title').value,
 				body: $('#pl-body').value,
+				notes: $('#pl-notes') ? $('#pl-notes').value : '',
 				photos: photos,
 				editLink: (res && res.edit_link) || '',
 				viewLink: (res && res.view_link) || '',
@@ -371,6 +580,7 @@
 		draftId = entry.id;
 		$('#pl-title').value = entry.title || '';
 		$('#pl-body').value = entry.body || '';
+		if ($('#pl-notes')) { $('#pl-notes').value = entry.notes || ''; }
 		state.transcript = entry.body || '';
 
 		// New drafts store a `photos` array; older ones a single `photo` + `filter`.
@@ -386,7 +596,7 @@
 				var img = new Image();
 				img.onload = function () {
 					URL.revokeObjectURL(url);
-					state.photos.push({ img: img, filter: pd.filter || 'none' });
+					state.photos.push({ img: img, filter: pd.filter || 'none', crop: pd.crop || null });
 					done();
 				};
 				img.onerror = function () { URL.revokeObjectURL(url); done(); };
@@ -394,6 +604,7 @@
 			});
 		}
 		updateSubmit();
+		updateRecUi();
 		show('screen-capture');
 	}
 
@@ -559,7 +770,7 @@
 		var type = chunks[0] ? chunks[0].type : ((recorder && recorder.mimeType) || 'audio/webm');
 		var blob = new Blob(chunks, { type: type });
 		setStatus('Transcribing…', 'busy');
-		$('#pl-rec-btn').setAttribute('disabled', 'disabled');
+		setGenBusy(true);
 
 		// Upload the native recording (webm/mp4/…) — OpenAI Whisper accepts it
 		// directly, so no client-side resampling/encoding is needed.
@@ -567,28 +778,91 @@
 		fd.append('audio', blob, 'recording.' + extForType(type));
 
 		api('transcribe', { method: 'POST', body: fd }).then(function (res) {
-			state.transcript = res.text || '';
-			setStatus('Writing it up…', 'busy');
-			// Send the transcript + the cover photo (first) so the model can use both.
-			var gfd = new FormData();
-			gfd.append('transcript', state.transcript);
-			if (state.photos.length) {
-				return bakePhotoAt(0, true).then(function (blob) {
-					if (blob) { gfd.append('image', blob, 'photo.jpg'); }
-					return api('generate', { method: 'POST', body: gfd });
-				});
-			}
-			return api('generate', { method: 'POST', body: gfd });
-		}).then(function (gen) {
-			if (gen.title) { $('#pl-title').value = gen.title; }
-			$('#pl-body').value = gen.body || state.transcript || '';
-			setStatus('✓ Written up below. Edit if needed, or tap record to redo.', null);
-			updateSubmit();
-			scheduleSave();
+			return runGenerate(res.text || '');
 		}).catch(function (err) {
 			setStatus(err.message || 'Transcription failed.', 'error');
+			setGenBusy(false);
+		});
+	}
+
+	// Is there already a draft worth building on (vs. writing from scratch)?
+	function hasDraft() {
+		return $('#pl-body').value.trim() !== '' || $('#pl-title').value.trim() !== '';
+	}
+
+	// Disable/enable the dictation + "Add to story" controls during an AI call.
+	function setGenBusy(on) {
+		var rb = $('#pl-rec-btn');
+		if (rb) { if (on) { rb.setAttribute('disabled', 'disabled'); } else { rb.removeAttribute('disabled'); } }
+		var na = $('#pl-notes-apply'); if (na) { na.disabled = !!on; }
+	}
+
+	function collapseNotes() {
+		var w = $('#pl-notes-wrap'), t = $('#pl-notes-toggle');
+		if (w) { w.classList.add('pl-hidden'); }
+		if (t) { t.setAttribute('aria-expanded', 'false'); t.innerHTML = '&#43; Paste notes'; }
+	}
+
+	// Reflect whether the mic starts a fresh write-up or adds to an existing draft.
+	function updateRecUi() {
+		var draft = hasDraft();
+		var rb = $('#pl-rec-btn');
+		if (rb) {
+			rb.classList.toggle('is-refine', draft);
+			rb.setAttribute('aria-label', draft ? 'Add to story by voice' : 'Record');
+		}
+		var st = $('#pl-rec-status');
+		if (st && !recording && !st.classList.contains('is-busy') && !st.classList.contains('is-error')) {
+			st.textContent = draft
+				? 'Tap to add more by voice — it builds on your story.'
+				: 'Tap to dictate, or type it below.';
+		}
+	}
+
+	// Send new material (dictation and/or pasted notes) to the AI. With an
+	// existing draft it refines/expands; otherwise it writes fresh. The server
+	// falls back safely, so the reader's current text is never lost on error.
+	function runGenerate(newTranscript) {
+		newTranscript = (newTranscript || '').trim();
+		var notes = $('#pl-notes') ? $('#pl-notes').value.trim() : '';
+		if (!newTranscript && !notes && !state.photos.length) {
+			setStatus('Add a photo, dictate, or paste some notes first.', 'error');
+			setGenBusy(false);
+			return Promise.resolve();
+		}
+		var refine = hasDraft();
+		setStatus(refine ? 'Updating your story…' : 'Writing it up…', 'busy');
+		setGenBusy(true);
+
+		var gfd = new FormData();
+		gfd.append('transcript', newTranscript);
+		gfd.append('notes', notes);
+		gfd.append('mode', refine ? 'refine' : 'fresh');
+		gfd.append('current_title', $('#pl-title').value);
+		gfd.append('current_body', $('#pl-body').value);
+
+		var sendGen = function () { return api('generate', { method: 'POST', body: gfd }); };
+		var chain = state.photos.length
+			? bakePhotoAt(0, true).then(function (b) { if (b) { gfd.append('image', b, 'photo.jpg'); } return sendGen(); })
+			: sendGen();
+
+		return chain.then(function (gen) {
+			if (gen.title) { $('#pl-title').value = gen.title; }
+			$('#pl-body').value = gen.body || $('#pl-body').value || newTranscript;
+			// Keep the raw dictation + notes around for the notification email.
+			var addRaw = (newTranscript + (notes ? ('\n\n' + notes) : '')).trim();
+			if (addRaw) { state.transcript = (state.transcript ? state.transcript + '\n\n' : '') + addRaw; }
+			// Notes are now folded in — clear them so they aren't applied twice.
+			if ($('#pl-notes')) { $('#pl-notes').value = ''; }
+			collapseNotes();
+			updateSubmit();
+			updateRecUi();
+			setStatus('✓ Ready below. Edit, dictate again, or paste more to build on it.', null);
+			scheduleSave();
+		}).catch(function (err) {
+			setStatus(err.message || 'Something went wrong. Your text is safe — try again.', 'error');
 		}).then(function () {
-			$('#pl-rec-btn').removeAttribute('disabled');
+			setGenBusy(false);
 		});
 	}
 
@@ -672,7 +946,8 @@
 			}
 			return api('submit', { method: 'POST', body: fd });
 		}).then(function (res) {
-			releaseStream(); // done capturing — free the mic
+			// Keep the mic grant for the app's lifetime (released on pagehide) so
+			// the next Partyline doesn't re-prompt for microphone access.
 			markSent(res);   // record it in the local "Your Partylines" list
 			draftId = null;  // next capture starts a fresh entry
 			if (res.message) { $('#pl-success-msg').textContent = res.message; }
@@ -686,13 +961,19 @@
 	}
 
 	function reset() {
-		releaseStream(); // leaving the capture flow — free the mic
+		// Note: the mic stream is intentionally NOT released here — it's held for
+		// the app's lifetime (freed on pagehide) so starting another Partyline
+		// doesn't trigger a fresh microphone permission prompt.
 		releaseWakeLock();
+		if (ed) { closeEditor(); }
 		draftId = null;
 		state = { photos: [], active: 0, video: null, transcript: '', title: '', body: '' };
 		if (canvas) { canvas.classList.add('pl-hidden'); canvas.style.filter = ''; }
 		$('#pl-filters').classList.add('pl-hidden');
+		$('#pl-photo-tools').classList.add('pl-hidden');
 		$('#pl-make-cover').classList.add('pl-hidden');
+		if ($('#pl-notes')) { $('#pl-notes').value = ''; }
+		collapseNotes();
 		var strip = $('#pl-thumbs'); if (strip) { strip.innerHTML = ''; strip.classList.add('pl-hidden'); }
 		var vin = $('#pl-input-video'); if (vin) { vin.value = ''; }
 		renderVideoChip();
@@ -704,6 +985,7 @@
 		if (window.turnstile && CFG.turnstileKey) { try { window.turnstile.reset(); } catch (e) {} }
 		setStatus('Tap to dictate, or type it below.', null);
 		updateSubmit();
+		updateRecUi();
 	}
 
 	/* --------------------------------------------------------------- */
@@ -784,9 +1066,9 @@
 			vinput.addEventListener('change', onVideoPick);
 		}
 
-		// Typing the story live-updates the submit gate.
-		$('#pl-body').addEventListener('input', function () { updateSubmit(); scheduleSave(); });
-		$('#pl-title').addEventListener('input', scheduleSave);
+		// Typing the story live-updates the submit gate and the dictate/refine hint.
+		$('#pl-body').addEventListener('input', function () { updateSubmit(); updateRecUi(); scheduleSave(); });
+		$('#pl-title').addEventListener('input', function () { updateRecUi(); scheduleSave(); });
 		function onContactInput() { updateSubmit(); saveContact(); }
 		if ($('#pl-name')) { $('#pl-name').addEventListener('input', onContactInput); }
 		if ($('#pl-email')) { $('#pl-email').addEventListener('input', onContactInput); }
@@ -794,13 +1076,42 @@
 		if ($('#pl-math')) { $('#pl-math').addEventListener('input', function () { updateSubmit(); }); }
 		applyContact(); // pre-fill saved contact info (anonymous)
 
-		var chips = document.querySelectorAll('.pl-chip');
+		var chips = document.querySelectorAll('#pl-filters .pl-chip');
 		for (var i = 0; i < chips.length; i++) {
 			chips[i].addEventListener('click', function () { applyFilter(this.getAttribute('data-filter')); });
 		}
 
+		// Crop & zoom editor.
+		$('#pl-edit-btn').addEventListener('click', openEditor);
+		$('#pl-crop-done').addEventListener('click', commitCrop);
+		$('#pl-crop-cancel').addEventListener('click', closeEditor);
+		$('#pl-crop-reset').addEventListener('click', function () { edSetAspect('orig'); });
+		var achips = document.querySelectorAll('#pl-editor .pl-chip');
+		for (var a = 0; a < achips.length; a++) {
+			achips[a].addEventListener('click', function () { edSetAspect(this.getAttribute('data-aspect')); });
+		}
+
 		var recBtn = $('#pl-rec-btn'); // absent in anonymous mode
 		if (recBtn) { recBtn.addEventListener('click', toggleRecord); }
+
+		// Paste-notes: expand/collapse, apply, and persist as you type.
+		var notesToggle = $('#pl-notes-toggle');
+		if (notesToggle) {
+			notesToggle.addEventListener('click', function () {
+				var wrap = $('#pl-notes-wrap');
+				var open = wrap.classList.toggle('pl-hidden') === false;
+				this.setAttribute('aria-expanded', open ? 'true' : 'false');
+				this.innerHTML = open ? '&#8722; Hide notes' : '&#43; Paste notes';
+				if (open && $('#pl-notes')) { $('#pl-notes').focus(); }
+			});
+		}
+		if ($('#pl-notes-apply')) {
+			$('#pl-notes-apply').addEventListener('click', function () {
+				if (!$('#pl-notes').value.trim()) { setStatus('Paste some notes first, then tap Add to story.', 'error'); return; }
+				runGenerate('');
+			});
+		}
+		if ($('#pl-notes')) { $('#pl-notes').addEventListener('input', scheduleSave); }
 
 		// The wake lock is auto-released when the page is hidden; re-acquire it
 		// if we come back while still recording.
@@ -808,7 +1119,12 @@
 			if (document.visibilityState === 'visible' && recording) { requestWakeLock(); }
 		});
 
+		// Free the held mic grant when the app is actually closing/backgrounded
+		// for good (we deliberately keep it across submits within a session).
+		window.addEventListener('pagehide', releaseStream);
+
 		updateSubmit(); // set the initial gated state
+		updateRecUi();
 	}
 
 	if (document.readyState === 'loading') {
