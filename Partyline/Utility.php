@@ -70,6 +70,47 @@ class Partyline_Utility
     }
 
     /**
+     * How many Partyliners the site has: anyone holding the dedicated
+     * "partyliner" role OR carrying a stored SMS phone number (the same
+     * definition the Partyliners admin screen uses). Cached in a transient
+     * since it can run on cached public pages; cleared on user changes.
+     *
+     * @return int
+     */
+    public static function countPartyliners()
+    {
+        $cached = get_transient( 'partyline_partyliner_count' );
+        if ( false !== $cached ) {
+            return (int) $cached;
+        }
+
+        $ids = array();
+        foreach ( get_users( array( 'role' => 'partyliner', 'fields' => 'ID', 'number' => 5000 ) ) as $id ) {
+            $ids[ (int) $id ] = true;
+        }
+        $with_phone = get_users( array(
+            'fields'     => 'ID',
+            'number'     => 5000,
+            'meta_query' => array(
+                array( 'key' => 'partyline_phone', 'value' => '', 'compare' => '!=' ),
+            ),
+        ) );
+        foreach ( $with_phone as $id ) {
+            $ids[ (int) $id ] = true;
+        }
+
+        $count = count( $ids );
+        set_transient( 'partyline_partyliner_count', $count, HOUR_IN_SECONDS );
+        return $count;
+    }
+
+    /** Forget the cached Partyliner count (call when a Partyliner is added/removed). */
+    public static function clearPartylinerCount()
+    {
+        delete_transient( 'partyline_partyliner_count' );
+    }
+
+    /**
      * Fix a malformed URL
      * @param string $url
      * @return string

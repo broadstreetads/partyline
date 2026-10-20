@@ -21,6 +21,7 @@ require_once dirname(__FILE__) . '/View.php';
 require_once dirname(__FILE__) . '/Exception.php';
 require_once dirname(__FILE__) . '/Pwa.php';
 require_once dirname(__FILE__) . '/Widget.php';
+require_once dirname(__FILE__) . '/CtaWidget.php';
 
 if (! class_exists('Partyline_Core')):
 
@@ -95,6 +96,9 @@ class Partyline_Core
 
         # -- "Partyline Posts" widget + [partyline_posts] shortcode --
         Partyline_Widget::init();
+
+        # -- "Partyline Call to Action" widget + [partyline_cta] shortcode --
+        Partyline_Cta_Widget::init();
     }
 
     /**
