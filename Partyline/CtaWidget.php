@@ -64,6 +64,7 @@ class Partyline_Cta_Widget extends WP_Widget {
 			'url'      => '', // blank = apply page (or the app when applications are closed)
 			'icon'     => '', // blank = the site icon; "none" = no logo; else a URL
 			'compact'  => '', // force the stacked/compact layout (narrow columns auto-detect)
+			'arrow'    => '', // show a down-arrow below the card (points at the Partylines beneath)
 		);
 	}
 
@@ -176,6 +177,14 @@ class Partyline_Cta_Widget extends WP_Widget {
 
 		$out .= '</div>';
 
+		// Optional down-arrow beneath the card — a cue that the stories below are
+		// themselves Partylines.
+		if ( in_array( strtolower( (string) $atts['arrow'] ), array( '1', 'yes', 'true', 'on' ), true ) ) {
+			$out .= '<div class="pl-cta-arrow" aria-hidden="true">'
+				. '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>'
+				. '</div>';
+		}
+
 		return $out;
 	}
 
@@ -224,6 +233,11 @@ class Partyline_Cta_Widget extends WP_Widget {
 			. '.pl-cta.is-compact .pl-cta-body{padding:16px}'
 			. '.pl-cta.is-compact .pl-cta-text{font-size:.95rem;margin-bottom:14px}'
 			. '.pl-cta.is-compact .pl-cta-btn{display:block;text-align:center}'
+			. '.pl-cta-arrow{display:flex;justify-content:center;margin:-2px 0 16px}'
+			. '.pl-cta-arrow svg{display:block;color:#111;background:#e8f651;border-radius:50%;padding:9px;'
+			. 'box-shadow:0 4px 10px rgba(17,17,17,.14);animation:pl-cta-bob 1.6s ease-in-out infinite}'
+			. '@keyframes pl-cta-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(5px)}}'
+			. '@media (prefers-reduced-motion:reduce){.pl-cta-arrow svg{animation:none}}'
 			. '</style>';
 	}
 
@@ -289,6 +303,10 @@ class Partyline_Cta_Widget extends WP_Widget {
 			<input class="checkbox" type="checkbox"<?php checked( in_array( strtolower( (string) $inst['compact'] ), array( '1', 'yes', 'true', 'on' ), true ) ); ?> id="<?php echo esc_attr( $this->get_field_id( 'compact' ) ); ?>" name="<?php echo esc_attr( $this->get_field_name( 'compact' ) ); ?>" value="1">
 			<label for="<?php echo esc_attr( $this->get_field_id( 'compact' ) ); ?>"><?php esc_html_e( 'Force compact layout (for narrow spots)', 'partyline' ); ?></label>
 		</p>
+		<p>
+			<input class="checkbox" type="checkbox"<?php checked( in_array( strtolower( (string) $inst['arrow'] ), array( '1', 'yes', 'true', 'on' ), true ) ); ?> id="<?php echo esc_attr( $this->get_field_id( 'arrow' ) ); ?>" name="<?php echo esc_attr( $this->get_field_name( 'arrow' ) ); ?>" value="1">
+			<label for="<?php echo esc_attr( $this->get_field_id( 'arrow' ) ); ?>"><?php esc_html_e( 'Show a down-arrow below (points at the Partylines beneath it)', 'partyline' ); ?></label>
+		</p>
 		<p style="color:#646970;">
 			<?php
 			printf(
@@ -317,6 +335,7 @@ class Partyline_Cta_Widget extends WP_Widget {
 			'url'      => '' !== $url ? esc_url_raw( $url ) : '',
 			'icon'     => ( '' === $icon || 'none' === strtolower( $icon ) ) ? $icon : esc_url_raw( $icon ),
 			'compact'  => empty( $new_instance['compact'] ) ? '' : '1',
+			'arrow'    => empty( $new_instance['arrow'] ) ? '' : '1',
 		);
 	}
 }
