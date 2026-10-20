@@ -139,6 +139,8 @@ class Partyline_Cta_Widget extends WP_Widget {
 		}
 
 		$compact = in_array( strtolower( (string) $atts['compact'] ), array( '1', 'yes', 'true', 'on' ), true );
+		// "arrow" now draws a speech-bubble tail pointing down at the stories below.
+		$tail = in_array( strtolower( (string) $atts['arrow'] ), array( '1', 'yes', 'true', 'on' ), true );
 
 		$has_headline = '' !== trim( wp_strip_all_tags( $headline ) );
 		$has_body     = '' !== trim( wp_strip_all_tags( $body ) );
@@ -147,7 +149,7 @@ class Partyline_Cta_Widget extends WP_Widget {
 		}
 
 		$out  = self::styles();
-		$out .= '<div class="pl-cta' . ( $compact ? ' is-compact' : '' ) . '">';
+		$out .= '<div class="pl-cta' . ( $compact ? ' is-compact' : '' ) . ( $tail ? ' has-tail' : '' ) . '">';
 
 		// Black header band: optional logo + kicker + the quote headline.
 		if ( $has_headline || '' !== $kicker || '' !== $icon_url ) {
@@ -177,14 +179,6 @@ class Partyline_Cta_Widget extends WP_Widget {
 
 		$out .= '</div>';
 
-		// Optional down-arrow beneath the card — a cue that the stories below are
-		// themselves Partylines.
-		if ( in_array( strtolower( (string) $atts['arrow'] ), array( '1', 'yes', 'true', 'on' ), true ) ) {
-			$out .= '<div class="pl-cta-arrow" aria-hidden="true">'
-				. '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>'
-				. '</div>';
-		}
-
 		return $out;
 	}
 
@@ -202,16 +196,16 @@ class Partyline_Cta_Widget extends WP_Widget {
 		}
 		$done = true;
 		return '<style>'
-			. '.pl-cta{--pl-accent:#e8f651;--pl-ink:#111;container-type:inline-size;width:100%;margin:0 0 20px;'
+			. '.pl-cta{--pl-accent:#e8f651;--pl-ink:#111;container-type:inline-size;position:relative;width:100%;margin:0 0 20px;'
 			. 'background:#fff;border:1px solid #e7e7ea;border-radius:16px;'
-			. 'box-shadow:0 10px 30px rgba(17,17,17,.10),0 2px 6px rgba(17,17,17,.05);overflow:hidden;color:var(--pl-ink)}'
+			. 'box-shadow:0 10px 30px rgba(17,17,17,.10),0 2px 6px rgba(17,17,17,.05);overflow:visible;color:var(--pl-ink)}'
 			. '.pl-cta *{box-sizing:border-box}'
-			. '.pl-cta-header{background:#0a0a0a;display:flex;align-items:center;gap:14px;padding:15px 20px 16px;margin:0}'
+			. '.pl-cta-header{background:#0a0a0a;display:flex;align-items:center;gap:14px;padding:15px 20px 16px;margin:0;border-radius:15px 15px 0 0}'
 			. '.pl-cta-logo{flex:0 0 auto;width:52px;height:52px;border-radius:50%;display:block;margin:0;max-width:none}'
 			. '.pl-cta-htext{min-width:0}'
 			. '.pl-cta-kicker{display:block;font-size:.72rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--pl-accent);margin:0 0 2px}'
 			. '.pl-cta-head{margin:0;padding:0;font-size:clamp(1rem,6cqi,1.35rem);font-weight:800;letter-spacing:-.02em;line-height:1.12;color:#fff}'
-			. '.pl-cta-body{padding:18px 20px 20px}'
+			. '.pl-cta-body{padding:18px 20px 20px;border-radius:0 0 15px 15px}'
 			. '.pl-cta-text{margin:0 0 16px;font-size:1rem;line-height:1.55;color:#3f4650}'
 			. '.pl-cta-count{font-weight:800;color:var(--pl-ink)}'
 			. '.pl-cta-btn{display:inline-block;background:var(--pl-accent);color:var(--pl-ink)!important;font-weight:800;'
@@ -233,11 +227,12 @@ class Partyline_Cta_Widget extends WP_Widget {
 			. '.pl-cta.is-compact .pl-cta-body{padding:16px}'
 			. '.pl-cta.is-compact .pl-cta-text{font-size:.95rem;margin-bottom:14px}'
 			. '.pl-cta.is-compact .pl-cta-btn{display:block;text-align:center}'
-			. '.pl-cta-arrow{display:flex;justify-content:center;margin:-2px 0 16px}'
-			. '.pl-cta-arrow svg{display:block;color:#111;background:#e8f651;border-radius:50%;padding:9px;'
-			. 'box-shadow:0 4px 10px rgba(17,17,17,.14);animation:pl-cta-bob 1.6s ease-in-out infinite}'
-			. '@keyframes pl-cta-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(5px)}}'
-			. '@media (prefers-reduced-motion:reduce){.pl-cta-arrow svg{animation:none}}'
+			// Speech-bubble tail: a white rotated square peeking out the bottom,
+			// bordered on its lower-right edges, pointing down at the stories below.
+			. '.pl-cta.has-tail{margin-bottom:30px}'
+			. '.pl-cta.has-tail::after{content:"";position:absolute;left:34px;bottom:-11px;width:22px;height:22px;'
+			. 'background:#fff;border-right:1px solid #e7e7ea;border-bottom:1px solid #e7e7ea;border-bottom-right-radius:4px;'
+			. 'transform:rotate(45deg);box-shadow:3px 3px 6px rgba(17,17,17,.05)}'
 			. '</style>';
 	}
 
@@ -305,7 +300,7 @@ class Partyline_Cta_Widget extends WP_Widget {
 		</p>
 		<p>
 			<input class="checkbox" type="checkbox"<?php checked( in_array( strtolower( (string) $inst['arrow'] ), array( '1', 'yes', 'true', 'on' ), true ) ); ?> id="<?php echo esc_attr( $this->get_field_id( 'arrow' ) ); ?>" name="<?php echo esc_attr( $this->get_field_name( 'arrow' ) ); ?>" value="1">
-			<label for="<?php echo esc_attr( $this->get_field_id( 'arrow' ) ); ?>"><?php esc_html_e( 'Show a down-arrow below (points at the Partylines beneath it)', 'partyline' ); ?></label>
+			<label for="<?php echo esc_attr( $this->get_field_id( 'arrow' ) ); ?>"><?php esc_html_e( 'Speech-bubble tail (points down at the Partylines beneath it)', 'partyline' ); ?></label>
 		</p>
 		<p style="color:#646970;">
 			<?php
