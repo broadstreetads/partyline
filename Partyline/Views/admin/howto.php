@@ -221,6 +221,9 @@ $pl_cat_name = $pl_cat_id ? get_cat_name( $pl_cat_id ) : '';
         the whole thing feel alive.</p>
 
       <h3>Recruiting Partyliners</h3>
+      <?php if ( class_exists( 'Partyline_Newspack' ) && ! Partyline_Newspack::accountsAllowed() ): ?>
+        <?php echo Partyline_Newspack::adminNote(); // phpcs:ignore WordPress.Security.EscapeOutput -- escaped in adminNote() ?>
+      <?php else: ?>
       <p>To credit texters by name, add them on the <a href="<?php echo esc_url( $partyliners_admin ); ?>">Partyliners</a> page.
         Even better, turn on <strong>Public Partyliner applications</strong> in
         <a href="<?php echo esc_url( $settings_admin ); ?>">Settings</a> and share this link so readers can register
@@ -233,6 +236,7 @@ $pl_cat_name = $pl_cat_id ? get_cat_name( $pl_cat_id ) : '';
         </div>
       <?php else: ?>
         <p class="plg-note">Public applications are currently off. Flip on <em>Public Partyliner applications</em> in Settings to activate your application link.</p>
+      <?php endif; ?>
       <?php endif; ?>
     </section>
 
@@ -270,7 +274,11 @@ $pl_cat_name = $pl_cat_id ? get_cat_name( $pl_cat_id ) : '';
           <summary>Do people need an account to submit?</summary>
           <div class="a">
             <p>It depends on your setup. The contributor app works for logged-in users out of the box. If you turn on <strong>Allow anonymous submissions</strong> in Settings, anyone can submit without an account. If anonymous submissions are off, a logged-out visitor who opens the app is simply sent to the login screen.</p>
+            <?php if ( class_exists( 'Partyline_Newspack' ) && ! Partyline_Newspack::accountsAllowed() ): ?>
+            <p><strong>Partyliner accounts:</strong> <?php echo esc_html( Partyline_Newspack::COMING_SOON ); ?> In the meantime, newsroom staff can use the app with their existing accounts.</p>
+            <?php else: ?>
             <p><strong>To set someone up with a Partyliner account</strong>, you have three options: open the <a href="<?php echo esc_url( $partyliners_admin ); ?>">Partyliners</a> page and use <em>Add a Partyliner</em> (just their name, phone, and email); turn on <strong>Public Partyliner applications</strong> in <a href="<?php echo esc_url( $settings_admin ); ?>">Settings</a> so readers can apply; or add them the usual WordPress way under <strong>Users &rarr; Add New</strong>. However they&rsquo;re created, their phone number is what links a text message back to their account.</p>
+            <?php endif; ?>
           </div>
         </details>
         <details>

@@ -36,6 +36,7 @@ $settings_url    = admin_url( 'admin.php?page=Partyline-Settings' );
 $howto_url       = admin_url( 'admin.php?page=Partyline-HowTo' );
 $apply_enabled  = class_exists( 'Partyline_Pwa' ) && Partyline_Pwa::applyEnabled();
 $apply_url      = class_exists( 'Partyline_Pwa' ) ? Partyline_Pwa::applyUrl() : '';
+$accounts_allowed = ! class_exists( 'Partyline_Newspack' ) || Partyline_Newspack::accountsAllowed();
 ?>
 <?php Partyline_View::load( 'admin/global/plg-styles' ); ?>
 
@@ -43,7 +44,9 @@ $apply_url      = class_exists( 'Partyline_Pwa' ) ? Partyline_Pwa::applyUrl() : 
   <div class="plg-wrap">
 
     <?php Partyline_View::load( 'admin/global/plg-hero', array(
-        'hero_lead' => 'The people who send in your Partylines. Add them by hand, or let them apply, and their phone number is matched to incoming texts automatically.',
+        'hero_lead' => $accounts_allowed
+            ? 'The people who send in your Partylines. Add them by hand, or let them apply, and their phone number is matched to incoming texts automatically.'
+            : 'The people who send in your Partylines. A staff member\'s phone number (set on their user profile) is matched to incoming texts automatically.',
         'hero_toc'  => array(
             array( 'href' => $main_url,     'label' => 'Newsroom' ),
             array( 'href' => $settings_url, 'label' => 'Settings' ),
@@ -58,6 +61,13 @@ $apply_url      = class_exists( 'Partyline_Pwa' ) ? Partyline_Pwa::applyUrl() : 
     <?php endif; ?>
 
     <!-- ============ ADD A PARTYLINER ============ -->
+    <?php if ( ! $accounts_allowed ): ?>
+    <section class="plg-section">
+      <div class="plg-eyebrow">Add</div>
+      <h2>Add a Partyliner</h2>
+      <?php echo Partyline_Newspack::adminNote(); // phpcs:ignore WordPress.Security.EscapeOutput -- escaped in adminNote() ?>
+    </section>
+    <?php else: ?>
     <section class="plg-section">
       <div class="plg-eyebrow">Add</div>
       <h2>Add a Partyliner</h2>
@@ -85,6 +95,7 @@ $apply_url      = class_exists( 'Partyline_Pwa' ) ? Partyline_Pwa::applyUrl() : 
         <button type="submit" name="partyline_add_partyliner" value="1" class="plg-btn">Add Partyliner</button>
       </form>
     </section>
+    <?php endif; ?>
 
     <!-- ============ ALL PARTYLINERS ============ -->
     <section class="plg-section">
@@ -106,7 +117,7 @@ $apply_url      = class_exists( 'Partyline_Pwa' ) ? Partyline_Pwa::applyUrl() : 
       <?php if ( empty( $users ) ): ?>
         <div class="plg-empty">
           <div class="big">👥</div>
-          <p style="margin:0;">No Partyliners yet. Add one above, or share your public application link.</p>
+          <p style="margin:0;"><?php echo $accounts_allowed ? 'No Partyliners yet. Add one above, or share your public application link.' : 'No Partyliners yet.'; ?></p>
         </div>
       <?php else: ?>
         <div style="overflow-x:auto;">
@@ -147,8 +158,10 @@ $apply_url      = class_exists( 'Partyline_Pwa' ) ? Partyline_Pwa::applyUrl() : 
                   <td class="plg-muted"><?php echo esc_html( $joined ); ?></td>
                   <td class="plg-actions">
                     <a href="<?php echo esc_url( get_edit_user_link( $u->ID ) ); ?>">Edit</a>
+                    <?php if ( $accounts_allowed ): ?>
                     <a href="<?php echo esc_url( $reset_url ); ?>"
                        onclick="return confirm('Email a set-password link to <?php echo esc_js( $u->display_name ); ?> (<?php echo esc_js( $u->user_email ); ?>)?');">Reset password</a>
+                    <?php endif; ?>
                     <a href="<?php echo esc_url( $del_url ); ?>" class="del"
                        onclick="return confirm('Remove <?php echo esc_js( $u->display_name ); ?>? Their submissions will be reassigned to you.');">Remove</a>
                   </td>

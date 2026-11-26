@@ -19,6 +19,7 @@ require_once dirname(__FILE__) . '/Utility.php';
 require_once dirname(__FILE__) . '/Video.php';
 require_once dirname(__FILE__) . '/View.php';
 require_once dirname(__FILE__) . '/Exception.php';
+require_once dirname(__FILE__) . '/Newspack.php';
 require_once dirname(__FILE__) . '/Pwa.php';
 require_once dirname(__FILE__) . '/Widget.php';
 require_once dirname(__FILE__) . '/CtaWidget.php';
@@ -249,7 +250,11 @@ class Partyline_Core
         $notice = null;
 
         // --- Add a Partyliner -------------------------------------------------
-        if ( isset( $_POST['partyline_add_partyliner'] ) ) {
+        if ( isset( $_POST['partyline_add_partyliner'] ) && ! Partyline_Newspack::accountsAllowed() ) {
+            // Newspack owns reader accounts; adding Partyliners is off there for now.
+            check_admin_referer( 'partyline_add_partyliner' );
+            $notice = array( 'error', Partyline_Newspack::COMING_SOON );
+        } elseif ( isset( $_POST['partyline_add_partyliner'] ) ) {
             check_admin_referer( 'partyline_add_partyliner' );
 
             $email_in = isset( $_POST['pl_email'] ) ? sanitize_email( wp_unslash( $_POST['pl_email'] ) ) : '';
@@ -282,9 +287,11 @@ class Partyline_Core
             check_admin_referer( 'partyline_resetpw_' . $uid );
 
             $sent   = Partyline_Utility::sendPartylinerSetPasswordEmail( $uid );
-            $notice = $sent
-                ? array( 'success', 'Sent a set-password email to that Partyliner.' )
-                : array( 'error', 'Could not send the set-password email.' );
+            $notice = ! Partyline_Newspack::accountsAllowed()
+                ? array( 'error', Partyline_Newspack::COMING_SOON )
+                : ( $sent
+                    ? array( 'success', 'Sent a set-password email to that Partyliner.' )
+                    : array( 'error', 'Could not send the set-password email.' ) );
         }
 
         // --- Delete a Partyliner ---------------------------------------------

@@ -82,6 +82,9 @@ $count           = is_array( $posts ) ? count( $posts ) : 0;
     <section class="plg-section">
       <div class="plg-eyebrow">Get more Partyliners</div>
       <h2>Recruit Partyliners</h2>
+      <?php if ( class_exists( 'Partyline_Newspack' ) && ! Partyline_Newspack::accountsAllowed() ): ?>
+        <?php echo Partyline_Newspack::adminNote(); // phpcs:ignore WordPress.Security.EscapeOutput -- escaped in adminNote() ?>
+      <?php else: ?>
       <p class="plg-intro">Let readers apply to become Partyliners on a public page. They confirm by email, and their phone number is matched to future text submissions automatically.</p>
       <?php if ( $apply_enabled && $apply_url ): ?>
         <div class="plg-linkbox">
@@ -92,6 +95,7 @@ $count           = is_array( $posts ) ? count( $posts ) : 0;
         <p style="margin-top:14px;font-size:13.5px;color:#6b7280;">Everyone who applies shows up on your <a href="<?php echo esc_url( $partyliners_url ); ?>">Partyliners</a> page.</p>
       <?php else: ?>
         <div class="plg-note">Public applications are currently <strong>off</strong>. Turn on <strong>Public Partyliner applications</strong> in <a href="<?php echo esc_url( $settings_url ); ?>">Settings</a> to get a shareable link where anyone can register as a Partyliner.</div>
+      <?php endif; ?>
       <?php endif; ?>
     </section>
 

@@ -994,6 +994,11 @@ class Partyline_Utility
      */
     public static function findOrCreatePartyliner( $args )
     {
+        // Newspack owns reader accounts; Partyline doesn't create them there (yet).
+        if ( class_exists( 'Partyline_Newspack' ) && ! Partyline_Newspack::accountsAllowed() ) {
+            return Partyline_Newspack::error();
+        }
+
         $name    = isset( $args['name'] ) ? sanitize_text_field( $args['name'] ) : '';
         $email   = isset( $args['email'] ) ? sanitize_email( $args['email'] ) : '';
         $phone   = isset( $args['phone'] ) ? self::normalizePhone( $args['phone'] ) : '';
@@ -1158,6 +1163,11 @@ class Partyline_Utility
      */
     public static function sendPartylinerSetPasswordEmail( $user_id )
     {
+        // On Newspack, sign-in goes through Newspack's own reader login flow.
+        if ( class_exists( 'Partyline_Newspack' ) && ! Partyline_Newspack::accountsAllowed() ) {
+            return false;
+        }
+
         $user = get_userdata( (int) $user_id );
         if ( ! $user || ! is_email( $user->user_email ) ) {
             return false;

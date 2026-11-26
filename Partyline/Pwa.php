@@ -69,6 +69,9 @@ class Partyline_Pwa {
 
 	/** Is the public Partyliner application page open? Opt-in, default OFF. */
 	public static function applyEnabled() {
+		if ( class_exists( 'Partyline_Newspack' ) && ! Partyline_Newspack::accountsAllowed() ) {
+			return false; // Newspack owns reader sign-up.
+		}
 		$s = Partyline_Utility::getSettings();
 		return ! empty( $s->partyliner_apply_enabled );
 	}
@@ -591,11 +594,21 @@ JS;
 		return hash_equals( $expected, (string) $sig );
 	}
 
+	/** Newspack: Partyliner sign-up isn't available yet (see Partyline_Newspack). */
+	private static function comingSoonScreen() {
+		return '<section class="pl-screen"><div class="pl-hero"><h1>Coming soon</h1><p>' . esc_html( Partyline_Newspack::COMING_SOON ) . '</p></div></section>';
+	}
+
 	/** GET /partyline/apply — the public application form. */
 	public static function serveApply() {
 		status_header( 200 );
 		nocache_headers();
 		header( 'Content-Type: text/html; charset=utf-8' );
+
+		if ( class_exists( 'Partyline_Newspack' ) && ! Partyline_Newspack::accountsAllowed() ) {
+			echo self::renderPage( self::comingSoonScreen() );
+			return;
+		}
 
 		if ( ! self::applyEnabled() ) {
 			echo self::renderPage( '<section class="pl-screen"><div class="pl-hero"><h1>Applications are closed</h1><p>We aren\'t accepting Partyliner applications right now.</p></div></section>' );
@@ -647,6 +660,11 @@ JS;
 		status_header( 200 );
 		nocache_headers();
 		header( 'Content-Type: text/html; charset=utf-8' );
+
+		if ( class_exists( 'Partyline_Newspack' ) && ! Partyline_Newspack::accountsAllowed() ) {
+			echo self::renderPage( self::comingSoonScreen() );
+			return;
+		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended — the token IS the secret.
 		$token = isset( $_GET['token'] ) ? sanitize_text_field( wp_unslash( $_GET['token'] ) ) : '';

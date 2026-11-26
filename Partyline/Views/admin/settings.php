@@ -133,6 +133,9 @@ $loader          = esc_url( Partyline_Utility::getImageBaseURL() . 'ajax-loader-
 
       <div class="plg-field">
         <div class="plg-field-label">Public Partyliner applications</div>
+        <?php if ( class_exists( 'Partyline_Newspack' ) && ! Partyline_Newspack::accountsAllowed() ): ?>
+        <?php echo Partyline_Newspack::adminNote(); // phpcs:ignore WordPress.Security.EscapeOutput -- escaped in adminNote() ?>
+        <?php else: ?>
         <div class="plg-field-desc">Let people apply to become Partyliners on a public page (name, phone, email, and an optional address). They confirm by email, and their phone is matched to future text-message submissions. Manage everyone under <a href="<?php echo esc_url( $partyliners_url ); ?>">Partyline &rarr; Partyliners</a>.</div>
         <label class="plg-check"><input type="checkbox" x-model="settings.partyliner_apply_enabled"> Enable public applications</label>
         <div class="plg-linkbox" x-show="settings.partyliner_apply_enabled">
@@ -140,6 +143,7 @@ $loader          = esc_url( Partyline_Utility::getImageBaseURL() . 'ajax-loader-
           <span class="url" id="apply-url"><?php echo esc_html( Partyline_Pwa::applyUrl() ); ?></span>
           <button type="button" class="plg-copy" @click="window.partylineCopyToClipboard('#apply-url')">Copy</button>
         </div>
+        <?php endif; ?>
       </div>
     </section>
 
