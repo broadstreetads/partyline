@@ -192,7 +192,11 @@ $pl_cat_name = $pl_cat_id ? get_cat_name( $pl_cat_id ) : '';
             <code id="plg-applink" data-link="<?php echo esc_attr( $app_url ); ?>"><?php echo esc_html( $app_url ); ?></code>
             <button type="button" class="plg-copy" onclick="plgCopy(this,'plg-applink')">Copy link</button>
           </div>
-          Optionally turn on <em>anonymous submissions</em> to let anyone contribute without an account (they provide a name, email, and phone, and pass a Cloudflare Turnstile check).</div></li>
+          <?php if ( class_exists( 'Partyline_Newspack' ) && ! Partyline_Newspack::anonymousAllowed() ): ?>
+          Contributors sign in with their existing account. <?php echo esc_html( Partyline_Newspack::ANONYMOUS_OFF ); ?>
+          <?php else: ?>
+          Optionally turn on <em>anonymous submissions</em> to let anyone contribute without an account (they provide a name, email, and phone, and pass a Cloudflare Turnstile check).
+          <?php endif; ?></div></li>
         <li><span class="s">3</span><div><strong>Text Messages (optional).</strong> To also accept Partylines by text, enable Twilio, get a Twilio phone number, and point its messaging webhook at the URL shown in that section.</div></li>
         <li><span class="s">4</span><div><strong>AI Formatting (optional).</strong> Add an OpenAI API key to auto-format submissions and enable voice dictation. You can fine-tune the editorial voice with the <em>AI writing prompt</em>.</div></li>
       </ol>
@@ -273,7 +277,11 @@ $pl_cat_name = $pl_cat_id ? get_cat_name( $pl_cat_id ) : '';
         <details>
           <summary>Do people need an account to submit?</summary>
           <div class="a">
+            <?php if ( class_exists( 'Partyline_Newspack' ) && ! Partyline_Newspack::anonymousAllowed() ): ?>
+            <p>Yes. The contributor app works for logged-in users, and a logged-out visitor who opens it is sent to the login screen. <?php echo esc_html( Partyline_Newspack::ANONYMOUS_OFF ); ?></p>
+            <?php else: ?>
             <p>It depends on your setup. The contributor app works for logged-in users out of the box. If you turn on <strong>Allow anonymous submissions</strong> in Settings, anyone can submit without an account. If anonymous submissions are off, a logged-out visitor who opens the app is simply sent to the login screen.</p>
+            <?php endif; ?>
             <?php if ( class_exists( 'Partyline_Newspack' ) && ! Partyline_Newspack::accountsAllowed() ): ?>
             <p><strong>Partyliner accounts:</strong> <?php echo esc_html( Partyline_Newspack::COMING_SOON ); ?> In the meantime, newsroom staff can use the app with their existing accounts.</p>
             <?php else: ?>

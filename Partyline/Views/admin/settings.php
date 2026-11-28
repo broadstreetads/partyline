@@ -110,6 +110,12 @@ $loader          = esc_url( Partyline_Utility::getImageBaseURL() . 'ajax-loader-
         </label>
       </div>
 
+      <?php if ( class_exists( 'Partyline_Newspack' ) && ! Partyline_Newspack::anonymousAllowed() ): ?>
+      <div class="plg-field">
+        <div class="plg-field-label">Allow anonymous submissions</div>
+        <?php echo Partyline_Newspack::adminNote( Partyline_Newspack::ANONYMOUS_OFF ); // phpcs:ignore WordPress.Security.EscapeOutput -- escaped in adminNote() ?>
+      </div>
+      <?php else: ?>
       <div class="plg-field">
         <div class="plg-field-label">Allow anonymous submissions</div>
         <div class="plg-field-desc">By default only logged-in users can submit. Turn this on to let anyone submit without an account. Anonymous submitters type their story (no voice dictation) and provide a name, email &amp; phone.</div>
@@ -130,6 +136,8 @@ $loader          = esc_url( Partyline_Utility::getImageBaseURL() . 'ajax-loader-
         <div class="plg-field-desc">Used on the server to verify the Turnstile token. Keep this private.</div>
         <input x-model="settings.turnstile_secret_key" type="password" placeholder="0x4AAA..." />
       </div>
+
+      <?php endif; ?>
 
       <div class="plg-field">
         <div class="plg-field-label">Public Partyliner applications</div>

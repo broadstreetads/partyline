@@ -7,8 +7,8 @@
  * story, the audio is transcribed (OpenAI Whisper), AI drafts a title/body, and
  * result is submitted as the same kind of draft post the SMS path creates.
  *
- * EVERYTHING here is gated behind the `pwa_enabled` setting (default off), so
- * the module is completely inert until the feature is deliberately enabled.
+ * EVERYTHING here is gated behind the `pwa_enabled` setting (default ON; an
+ * admin can switch it off, which makes the module completely inert).
  *
  * @author Broadstreet Ads <labs@broadstreetads.com>
  */
@@ -58,6 +58,9 @@ class Partyline_Pwa {
 
 	/** May people submit without logging in? Opt-in, default OFF. */
 	public static function allowAnonymous() {
+		if ( class_exists( 'Partyline_Newspack' ) && ! Partyline_Newspack::anonymousAllowed() ) {
+			return false; // Off on Newspack until there's stronger spam protection.
+		}
 		$s = Partyline_Utility::getSettings();
 		return ! empty( $s->pwa_allow_anonymous );
 	}
