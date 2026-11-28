@@ -3,7 +3,7 @@ Contributors: katzgrau, broadstreetads
 Tags: community, local news, ai, sms, user generated content
 Requires at least: 5.0
 Tested up to: 7.0
-Stable tag: 1.5.2
+Stable tag: 1.5.3
 License: GPLv2
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -95,6 +95,9 @@ Optional. Used to verify that anonymous submissions and public applications come
 4. An example of a post created by Partyline.
 
 == Changelog ==
+
+= 1.5.3 =
+* Newspack compatibility: anonymous contributor-app submissions are now turned off on sites running Newspack. Signed-in contributors and text messages keep working. No change on other sites.
 
 = 1.5.2 =
 * Newspack compatibility: on sites running Newspack, Partyline leaves reader accounts to Newspack's own sign-in. Adding Partyliners and public applications are paused there (coming in a future version); staff and anonymous submissions keep working. No change on other sites.
